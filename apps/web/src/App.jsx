@@ -18,6 +18,7 @@ import CustomerDetail from './pages/CustomerDetail';
 
 import Vehicles from './pages/Vehicles';
 import VehicleDetail from './pages/VehicleDetail';
+import VehicleQrPrint from './pages/VehicleQrPrint';
 
 import Appointments from './pages/Appointments';
 
@@ -88,6 +89,19 @@ export default function App() {
           <Route
             path="/qr/:token"
             element={<PublicVehicle />}
+          />
+
+          <Route
+            path="/vehicles/:id/qr-print"
+            element={
+              <ProtectedRoute>
+                <ForRoles
+                  roles={SERVICE_ROLES}
+                >
+                  <VehicleQrPrint />
+                </ForRoles>
+              </ProtectedRoute>
+            }
           />
 
           <Route
