@@ -3,6 +3,7 @@
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
@@ -14,11 +15,40 @@ export class CustomersService {
     private readonly prisma: PrismaService,
   ) {}
 
+  private accessWhere(
+    organizationId: string,
+    role: UserRole,
+    branchId: string | null,
+  ) {
+    return {
+      organizationId,
+      ...(role ===
+      UserRole.SERVICE_ADVISOR
+        ? {
+            branchId:
+              branchId ??
+              '__branch_not_assigned__',
+          }
+        : {}),
+    };
+  }
+
   create(
     organizationId: string,
     branchId: string | null,
+    role: UserRole,
     dto: CreateCustomerDto,
   ) {
+    if (
+      role ===
+        UserRole.SERVICE_ADVISOR &&
+      !branchId
+    ) {
+      throw new BadRequestException(
+        'Servis danışmanı için şube ataması gerekli.',
+      );
+    }
+
     return this.prisma.customer.create({
       data: {
         ...dto,
@@ -28,11 +58,17 @@ export class CustomersService {
     });
   }
 
-  findAll(organizationId: string) {
+  findAll(
+    organizationId: string,
+    role: UserRole,
+    branchId: string | null,
+  ) {
     return this.prisma.customer.findMany({
-      where: {
+      where: this.accessWhere(
         organizationId,
-      },
+        role,
+        branchId,
+      ),
       include: {
         vehicles: true,
       },
@@ -45,21 +81,33 @@ export class CustomersService {
   async findOne(
     organizationId: string,
     id: string,
+    role: UserRole,
+    branchId: string | null,
   ) {
     const customer =
       await this.prisma.customer.findFirst({
         where: {
           id,
-          organizationId,
+          ...this.accessWhere(
+            organizationId,
+            role,
+            branchId,
+          ),
         },
         include: {
           vehicles: true,
+          payments: {
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 20,
+          },
         },
       });
 
     if (!customer) {
       throw new NotFoundException(
-        'Müşteri bulunamadı.',
+        'Müşteri bulunamadı veya erişim yetkiniz yok.',
       );
     }
 
@@ -69,17 +117,19 @@ export class CustomersService {
   async update(
     organizationId: string,
     id: string,
+    role: UserRole,
+    branchId: string | null,
     dto: UpdateCustomerDto,
   ) {
     await this.findOne(
       organizationId,
       id,
+      role,
+      branchId,
     );
 
     return this.prisma.customer.update({
-      where: {
-        id,
-      },
+      where: { id },
       data: {
         firstName: dto.firstName,
         lastName: dto.lastName,
@@ -97,10 +147,14 @@ export class CustomersService {
   async remove(
     organizationId: string,
     id: string,
+    role: UserRole,
+    branchId: string | null,
   ) {
     await this.findOne(
       organizationId,
       id,
+      role,
+      branchId,
     );
 
     const [
@@ -111,33 +165,19 @@ export class CustomersService {
       paymentCount,
     ] = await Promise.all([
       this.prisma.vehicle.count({
-        where: {
-          customerId: id,
-        },
+        where: { customerId: id },
       }),
-
       this.prisma.appointment.count({
-        where: {
-          customerId: id,
-        },
+        where: { customerId: id },
       }),
-
       this.prisma.serviceOrder.count({
-        where: {
-          customerId: id,
-        },
+        where: { customerId: id },
       }),
-
       this.prisma.quote.count({
-        where: {
-          customerId: id,
-        },
+        where: { customerId: id },
       }),
-
       this.prisma.payment.count({
-        where: {
-          customerId: id,
-        },
+        where: { customerId: id },
       }),
     ]);
 
@@ -155,9 +195,7 @@ export class CustomersService {
     }
 
     await this.prisma.customer.delete({
-      where: {
-        id,
-      },
+      where: { id },
     });
 
     return {
