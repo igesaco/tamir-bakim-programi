@@ -41,7 +41,7 @@ export class AuthService {
 
     const email = dto.email
       .trim()
-      .toLocaleLowerCase('tr-TR');
+      .toLowerCase();
 
     const existingUser =
       await this.usersService.findByEmail(
