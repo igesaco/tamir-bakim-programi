@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
@@ -7,45 +8,68 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
-  Body,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { UserRole } from '@prisma/client';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 
-import { MediaService } from './media.service';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { UploadMediaDto } from './dto/upload-media.dto';
+import { MediaService } from './media.service';
 
 @UseGuards(AuthGuard('jwt'))
+@Roles(
+  UserRole.OWNER,
+  UserRole.MANAGER,
+  UserRole.SERVICE_ADVISOR,
+)
+@UseGuards(RolesGuard)
 @Controller('media')
 export class MediaController {
-  constructor(private readonly mediaService: MediaService) {}
+  constructor(
+    private readonly mediaService: MediaService,
+  ) {}
 
   @Post('upload')
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
         destination: './uploads',
-        filename: (_req, file, callback) => {
+        filename: (
+          _req,
+          file,
+          callback,
+        ) => {
           const unique =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
+            Date.now() +
+            '-' +
+            Math.round(
+              Math.random() * 1e9,
+            );
 
           callback(
             null,
-            unique + extname(file.originalname),
+            unique +
+              extname(
+                file.originalname,
+              ),
           );
         },
       }),
       limits: {
-        fileSize: 15 * 1024 * 1024,
+        fileSize:
+          15 * 1024 * 1024,
       },
     }),
   )
   upload(
     @Req() req: any,
     @Body() dto: UploadMediaDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile()
+    file: Express.Multer.File,
   ) {
     return this.mediaService.create(
       req.user.organizationId,
