@@ -279,13 +279,12 @@ export class BillingService {
 
     if (
       ![
-        PaymentStatus.PAID,
         PaymentStatus.CANCELLED,
         PaymentStatus.REFUNDED,
       ].includes(status)
     ) {
       throw new BadRequestException(
-        'Tahsilat durumu yalnızca ödendi, iptal veya iade olarak değiştirilebilir.',
+        'Tahsilat durumu yalnızca iptal veya iade olarak değiştirilebilir.',
       );
     }
 
@@ -294,11 +293,7 @@ export class BillingService {
       data: {
         status,
         paidAt:
-          status ===
-          PaymentStatus.PAID
-            ? payment.paidAt ??
-              new Date()
-            : payment.paidAt,
+          payment.paidAt,
       },
       include: {
         branch: true,
