@@ -368,9 +368,9 @@ export class VehiclesService {
           qrToken: true,
           maintenanceRecords: {
             select: {
+              id: true,
               performedAt: true,
               mileage: true,
-              totalAmount: true,
               items: {
                 select: {
                   name: true,
@@ -392,9 +392,15 @@ export class VehiclesService {
               title: true,
               nextDueKm: true,
               nextDueDate: true,
-              estimatedPriceMin: true,
-              estimatedPriceMax: true,
             },
+            orderBy: [
+              {
+                nextDueDate: 'asc',
+              },
+              {
+                nextDueKm: 'asc',
+              },
+            ],
           },
         },
       });
@@ -405,6 +411,20 @@ export class VehiclesService {
       );
     }
 
-    return vehicle;
+    const {
+      maintenanceRecords,
+      maintenancePlans,
+      ...publicVehicle
+    } = vehicle;
+
+    return {
+      vehicle: publicVehicle,
+      lastMaintenanceRecord:
+        maintenanceRecords[0] ??
+        null,
+      maintenanceHistory:
+        maintenanceRecords,
+      maintenancePlans,
+    };
   }
 }
