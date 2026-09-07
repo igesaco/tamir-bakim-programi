@@ -1,10 +1,16 @@
 ﻿import { useEffect, useState } from 'react';
+
 import api from '../api/client';
+import { useAuth } from '../auth/AuthContext';
+import { statusLabel } from '../utils/status';
 
 export default function Maintenance() {
+  const { user } = useAuth();
+
   const [plans, setPlans] = useState([]);
   const [records, setRecords] = useState([]);
   const [vehicles, setVehicles] = useState([]);
+  const [packages, setPackages] = useState([]);
 
   const [form, setForm] = useState({
     vehicleId: '',
@@ -19,15 +25,18 @@ export default function Maintenance() {
   });
 
   async function load() {
-    const [p, r, v] = await Promise.all([
-      api.get('/maintenance/plans'),
-      api.get('/maintenance/records'),
-      api.get('/vehicles'),
-    ]);
+    const [p, r, v, packageResponse] =
+      await Promise.all([
+        api.get('/maintenance/plans'),
+        api.get('/maintenance/records'),
+        api.get('/vehicles'),
+        api.get('/maintenance/packages'),
+      ]);
 
     setPlans(p.data);
     setRecords(r.data);
     setVehicles(v.data);
+    setPackages(packageResponse.data);
   }
 
   useEffect(() => {
@@ -72,6 +81,24 @@ export default function Maintenance() {
       estimatedPriceMin: '',
       estimatedPriceMax: '',
     });
+
+    await load();
+  }
+
+  const canManagePackages =
+    user?.role === 'OWNER' ||
+    user?.role === 'MANAGER';
+
+  async function togglePackage(
+    maintenancePackage,
+  ) {
+    await api.patch(
+      `/maintenance/packages/${maintenancePackage.id}/active`,
+      {
+        active:
+          !maintenancePackage.active,
+      },
+    );
 
     await load();
   }
@@ -242,7 +269,9 @@ export default function Maintenance() {
                           ? new Date(p.nextDueDate).toLocaleDateString('tr-TR')
                           : '-'}
                       </td>
-                      <td>{p.status}</td>
+                      <td>
+                        {statusLabel(p.status)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -286,6 +315,94 @@ export default function Maintenance() {
               </table>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="panel-card spaced-card">
+        <div className="card-title-row">
+          <div>
+            <h3>Hazır Bakım Paketleri</h3>
+            <p className="sub-text">
+              Bu paketler teklif oluştururken tek seçimle teklif kalemlerine aktarılır.
+            </p>
+          </div>
+        </div>
+
+        <div className="maintenance-package-grid">
+          {packages.map(
+            (maintenancePackage) => (
+              <div
+                className="maintenance-package-card"
+                key={maintenancePackage.id}
+              >
+                <div className="maintenance-package-head">
+                  <div>
+                    <strong>
+                      {maintenancePackage.name}
+                    </strong>
+
+                    <span>
+                      {maintenancePackage.description ||
+                        'Bakım paketi'}
+                    </span>
+                  </div>
+
+                  <span
+                    className={
+                      maintenancePackage.active
+                        ? 'status-badge success'
+                        : 'status-badge danger'
+                    }
+                  >
+                    {maintenancePackage.active
+                      ? 'Aktif'
+                      : 'Pasif'}
+                  </span>
+                </div>
+
+                <div className="maintenance-package-items">
+                  {maintenancePackage.items.map(
+                    (item) => (
+                      <div key={item.id}>
+                        <span>
+                          {statusLabel(item.type)}
+                        </span>
+
+                        <strong>
+                          {item.name}
+                        </strong>
+
+                        <small>
+                          {Number(item.quantity)} adet · KDV %{Number(item.vatRate || 0)}
+                        </small>
+                      </div>
+                    ),
+                  )}
+                </div>
+
+                {canManagePackages && (
+                  <button
+                    className="small-button"
+                    onClick={() =>
+                      togglePackage(
+                        maintenancePackage,
+                      )
+                    }
+                  >
+                    {maintenancePackage.active
+                      ? 'Paketi Pasif Yap'
+                      : 'Paketi Aktif Yap'}
+                  </button>
+                )}
+              </div>
+            ),
+          )}
+
+          {!packages.length && (
+            <div className="empty-state">
+              Bakım paketi bulunamadı.
+            </div>
+          )}
         </div>
       </div>
     </>
