@@ -170,20 +170,41 @@ export class BillingService {
       }
     } else if (dto.serviceOrderId) {
       const items =
-        await this.prisma.serviceOrderItem.aggregate({
+        await this.prisma.serviceOrderItem.findMany({
           where: {
             serviceOrderId:
               dto.serviceOrderId,
           },
-          _sum: {
+          select: {
             totalPrice: true,
+            vatAmount: true,
+            grossTotal: true,
           },
         });
 
       const orderTotal =
-        Number(
-          items._sum.totalPrice ??
-            0,
+        items.reduce(
+          (sum, item) => {
+            const gross =
+              Number(
+                item.grossTotal ??
+                  0,
+              );
+
+            return (
+              sum +
+              (gross > 0
+                ? gross
+                : Number(
+                    item.totalPrice,
+                  ) +
+                  Number(
+                    item.vatAmount ??
+                      0,
+                  ))
+            );
+          },
+          0,
         );
 
       if (orderTotal > 0) {
