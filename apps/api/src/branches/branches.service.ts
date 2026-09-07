@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ServiceOrderStatus } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBranchDto } from './dto/create-branch.dto';
@@ -82,8 +83,8 @@ export class BranchesService {
             branchId: id,
             status: {
               notIn: [
-                'DELIVERED',
-                'CANCELLED',
+                ServiceOrderStatus.DELIVERED,
+                ServiceOrderStatus.CANCELLED,
               ],
             },
           },
