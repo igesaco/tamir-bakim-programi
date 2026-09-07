@@ -19,7 +19,7 @@ export class UsersService {
   private normalizeEmail(email: string) {
     return email
       .trim()
-      .toLocaleLowerCase('tr-TR');
+      .toLowerCase();
   }
 
   findByEmail(email: string) {
