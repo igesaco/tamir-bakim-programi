@@ -263,13 +263,18 @@ export class UsersService {
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        tokenVersion: {
+          increment: 1,
+        },
+      },
     });
 
     return {
       success: true,
       message:
-        'Şifreniz güncellendi.',
+        'Şifreniz güncellendi. Diğer oturumlar sonlandırıldı.',
     };
   }
 
@@ -310,13 +315,18 @@ export class UsersService {
 
     await this.prisma.user.update({
       where: { id },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        tokenVersion: {
+          increment: 1,
+        },
+      },
     });
 
     return {
       success: true,
       message:
-        'Personel şifresi yenilendi.',
+        'Personel şifresi yenilendi ve eski oturumları sonlandırıldı.',
     };
   }
 
