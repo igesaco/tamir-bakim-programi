@@ -129,6 +129,8 @@ model Organization {
   id        String   @id @default(cuid())
   name      String
   taxNumber String?
+  taxOffice String?
+  address   String?
   phone     String?
   email     String?
   active    Boolean  @default(true)
