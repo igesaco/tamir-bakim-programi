@@ -40,6 +40,7 @@ export class MaintenanceController {
     return this.maintenanceService.createRecord(
       req.user.organizationId,
       req.user.branchId,
+      req.user.role,
       dto,
     );
   }
@@ -52,7 +53,17 @@ export class MaintenanceController {
     return this.maintenanceService.createPlan(
       req.user.organizationId,
       req.user.branchId,
+      req.user.role,
       dto,
+    );
+  }
+
+  @Get('alerts')
+  alerts(@Req() req: any) {
+    return this.maintenanceService.alerts(
+      req.user.organizationId,
+      req.user.role,
+      req.user.branchId,
     );
   }
 
@@ -63,6 +74,8 @@ export class MaintenanceController {
   ) {
     return this.maintenanceService.findRecords(
       req.user.organizationId,
+      req.user.role,
+      req.user.branchId,
       vehicleId,
     );
   }
@@ -74,6 +87,8 @@ export class MaintenanceController {
   ) {
     return this.maintenanceService.findPlans(
       req.user.organizationId,
+      req.user.role,
+      req.user.branchId,
       vehicleId,
     );
   }
@@ -86,6 +101,8 @@ export class MaintenanceController {
     return this.maintenanceService.completePlan(
       req.user.organizationId,
       id,
+      req.user.role,
+      req.user.branchId,
     );
   }
 
