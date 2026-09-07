@@ -1,4 +1,9 @@
-import { IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class CreateServiceOrderDto {
   @IsString()
@@ -6,6 +11,10 @@ export class CreateServiceOrderDto {
 
   @IsString()
   vehicleId: string;
+
+  @IsOptional()
+  @IsString()
+  branchId?: string;
 
   @IsInt()
   @Min(0)
