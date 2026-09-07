@@ -12,6 +12,16 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreatePartDto } from './dto/create-part.dto';
 import { StockMovementDto } from './dto/stock-movement.dto';
 
+function money(value: number) {
+  return (
+    Math.round(
+      (value +
+        Number.EPSILON) *
+        100,
+    ) / 100
+  );
+}
+
 @Injectable()
 export class InventoryService {
   constructor(
@@ -381,11 +391,31 @@ export class InventoryService {
           | null = null;
 
         if (dto.serviceOrderId) {
-          const total =
-            dto.quantity *
-            Number(
-              inventory.part
-                .salePrice,
+          const unitPrice =
+            money(
+              Number(
+                inventory.part
+                  .salePrice,
+              ),
+            );
+
+          const totalPrice =
+            money(
+              dto.quantity *
+                unitPrice,
+            );
+
+          const vatRate = 20;
+          const vatAmount =
+            money(
+              totalPrice *
+                (vatRate / 100),
+            );
+
+          const grossTotal =
+            money(
+              totalPrice +
+                vatAmount,
             );
 
           const serviceOrderItem =
@@ -403,11 +433,11 @@ export class InventoryService {
                   dto.note,
                 quantity:
                   dto.quantity,
-                unitPrice:
-                  inventory.part
-                    .salePrice,
-                totalPrice:
-                  total,
+                unitPrice,
+                totalPrice,
+                vatRate,
+                vatAmount,
+                grossTotal,
               },
             });
 
