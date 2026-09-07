@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseEnumPipe,
@@ -129,7 +130,7 @@ export class ServiceOrdersController {
     );
   }
 
-  @Post(':id/items/:itemId/remove')
+  @Delete(':id/items/:itemId')
   @Roles(
     UserRole.OWNER,
     UserRole.MANAGER,
