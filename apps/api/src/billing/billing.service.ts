@@ -2,81 +2,152 @@ import {
   BadRequestException,
   Injectable,
 } from '@nestjs/common';
-import { PaymentStatus } from '@prisma/client';
+import {
+  PaymentStatus,
+  UserRole,
+} from '@prisma/client';
+
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 
 @Injectable()
 export class BillingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+  ) {}
 
   async create(
     organizationId: string,
-    branchId: string | null,
+    actorBranchId: string | null,
+    actorRole: UserRole,
     dto: CreatePaymentDto,
   ) {
-    if (!branchId) {
-      throw new BadRequestException('Þube seçimi gerekli.');
-    }
-
-    const customer = await this.prisma.customer.findFirst({
-      where: {
-        id: dto.customerId,
-        organizationId,
-      },
-    });
-
-    if (!customer) {
-      throw new BadRequestException('Müþteri bulunamadý.');
-    }
-
-    if (dto.serviceOrderId) {
-      const order = await this.prisma.serviceOrder.findFirst({
+    const customer =
+      await this.prisma.customer.findFirst({
         where: {
-          id: dto.serviceOrderId,
+          id: dto.customerId,
           organizationId,
-          customerId: dto.customerId,
         },
       });
 
+    if (!customer) {
+      throw new BadRequestException(
+        'MÃ¼ÅŸteri bulunamadÄ±.',
+      );
+    }
+
+    let branchId =
+      dto.branchId ??
+      actorBranchId;
+
+    if (dto.serviceOrderId) {
+      const order =
+        await this.prisma.serviceOrder.findFirst({
+          where: {
+            id: dto.serviceOrderId,
+            organizationId,
+            customerId: dto.customerId,
+          },
+        });
+
       if (!order) {
-        throw new BadRequestException('Ýþ emri bulunamadý.');
+        throw new BadRequestException(
+          'Ä°ÅŸ emri bulunamadÄ±.',
+        );
       }
+
+      branchId = order.branchId;
     }
 
     if (dto.quoteId) {
-      const quote = await this.prisma.quote.findFirst({
+      const quote =
+        await this.prisma.quote.findFirst({
+          where: {
+            id: dto.quoteId,
+            organizationId,
+            customerId: dto.customerId,
+          },
+        });
+
+      if (!quote) {
+        throw new BadRequestException(
+          'Teklif bulunamadÄ±.',
+        );
+      }
+
+      if (
+        dto.serviceOrderId &&
+        quote.serviceOrderId &&
+        quote.serviceOrderId !==
+          dto.serviceOrderId
+      ) {
+        throw new BadRequestException(
+          'Teklif ve iÅŸ emri birbiriyle eÅŸleÅŸmiyor.',
+        );
+      }
+
+      branchId = quote.branchId;
+    }
+
+    if (!branchId) {
+      throw new BadRequestException(
+        'Tahsilat iÃ§in ÅŸube seÃ§imi gerekli.',
+      );
+    }
+
+    const branch =
+      await this.prisma.branch.findFirst({
         where: {
-          id: dto.quoteId,
+          id: branchId,
           organizationId,
-          customerId: dto.customerId,
+          active: true,
         },
       });
 
-      if (!quote) {
-        throw new BadRequestException('Teklif bulunamadý.');
-      }
+    if (!branch) {
+      throw new BadRequestException(
+        'GeÃ§erli ve aktif bir ÅŸube seÃ§iniz.',
+      );
     }
 
-    const status = dto.status ?? PaymentStatus.PAID;
+    if (
+      actorRole !== UserRole.OWNER &&
+      actorRole !== UserRole.MANAGER
+    ) {
+      throw new BadRequestException(
+        'Tahsilat oluÅŸturma yetkiniz yok.',
+      );
+    }
+
+    const status =
+      dto.status ??
+      PaymentStatus.PAID;
 
     return this.prisma.payment.create({
       data: {
         organizationId,
         branchId,
-        customerId: dto.customerId,
-        serviceOrderId: dto.serviceOrderId,
-        quoteId: dto.quoteId,
-        amount: dto.amount,
-        method: dto.method,
+        customerId:
+          dto.customerId,
+        serviceOrderId:
+          dto.serviceOrderId,
+        quoteId:
+          dto.quoteId,
+        amount:
+          dto.amount,
+        method:
+          dto.method,
         status,
-        reference: dto.reference,
+        reference:
+          dto.reference,
         paidAt:
-          status === PaymentStatus.PAID
+          status ===
+          PaymentStatus.PAID
             ? new Date()
             : null,
       },
       include: {
+        branch: true,
         customer: true,
         serviceOrder: true,
         quote: true,
@@ -84,12 +155,15 @@ export class BillingService {
     });
   }
 
-  findAll(organizationId: string) {
+  findAll(
+    organizationId: string,
+  ) {
     return this.prisma.payment.findMany({
       where: {
         organizationId,
       },
       include: {
+        branch: true,
         customer: true,
         serviceOrder: true,
         quote: true,
