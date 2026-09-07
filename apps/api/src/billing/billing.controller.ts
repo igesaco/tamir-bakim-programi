@@ -16,14 +16,17 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('billing')
+@Roles(
+  UserRole.OWNER,
+  UserRole.MANAGER,
+)
+@UseGuards(RolesGuard)
 export class BillingController {
   constructor(
     private readonly billingService: BillingService,
   ) {}
 
   @Post('payments')
-  @Roles(UserRole.OWNER, UserRole.MANAGER)
-  @UseGuards(RolesGuard)
   create(
     @Req() req: any,
     @Body() dto: CreatePaymentDto,
@@ -31,13 +34,12 @@ export class BillingController {
     return this.billingService.create(
       req.user.organizationId,
       req.user.branchId,
+      req.user.role,
       dto,
     );
   }
 
   @Get('payments')
-  @Roles(UserRole.OWNER, UserRole.MANAGER)
-  @UseGuards(RolesGuard)
   findAll(@Req() req: any) {
     return this.billingService.findAll(
       req.user.organizationId,
