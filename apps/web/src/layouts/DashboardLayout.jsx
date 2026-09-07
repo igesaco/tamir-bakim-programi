@@ -6,6 +6,8 @@
 import {
   NavLink,
   Outlet,
+  useLocation,
+  useNavigate,
 } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
@@ -142,21 +144,86 @@ const uiModes = [
     value: 'classic',
     label: 'Klasik',
     description:
-      'Mevcut sol menülü yönetim görünümü.',
+      'Sol menülü standart yönetim görünümü.',
   },
   {
     value: 'desktop',
     label: 'Masaüstü',
     description:
-      'Windows masaüstü hissi, uygulama penceresi ve kısayol ikonları.',
+      'Ortada uygulama kısayolları, pencere mantığı ve çoklu sekmeler.',
   },
   {
     value: 'focus',
-    label: 'Odak',
+    label: 'Çalışma Alanı',
     description:
-      'Yüzen üst bar, alt dock ve cam efektli odak görünümü.',
+      'Üst yatay uygulama şeridi ve geniş çalışma ekranı.',
   },
 ];
+
+function getPageLabel(
+  pathname,
+  visibleMenu,
+) {
+  const direct =
+    visibleMenu.find(
+      (item) =>
+        item.path === pathname,
+    );
+
+  if (direct) {
+    return direct.label;
+  }
+
+  if (
+    pathname.startsWith(
+      '/customers/',
+    )
+  ) {
+    return 'Müşteri Paneli';
+  }
+
+  if (
+    pathname.startsWith(
+      '/vehicles/',
+    )
+  ) {
+    return 'Araç Detayı';
+  }
+
+  if (
+    pathname.startsWith(
+      '/service-orders/',
+    )
+  ) {
+    return 'İş Emri';
+  }
+
+  if (
+    pathname.startsWith(
+      '/appointments',
+    )
+  ) {
+    return 'Randevular';
+  }
+
+  if (
+    pathname.startsWith(
+      '/quotes',
+    )
+  ) {
+    return 'Teklifler';
+  }
+
+  if (
+    pathname.startsWith(
+      '/maintenance',
+    )
+  ) {
+    return 'Bakım';
+  }
+
+  return 'Tamir Bakım';
+}
 
 export default function DashboardLayout() {
   const {
@@ -164,14 +231,25 @@ export default function DashboardLayout() {
     logout,
   } = useAuth();
 
-  const storageKey =
+  const location =
+    useLocation();
+  const navigate =
+    useNavigate();
+
+  const modeStorageKey =
     `tb-ui-mode:${user?.id || 'default'}`;
+
+  const themeStorageKey =
+    `tb-ui-theme:${user?.id || 'default'}`;
+
+  const tabsStorageKey =
+    `tb-desktop-tabs:${user?.id || 'default'}`;
 
   const [uiMode, setUiMode] =
     useState(() => {
       const stored =
         localStorage.getItem(
-          storageKey,
+          modeStorageKey,
         );
 
       return [
@@ -183,10 +261,43 @@ export default function DashboardLayout() {
         : 'classic';
     });
 
+  const [theme, setTheme] =
+    useState(() => {
+      const stored =
+        localStorage.getItem(
+          themeStorageKey,
+        );
+
+      return stored === 'light'
+        ? 'light'
+        : 'dark';
+    });
+
+  const [openTabs, setOpenTabs] =
+    useState(() => {
+      try {
+        const stored =
+          sessionStorage.getItem(
+            tabsStorageKey,
+          );
+
+        const parsed =
+          stored
+            ? JSON.parse(stored)
+            : [];
+
+        return Array.isArray(parsed)
+          ? parsed
+          : [];
+      } catch {
+        return [];
+      }
+    });
+
   useEffect(() => {
     const stored =
       localStorage.getItem(
-        storageKey,
+        modeStorageKey,
       );
 
     if (
@@ -201,14 +312,43 @@ export default function DashboardLayout() {
     } else {
       setUiMode('classic');
     }
-  }, [storageKey]);
+  }, [modeStorageKey]);
+
+  useEffect(() => {
+    const stored =
+      localStorage.getItem(
+        themeStorageKey,
+      );
+
+    setTheme(
+      stored === 'light'
+        ? 'light'
+        : 'dark',
+    );
+  }, [themeStorageKey]);
 
   useEffect(() => {
     localStorage.setItem(
-      storageKey,
+      modeStorageKey,
       uiMode,
     );
-  }, [storageKey, uiMode]);
+  }, [
+    modeStorageKey,
+    uiMode,
+  ]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      themeStorageKey,
+      theme,
+    );
+
+    document.documentElement.dataset.theme =
+      theme;
+  }, [
+    themeStorageKey,
+    theme,
+  ]);
 
   const visibleMenu =
     useMemo(
@@ -228,10 +368,99 @@ export default function DashboardLayout() {
         item.value === uiMode,
     ) ?? uiModes[0];
 
+  const currentLabel =
+    getPageLabel(
+      location.pathname,
+      visibleMenu,
+    );
+
+  useEffect(() => {
+    if (
+      uiMode !== 'desktop'
+    ) {
+      return;
+    }
+
+    setOpenTabs(
+      (current) => {
+        const exists =
+          current.some(
+            (tab) =>
+              tab.path ===
+              location.pathname,
+          );
+
+        if (exists) {
+          return current;
+        }
+
+        return [
+          ...current,
+          {
+            path:
+              location.pathname,
+            label:
+              currentLabel,
+          },
+        ].slice(-8);
+      },
+    );
+  }, [
+    uiMode,
+    location.pathname,
+    currentLabel,
+  ]);
+
+  useEffect(() => {
+    sessionStorage.setItem(
+      tabsStorageKey,
+      JSON.stringify(
+        openTabs,
+      ),
+    );
+  }, [
+    tabsStorageKey,
+    openTabs,
+  ]);
+
+  function closeDesktopTab(
+    event,
+    path,
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    setOpenTabs(
+      (current) => {
+        const remaining =
+          current.filter(
+            (tab) =>
+              tab.path !== path,
+          );
+
+        if (
+          path ===
+          location.pathname
+        ) {
+          const next =
+            remaining[
+              remaining.length - 1
+            ];
+
+          navigate(
+            next?.path || '/',
+          );
+        }
+
+        return remaining;
+      },
+    );
+  }
+
   return (
     <div
       className={
-        `app-shell ui-mode-${uiMode}`
+        `app-shell ui-mode-${uiMode} theme-${theme}`
       }
     >
       <aside className="sidebar">
@@ -333,6 +562,40 @@ export default function DashboardLayout() {
             </div>
 
             <div
+              className="theme-switch"
+              role="group"
+              aria-label="Renk teması"
+            >
+              <button
+                type="button"
+                className={
+                  theme === 'dark'
+                    ? 'theme-button active'
+                    : 'theme-button'
+                }
+                onClick={() =>
+                  setTheme('dark')
+                }
+              >
+                Koyu
+              </button>
+
+              <button
+                type="button"
+                className={
+                  theme === 'light'
+                    ? 'theme-button active'
+                    : 'theme-button'
+                }
+                onClick={() =>
+                  setTheme('light')
+                }
+              >
+                Aydınlık
+              </button>
+            </div>
+
+            <div
               className="ui-mode-buttons"
               role="group"
               aria-label="Görünüm modu"
@@ -366,6 +629,59 @@ export default function DashboardLayout() {
             </div>
           </div>
         </header>
+
+        {uiMode ===
+          'desktop' && (
+          <div className="desktop-tabs">
+            {openTabs.map(
+              (tab) => (
+                <button
+                  key={
+                    tab.path
+                  }
+                  type="button"
+                  className={
+                    tab.path ===
+                    location.pathname
+                      ? 'desktop-tab active'
+                      : 'desktop-tab'
+                  }
+                  onClick={() =>
+                    navigate(
+                      tab.path,
+                    )
+                  }
+                >
+                  <span>
+                    {
+                      tab.label
+                    }
+                  </span>
+
+                  <span
+                    className="desktop-tab-close"
+                    role="button"
+                    tabIndex="0"
+                    onClick={(event) =>
+                      closeDesktopTab(
+                        event,
+                        tab.path,
+                      )
+                    }
+                  >
+                    ×
+                  </span>
+                </button>
+              ),
+            )}
+
+            {!openTabs.length && (
+              <span className="desktop-tabs-empty">
+                Bir uygulama açın.
+              </span>
+            )}
+          </div>
+        )}
 
         <section className="page-area">
           <Outlet />
