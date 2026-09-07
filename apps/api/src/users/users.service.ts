@@ -16,9 +16,22 @@ export class UsersService {
     private readonly prisma: PrismaService,
   ) {}
 
+  private normalizeEmail(email: string) {
+    return email
+      .trim()
+      .toLocaleLowerCase('tr-TR');
+  }
+
   findByEmail(email: string) {
     return this.prisma.user.findUnique({
-      where: { email },
+      where: {
+        email:
+          this.normalizeEmail(email),
+      },
+      include: {
+        organization: true,
+        branch: true,
+      },
     });
   }
 
@@ -91,12 +104,8 @@ export class UsersService {
         branch: true,
       },
       orderBy: [
-        {
-          firstName: 'asc',
-        },
-        {
-          lastName: 'asc',
-        },
+        { firstName: 'asc' },
+        { lastName: 'asc' },
       ],
     });
   }
@@ -106,8 +115,11 @@ export class UsersService {
     actorRole: UserRole,
     dto: CreateUserDto,
   ) {
+    const email =
+      this.normalizeEmail(dto.email);
+
     const existing =
-      await this.findByEmail(dto.email);
+      await this.findByEmail(email);
 
     if (existing) {
       throw new BadRequestException(
@@ -125,12 +137,24 @@ export class UsersService {
     }
 
     if (
-      (
-        dto.role === UserRole.MANAGER ||
-        dto.role ===
-          UserRole.SERVICE_ADVISOR ||
-        dto.role === UserRole.TECHNICIAN
-      ) &&
+      ![
+        UserRole.OWNER,
+        UserRole.MANAGER,
+        UserRole.SERVICE_ADVISOR,
+        UserRole.TECHNICIAN,
+      ].includes(dto.role)
+    ) {
+      throw new BadRequestException(
+        'Bu kullanıcı rolü bu panelde desteklenmiyor.',
+      );
+    }
+
+    if (
+      [
+        UserRole.MANAGER,
+        UserRole.SERVICE_ADVISOR,
+        UserRole.TECHNICIAN,
+      ].includes(dto.role) &&
       !dto.branchId
     ) {
       throw new BadRequestException(
@@ -164,13 +188,18 @@ export class UsersService {
     return this.prisma.user.create({
       data: {
         organizationId,
-        branchId: dto.branchId,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        email: dto.email,
-        phone: dto.phone,
+        branchId:
+          dto.branchId,
+        firstName:
+          dto.firstName.trim(),
+        lastName:
+          dto.lastName.trim(),
+        email,
+        phone:
+          dto.phone?.trim(),
         passwordHash,
-        role: dto.role,
+        role:
+          dto.role,
       },
       select: {
         id: true,
@@ -185,6 +214,110 @@ export class UsersService {
         createdAt: true,
       },
     });
+  }
+
+  async changeOwnPassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const user =
+      await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+    if (!user) {
+      throw new NotFoundException(
+        'Kullanıcı bulunamadı.',
+      );
+    }
+
+    const correct =
+      await bcrypt.compare(
+        currentPassword,
+        user.passwordHash,
+      );
+
+    if (!correct) {
+      throw new BadRequestException(
+        'Mevcut şifre yanlış.',
+      );
+    }
+
+    if (
+      await bcrypt.compare(
+        newPassword,
+        user.passwordHash,
+      )
+    ) {
+      throw new BadRequestException(
+        'Yeni şifre mevcut şifrenizle aynı olamaz.',
+      );
+    }
+
+    const passwordHash =
+      await bcrypt.hash(
+        newPassword,
+        12,
+      );
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    return {
+      success: true,
+      message:
+        'Şifreniz güncellendi.',
+    };
+  }
+
+  async resetPassword(
+    organizationId: string,
+    actorRole: UserRole,
+    id: string,
+    password: string,
+  ) {
+    const target =
+      await this.prisma.user.findFirst({
+        where: {
+          id,
+          organizationId,
+        },
+      });
+
+    if (!target) {
+      throw new NotFoundException(
+        'Personel bulunamadı.',
+      );
+    }
+
+    if (
+      target.role === UserRole.OWNER &&
+      actorRole !== UserRole.OWNER
+    ) {
+      throw new ForbiddenException(
+        'Kurucu hesabının şifresini yalnızca kurucu değiştirebilir.',
+      );
+    }
+
+    const passwordHash =
+      await bcrypt.hash(
+        password,
+        12,
+      );
+
+    await this.prisma.user.update({
+      where: { id },
+      data: { passwordHash },
+    });
+
+    return {
+      success: true,
+      message:
+        'Personel şifresi yenilendi.',
+    };
   }
 
   async setActive(
@@ -270,13 +403,11 @@ export class UsersService {
     }
 
     if (
-      (
-        target.role === UserRole.MANAGER ||
-        target.role ===
-          UserRole.SERVICE_ADVISOR ||
-        target.role ===
-          UserRole.TECHNICIAN
-      ) &&
+      [
+        UserRole.MANAGER,
+        UserRole.SERVICE_ADVISOR,
+        UserRole.TECHNICIAN,
+      ].includes(target.role) &&
       !branchId
     ) {
       throw new BadRequestException(
@@ -304,7 +435,8 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id },
       data: {
-        branchId: branchId ?? null,
+        branchId:
+          branchId ?? null,
       },
       select: {
         id: true,
@@ -312,6 +444,88 @@ export class UsersService {
         lastName: true,
         email: true,
         role: true,
+        branchId: true,
+        branch: true,
+      },
+    });
+  }
+
+  async changeRole(
+    organizationId: string,
+    actorId: string,
+    actorRole: UserRole,
+    id: string,
+    role: UserRole,
+  ) {
+    const target =
+      await this.prisma.user.findFirst({
+        where: {
+          id,
+          organizationId,
+        },
+      });
+
+    if (!target) {
+      throw new NotFoundException(
+        'Personel bulunamadı.',
+      );
+    }
+
+    if (
+      id === actorId &&
+      role !== target.role
+    ) {
+      throw new BadRequestException(
+        'Kendi rolünüzü değiştiremezsiniz.',
+      );
+    }
+
+    if (
+      (target.role === UserRole.OWNER ||
+        role === UserRole.OWNER) &&
+      actorRole !== UserRole.OWNER
+    ) {
+      throw new ForbiddenException(
+        'Kurucu rolünü yalnızca kurucu yönetebilir.',
+      );
+    }
+
+    if (
+      ![
+        UserRole.OWNER,
+        UserRole.MANAGER,
+        UserRole.SERVICE_ADVISOR,
+        UserRole.TECHNICIAN,
+      ].includes(role)
+    ) {
+      throw new BadRequestException(
+        'Bu rol bu panelde desteklenmiyor.',
+      );
+    }
+
+    if (
+      [
+        UserRole.MANAGER,
+        UserRole.SERVICE_ADVISOR,
+        UserRole.TECHNICIAN,
+      ].includes(role) &&
+      !target.branchId
+    ) {
+      throw new BadRequestException(
+        'Bu role geçiş için önce personele şube atayın.',
+      );
+    }
+
+    return this.prisma.user.update({
+      where: { id },
+      data: { role },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+        active: true,
         branchId: true,
         branch: true,
       },
