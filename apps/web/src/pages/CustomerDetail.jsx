@@ -74,6 +74,12 @@ export default function CustomerDetail() {
     useState([]);
   const [payments, setPayments] =
     useState([]);
+  const [makes, setMakes] =
+    useState([]);
+  const [vehicleModels, setVehicleModels] =
+    useState([]);
+  const [catalogWarning, setCatalogWarning] =
+    useState('');
 
   const [busy, setBusy] =
     useState(false);
@@ -155,6 +161,43 @@ export default function CustomerDetail() {
       address: '',
       notes: '',
     });
+
+  async function loadVehicleModels(
+    make,
+    year,
+  ) {
+    const cleanMake =
+      String(make || '').trim();
+
+    if (!cleanMake) {
+      setVehicleModels([]);
+      return;
+    }
+
+    try {
+      const response =
+        await api.get(
+          '/vehicle-catalog/models',
+          {
+            params: {
+              make: cleanMake,
+              year:
+                year || undefined,
+            },
+          },
+        );
+
+      setVehicleModels(
+        response.data,
+      );
+      setCatalogWarning('');
+    } catch {
+      setVehicleModels([]);
+      setCatalogWarning(
+        'Model kataloğu yüklenemedi. Modeli manuel yazabilirsiniz.',
+      );
+    }
+  }
 
   async function load() {
     setError('');
@@ -280,6 +323,18 @@ export default function CustomerDetail() {
         ),
       );
     });
+
+    api.get('/vehicle-catalog/makes')
+      .then((response) => {
+        setMakes(response.data);
+        setCatalogWarning('');
+      })
+      .catch(() => {
+        setMakes([]);
+        setCatalogWarning(
+          'Araç marka kataloğu yüklenemedi. Marka ve modeli manuel yazabilirsiniz.',
+        );
+      });
   }, [id, canViewFinance]);
 
   const quoteTotals =
@@ -1016,35 +1071,90 @@ export default function CustomerDetail() {
                 required
               />
 
-              <input
-                placeholder="Marka"
-                value={
-                  vehicleForm.brand
-                }
-                onChange={(e) =>
-                  setVehicleForm({
-                    ...vehicleForm,
-                    brand:
-                      e.target.value,
-                  })
-                }
-                required
-              />
+              <div>
+                <input
+                  list="customer-vehicle-makes"
+                  placeholder="Marka"
+                  value={
+                    vehicleForm.brand
+                  }
+                  onChange={(e) =>
+                    setVehicleForm({
+                      ...vehicleForm,
+                      brand:
+                        e.target.value,
+                      model: '',
+                    })
+                  }
+                  onBlur={() =>
+                    loadVehicleModels(
+                      vehicleForm.brand,
+                      vehicleForm.modelYear,
+                    )
+                  }
+                  required
+                />
 
-              <input
-                placeholder="Model"
-                value={
-                  vehicleForm.model
-                }
-                onChange={(e) =>
-                  setVehicleForm({
-                    ...vehicleForm,
-                    model:
-                      e.target.value,
-                  })
-                }
-                required
-              />
+                <datalist id="customer-vehicle-makes">
+                  {makes.map(
+                    (make) => (
+                      <option
+                        key={
+                          make.id
+                        }
+                        value={
+                          make.name
+                        }
+                      />
+                    ),
+                  )}
+                </datalist>
+
+                <div className="sub-text">
+                  {makes.length
+                    ? `${makes.length} marka yüklendi.`
+                    : 'Markayı manuel yazabilirsiniz.'}
+                </div>
+              </div>
+
+              <div>
+                <input
+                  list="customer-vehicle-models"
+                  placeholder="Model"
+                  value={
+                    vehicleForm.model
+                  }
+                  onChange={(e) =>
+                    setVehicleForm({
+                      ...vehicleForm,
+                      model:
+                        e.target.value,
+                    })
+                  }
+                  required
+                />
+
+                <datalist id="customer-vehicle-models">
+                  {vehicleModels.map(
+                    (item) => (
+                      <option
+                        key={
+                          `${item.makeId}-${item.id}-${item.model}`
+                        }
+                        value={
+                          item.model
+                        }
+                      />
+                    ),
+                  )}
+                </datalist>
+
+                <div className="sub-text">
+                  {vehicleModels.length
+                    ? `${vehicleModels.length} model yüklendi.`
+                    : 'Önce marka seçin veya modeli manuel yazın.'}
+                </div>
+              </div>
 
               <input
                 type="number"
@@ -1058,6 +1168,12 @@ export default function CustomerDetail() {
                     modelYear:
                       e.target.value,
                   })
+                }
+                onBlur={() =>
+                  loadVehicleModels(
+                    vehicleForm.brand,
+                    vehicleForm.modelYear,
+                  )
                 }
               />
 
@@ -1144,6 +1260,12 @@ export default function CustomerDetail() {
                   VIN/şasi numarasını boşluksuz girin. Sistem otomatik olarak büyük harfe çevirir.
                 </div>
               </div>
+
+              {catalogWarning && (
+                <div className="page-message error-message full">
+                  {catalogWarning}
+                </div>
+              )}
 
               <button
                 className="primary-button full"
