@@ -1,20 +1,43 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { UserRole } from '@prisma/client';
+
 import { OrganizationsService } from './organizations.service';
-import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { UpdateOrganizationDto } from './dto/update-organization.dto';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('organizations')
+@UseGuards(AuthGuard('jwt'))
 export class OrganizationsController {
   constructor(
     private readonly organizationsService: OrganizationsService,
   ) {}
 
-  @Post()
-  create(@Body() data: CreateOrganizationDto) {
-    return this.organizationsService.create(data);
+  @Get('me')
+  findMine(@Req() req: any) {
+    return this.organizationsService.findMine(
+      req.user.organizationId,
+    );
   }
 
-  @Get()
-  findAll() {
-    return this.organizationsService.findAll();
+  @Patch('me')
+  @Roles(UserRole.OWNER, UserRole.MANAGER)
+  @UseGuards(RolesGuard)
+  updateMine(
+    @Req() req: any,
+    @Body() dto: UpdateOrganizationDto,
+  ) {
+    return this.organizationsService.updateMine(
+      req.user.organizationId,
+      dto,
+    );
   }
 }

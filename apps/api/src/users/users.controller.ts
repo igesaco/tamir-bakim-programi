@@ -1,28 +1,101 @@
 import {
+  Body,
   Controller,
   Get,
   NotFoundException,
+  Param,
+  Patch,
+  Post,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { UserRole } from '@prisma/client';
+
 import { UsersService } from './users.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserActiveDto } from './dto/update-user-active.dto';
+import { UpdateUserBranchDto } from './dto/update-user-branch.dto';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('users')
+@UseGuards(AuthGuard('jwt'))
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+  ) {}
 
-  @UseGuards(AuthGuard('jwt'))
   @Get('me')
   async me(@Req() req: any) {
-    const user = await this.usersService.findById(req.user.sub);
+    const user = await this.usersService.findById(
+      req.user.sub,
+    );
 
     if (!user) {
-      throw new NotFoundException('KullanÄ±cÄ± bulunamadÄ±.');
+      throw new NotFoundException(
+        'Kullanýcý bulunamadý.',
+      );
     }
 
     const { passwordHash, ...safeUser } = user;
 
     return safeUser;
+  }
+
+  @Get()
+  @Roles(UserRole.OWNER, UserRole.MANAGER)
+  @UseGuards(RolesGuard)
+  findAll(@Req() req: any) {
+    return this.usersService.findAll(
+      req.user.organizationId,
+    );
+  }
+
+  @Post()
+  @Roles(UserRole.OWNER, UserRole.MANAGER)
+  @UseGuards(RolesGuard)
+  create(
+    @Req() req: any,
+    @Body() dto: CreateUserDto,
+  ) {
+    return this.usersService.create(
+      req.user.organizationId,
+      req.user.role,
+      dto,
+    );
+  }
+
+  @Patch(':id/active')
+  @Roles(UserRole.OWNER, UserRole.MANAGER)
+  @UseGuards(RolesGuard)
+  setActive(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateUserActiveDto,
+  ) {
+    return this.usersService.setActive(
+      req.user.organizationId,
+      req.user.sub,
+      req.user.role,
+      id,
+      dto.active,
+    );
+  }
+
+  @Patch(':id/branch')
+  @Roles(UserRole.OWNER, UserRole.MANAGER)
+  @UseGuards(RolesGuard)
+  changeBranch(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateUserBranchDto,
+  ) {
+    return this.usersService.changeBranch(
+      req.user.organizationId,
+      req.user.role,
+      id,
+      dto.branchId,
+    );
   }
 }

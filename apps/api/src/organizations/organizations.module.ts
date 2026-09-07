@@ -1,9 +1,14 @@
 import { Module } from '@nestjs/common';
-import { OrganizationsService } from './organizations.service';
+
 import { OrganizationsController } from './organizations.controller';
+import { OrganizationsService } from './organizations.service';
+import { RolesGuard } from '../auth/roles.guard';
 
 @Module({
-  providers: [OrganizationsService],
-  controllers: [OrganizationsController]
+  controllers: [OrganizationsController],
+  providers: [
+    OrganizationsService,
+    RolesGuard,
+  ],
 })
 export class OrganizationsModule {}
