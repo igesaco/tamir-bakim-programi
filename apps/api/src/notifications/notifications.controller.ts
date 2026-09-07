@@ -37,6 +37,7 @@ export class NotificationsController {
     return this.notificationsService.create(
       req.user.organizationId,
       req.user.branchId,
+      req.user.role,
       dto,
     );
   }
@@ -45,6 +46,8 @@ export class NotificationsController {
   findAll(@Req() req: any) {
     return this.notificationsService.findAll(
       req.user.organizationId,
+      req.user.role,
+      req.user.branchId,
     );
   }
 
@@ -56,6 +59,8 @@ export class NotificationsController {
     return this.notificationsService.markRead(
       req.user.organizationId,
       id,
+      req.user.role,
+      req.user.branchId,
     );
   }
 }
