@@ -148,19 +148,23 @@ export default function ServiceOrderDetail() {
           </strong>
         </div>
 
-        <div className="stat-card">
-          <span>İşlem Tutarı</span>
-          <strong>
-            {itemTotal.toLocaleString('tr-TR')} ₺
-          </strong>
-        </div>
+        {user?.role !== 'TECHNICIAN' && (
+          <>
+            <div className="stat-card">
+              <span>İşlem Tutarı</span>
+              <strong>
+                {itemTotal.toLocaleString('tr-TR')} ₺
+              </strong>
+            </div>
 
-        <div className="stat-card">
-          <span>Ödenen</span>
-          <strong>
-            {paymentTotal.toLocaleString('tr-TR')} ₺
-          </strong>
-        </div>
+            <div className="stat-card">
+              <span>Ödenen</span>
+              <strong>
+                {paymentTotal.toLocaleString('tr-TR')} ₺
+              </strong>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="panel-card spaced-card">
