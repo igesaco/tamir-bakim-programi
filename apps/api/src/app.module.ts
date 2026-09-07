@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+
 import { PrismaModule } from './prisma/prisma.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { BranchesModule } from './branches/branches.module';
@@ -22,7 +26,32 @@ import { AuditModule } from './audit/audit.module';
 import { ReportsModule } from './reports/reports.module';
 
 @Module({
-  imports: [PrismaModule, OrganizationsModule, BranchesModule, AuthModule, UsersModule, CustomersModule, VehiclesModule, AppointmentsModule, InspectionsModule, ServiceOrdersModule, QuotesModule, MaintenanceModule, InventoryModule, SuppliersModule, MediaModule, NotificationsModule, BillingModule, AuditModule, ReportsModule],
+  imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
+    }),
+
+    PrismaModule,
+    OrganizationsModule,
+    BranchesModule,
+    AuthModule,
+    UsersModule,
+    CustomersModule,
+    VehiclesModule,
+    AppointmentsModule,
+    InspectionsModule,
+    ServiceOrdersModule,
+    QuotesModule,
+    MaintenanceModule,
+    InventoryModule,
+    SuppliersModule,
+    MediaModule,
+    NotificationsModule,
+    BillingModule,
+    AuditModule,
+    ReportsModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
