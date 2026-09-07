@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -9,8 +10,8 @@ import * as bcrypt from 'bcrypt';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
-import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
@@ -20,97 +21,175 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async register(dto: RegisterDto) {
-    const existingUser = await this.usersService.findByEmail(dto.email);
-
-    if (existingUser) {
-      throw new BadRequestException('Bu e-posta adresi zaten kayıtlı.');
+  private publicRegistrationEnabled() {
+    if (
+      process.env.ALLOW_PUBLIC_REGISTRATION ===
+      'true'
+    ) {
+      return true;
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, 12);
+    return process.env.NODE_ENV !== 'production';
+  }
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const organization = await tx.organization.create({
-        data: {
-          name: dto.organizationName,
+  async register(dto: RegisterDto) {
+    if (!this.publicRegistrationEnabled()) {
+      throw new ForbiddenException(
+        'Yeni işletme kaydı şu anda kapalı.',
+      );
+    }
+
+    const email = dto.email
+      .trim()
+      .toLocaleLowerCase('tr-TR');
+
+    const existingUser =
+      await this.usersService.findByEmail(
+        email,
+      );
+
+    if (existingUser) {
+      throw new BadRequestException(
+        'Bu e-posta adresi zaten kayıtlı.',
+      );
+    }
+
+    const passwordHash =
+      await bcrypt.hash(
+        dto.password,
+        12,
+      );
+
+    const result =
+      await this.prisma.$transaction(
+        async (tx) => {
+          const organization =
+            await tx.organization.create({
+              data: {
+                name:
+                  dto.organizationName.trim(),
+              },
+            });
+
+          const branch =
+            await tx.branch.create({
+              data: {
+                name:
+                  dto.branchName.trim(),
+                organizationId:
+                  organization.id,
+              },
+            });
+
+          const user =
+            await tx.user.create({
+              data: {
+                firstName:
+                  dto.firstName.trim(),
+                lastName:
+                  dto.lastName.trim(),
+                email,
+                phone:
+                  dto.phone?.trim(),
+                passwordHash,
+                role:
+                  UserRole.OWNER,
+                organizationId:
+                  organization.id,
+                branchId:
+                  branch.id,
+              },
+            });
+
+          return {
+            organization,
+            branch,
+            user,
+          };
         },
-      });
+      );
 
-      const branch = await tx.branch.create({
-        data: {
-          name: dto.branchName,
-          organizationId: organization.id,
-        },
-      });
-
-      const user = await tx.user.create({
-        data: {
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          email: dto.email,
-          phone: dto.phone,
-          passwordHash,
-          role: UserRole.OWNER,
-          organizationId: organization.id,
-          branchId: branch.id,
-        },
-      });
-
-      return {
-        organization,
-        branch,
-        user,
-      };
-    });
-
-    const token = await this.createToken(result.user);
+    const token =
+      await this.createToken(
+        result.user,
+      );
 
     return {
       token,
       user: {
-        id: result.user.id,
-        firstName: result.user.firstName,
-        lastName: result.user.lastName,
-        email: result.user.email,
-        role: result.user.role,
+        id:
+          result.user.id,
+        firstName:
+          result.user.firstName,
+        lastName:
+          result.user.lastName,
+        email:
+          result.user.email,
+        role:
+          result.user.role,
       },
-      organization: result.organization,
-      branch: result.branch,
+      organization:
+        result.organization,
+      branch:
+        result.branch,
     };
   }
 
   async login(dto: LoginDto) {
-    const user = await this.usersService.findByEmail(dto.email);
+    const user =
+      await this.usersService.findByEmail(
+        dto.email,
+      );
 
     if (!user) {
-      throw new UnauthorizedException('E-posta veya şifre hatalı.');
+      throw new UnauthorizedException(
+        'E-posta veya şifre hatalı.',
+      );
     }
 
-    const passwordCorrect = await bcrypt.compare(
-      dto.password,
-      user.passwordHash,
-    );
+    const passwordCorrect =
+      await bcrypt.compare(
+        dto.password,
+        user.passwordHash,
+      );
 
     if (!passwordCorrect) {
-      throw new UnauthorizedException('E-posta veya şifre hatalı.');
+      throw new UnauthorizedException(
+        'E-posta veya şifre hatalı.',
+      );
     }
 
     if (!user.active) {
-      throw new UnauthorizedException('Kullanıcı hesabı aktif değil.');
+      throw new UnauthorizedException(
+        'Kullanıcı hesabı aktif değil.',
+      );
     }
 
-    const token = await this.createToken(user);
+    if (!user.organization.active) {
+      throw new UnauthorizedException(
+        'İşletme hesabı aktif değil.',
+      );
+    }
+
+    const token =
+      await this.createToken(user);
 
     return {
       token,
       user: {
         id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        organizationId: user.organizationId,
-        branchId: user.branchId,
+        firstName:
+          user.firstName,
+        lastName:
+          user.lastName,
+        email:
+          user.email,
+        role:
+          user.role,
+        organizationId:
+          user.organizationId,
+        branchId:
+          user.branchId,
       },
     };
   }
@@ -126,8 +205,10 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
-      organizationId: user.organizationId,
-      branchId: user.branchId,
+      organizationId:
+        user.organizationId,
+      branchId:
+        user.branchId,
     });
   }
 }
