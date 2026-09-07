@@ -31,6 +31,7 @@ export default function Cashier() {
   const [quotes, setQuotes] = useState([]);
   const [branches, setBranches] = useState([]);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
 
   const [form, setForm] = useState({
@@ -131,6 +132,7 @@ export default function Cashier() {
 
     setBusy(true);
     setError('');
+    setMessage('');
 
     try {
       await api.post(
@@ -168,6 +170,10 @@ export default function Cashier() {
         reference: '',
       });
 
+      setMessage(
+        'Tahsilat kaydedildi.',
+      );
+
       await load();
     } catch (err) {
       const message =
@@ -181,6 +187,53 @@ export default function Cashier() {
       );
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function updatePaymentStatus(
+    payment,
+    status,
+  ) {
+    const label =
+      status === 'REFUNDED'
+        ? 'iade'
+        : 'iptal';
+
+    const approved =
+      window.confirm(
+        `${payment.customer?.firstName || ''} ${payment.customer?.lastName || ''} için ${money(payment.amount)} ₺ tahsilatı ${label} etmek istediğinize emin misiniz?`,
+      );
+
+    if (!approved) {
+      return;
+    }
+
+    setError('');
+    setMessage('');
+
+    try {
+      await api.patch(
+        `/billing/payments/${payment.id}/status`,
+        { status },
+      );
+
+      setMessage(
+        status === 'REFUNDED'
+          ? 'Tahsilat iade olarak işaretlendi.'
+          : 'Tahsilat iptal edildi.',
+      );
+
+      await load();
+    } catch (err) {
+      const detail =
+        err?.response?.data?.message;
+
+      setError(
+        Array.isArray(detail)
+          ? detail.join(', ')
+          : detail ||
+              'Tahsilat durumu güncellenemedi.',
+      );
     }
   }
 
@@ -266,6 +319,12 @@ export default function Cashier() {
           </strong>
         </div>
       </div>
+
+      {message && (
+        <div className="page-message success-message">
+          {message}
+        </div>
+      )}
 
       {error && (
         <div className="page-message error-message">
@@ -482,7 +541,9 @@ export default function Cashier() {
                   <th>Şube</th>
                   <th>İş Emri</th>
                   <th>Yöntem</th>
+                  <th>Durum</th>
                   <th>Tutar</th>
+                  <th></th>
                 </tr>
               </thead>
 
@@ -526,6 +587,21 @@ export default function Cashier() {
                       </td>
 
                       <td>
+                        <span
+                          className={
+                            payment.status ===
+                            'PAID'
+                              ? 'status-badge success'
+                              : 'status-badge danger'
+                          }
+                        >
+                          {statusLabel(
+                            payment.status,
+                          )}
+                        </span>
+                      </td>
+
+                      <td>
                         <strong>
                           {money(
                             payment.amount,
@@ -533,12 +609,43 @@ export default function Cashier() {
                           ₺
                         </strong>
                       </td>
+
+                      <td>
+                        {payment.status ===
+                          'PAID' && (
+                          <div className="action-row">
+                            <button
+                              className="table-action danger-text"
+                              onClick={() =>
+                                updatePaymentStatus(
+                                  payment,
+                                  'CANCELLED',
+                                )
+                              }
+                            >
+                              İptal
+                            </button>
+
+                            <button
+                              className="table-action"
+                              onClick={() =>
+                                updatePaymentStatus(
+                                  payment,
+                                  'REFUNDED',
+                                )
+                              }
+                            >
+                              İade
+                            </button>
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   ))}
 
                 {!payments.length && (
                   <tr>
-                    <td colSpan="6">
+                    <td colSpan="8">
                       Henüz tahsilat kaydı yok.
                     </td>
                   </tr>
