@@ -3,6 +3,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
 } from 'class-validator';
 import { ServiceItemType } from '@prisma/client';
@@ -35,4 +36,10 @@ export class CreateServiceOrderItemDto {
   @IsNumber()
   @Min(0)
   discountAmount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  vatRate?: number;
 }
