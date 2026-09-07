@@ -44,6 +44,7 @@ export default function Users() {
   }, []);
 
   const branchRequired = [
+    'MANAGER',
     'SERVICE_ADVISOR',
     'TECHNICIAN',
   ].includes(form.role);
