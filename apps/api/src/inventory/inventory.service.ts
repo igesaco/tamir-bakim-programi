@@ -338,7 +338,8 @@ export class InventoryService {
       const order =
         await this.prisma.serviceOrder.findFirst({
           where: {
-            id: dto.serviceOrderId,
+            id:
+              dto.serviceOrderId,
             organizationId,
             branchId:
               validBranchId,
@@ -375,6 +376,45 @@ export class InventoryService {
             },
           });
 
+        let serviceOrderItemId:
+          | string
+          | null = null;
+
+        if (dto.serviceOrderId) {
+          const total =
+            dto.quantity *
+            Number(
+              inventory.part
+                .salePrice,
+            );
+
+          const serviceOrderItem =
+            await tx.serviceOrderItem.create({
+              data: {
+                serviceOrderId:
+                  dto.serviceOrderId,
+                partId:
+                  dto.partId,
+                type:
+                  ServiceItemType.PART,
+                name:
+                  inventory.part.name,
+                description:
+                  dto.note,
+                quantity:
+                  dto.quantity,
+                unitPrice:
+                  inventory.part
+                    .salePrice,
+                totalPrice:
+                  total,
+              },
+            });
+
+          serviceOrderItemId =
+            serviceOrderItem.id;
+        }
+
         await tx.inventoryMovement.create({
           data: {
             organizationId,
@@ -391,42 +431,15 @@ export class InventoryService {
             quantity:
               dto.quantity,
             unitCost:
-              dto.unitCost,
+              dto.unitCost ??
+              inventory.part
+                .purchasePrice,
             note:
-              dto.note,
+              serviceOrderItemId
+                ? `SERVICE_ORDER_ITEM:${serviceOrderItemId}`
+                : dto.note,
           },
         });
-
-        if (dto.serviceOrderId) {
-          const total =
-            dto.quantity *
-            Number(
-              inventory.part
-                .salePrice,
-            );
-
-          await tx.serviceOrderItem.create({
-            data: {
-              serviceOrderId:
-                dto.serviceOrderId,
-              partId:
-                dto.partId,
-              type:
-                ServiceItemType.PART,
-              name:
-                inventory.part.name,
-              description:
-                dto.note,
-              quantity:
-                dto.quantity,
-              unitPrice:
-                inventory.part
-                  .salePrice,
-              totalPrice:
-                total,
-            },
-          });
-        }
 
         return updatedInventory;
       },
