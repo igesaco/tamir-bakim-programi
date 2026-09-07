@@ -12,12 +12,12 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { UserRole } from '@prisma/client';
 
-import { UsersService } from './users.service';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserActiveDto } from './dto/update-user-active.dto';
 import { UpdateUserBranchDto } from './dto/update-user-branch.dto';
-import { Roles } from '../auth/roles.decorator';
-import { RolesGuard } from '../auth/roles.guard';
+import { UsersService } from './users.service';
 
 @Controller('users')
 @UseGuards(AuthGuard('jwt'))
@@ -28,23 +28,45 @@ export class UsersController {
 
   @Get('me')
   async me(@Req() req: any) {
-    const user = await this.usersService.findById(
-      req.user.sub,
-    );
+    const user =
+      await this.usersService.findById(
+        req.user.sub,
+      );
 
     if (!user) {
       throw new NotFoundException(
-        'Kullanýcý bulunamadý.',
+        'KullanÄ±cÄ± bulunamadÄ±.',
       );
     }
 
-    const { passwordHash, ...safeUser } = user;
+    const {
+      passwordHash,
+      ...safeUser
+    } = user;
 
     return safeUser;
   }
 
+  @Get('technicians')
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+  )
+  @UseGuards(RolesGuard)
+  findTechnicians(@Req() req: any) {
+    return this.usersService.findTechnicians(
+      req.user.organizationId,
+      req.user.role,
+      req.user.branchId,
+    );
+  }
+
   @Get()
-  @Roles(UserRole.OWNER, UserRole.MANAGER)
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+  )
   @UseGuards(RolesGuard)
   findAll(@Req() req: any) {
     return this.usersService.findAll(
@@ -53,7 +75,10 @@ export class UsersController {
   }
 
   @Post()
-  @Roles(UserRole.OWNER, UserRole.MANAGER)
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+  )
   @UseGuards(RolesGuard)
   create(
     @Req() req: any,
@@ -67,7 +92,10 @@ export class UsersController {
   }
 
   @Patch(':id/active')
-  @Roles(UserRole.OWNER, UserRole.MANAGER)
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+  )
   @UseGuards(RolesGuard)
   setActive(
     @Req() req: any,
@@ -84,7 +112,10 @@ export class UsersController {
   }
 
   @Patch(':id/branch')
-  @Roles(UserRole.OWNER, UserRole.MANAGER)
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+  )
   @UseGuards(RolesGuard)
   changeBranch(
     @Req() req: any,
