@@ -41,6 +41,7 @@ export class QuotesController {
     return this.quotesService.create(
       req.user.organizationId,
       req.user.branchId,
+      req.user.role,
       dto,
     );
   }
@@ -49,6 +50,8 @@ export class QuotesController {
   findAll(@Req() req: any) {
     return this.quotesService.findAll(
       req.user.organizationId,
+      req.user.role,
+      req.user.branchId,
     );
   }
 
@@ -60,6 +63,8 @@ export class QuotesController {
     return this.quotesService.findOne(
       req.user.organizationId,
       id,
+      req.user.role,
+      req.user.branchId,
     );
   }
 
@@ -77,6 +82,8 @@ export class QuotesController {
       req.user.organizationId,
       id,
       status,
+      req.user.role,
+      req.user.branchId,
     );
   }
 }
