@@ -15,10 +15,10 @@ import { RolesGuard } from '../auth/roles.guard';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { SuppliersService } from './suppliers.service';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('suppliers')
 @Roles(UserRole.OWNER, UserRole.MANAGER)
-@UseGuards(RolesGuard)
+
 export class SuppliersController {
   constructor(
     private readonly suppliersService: SuppliersService,
