@@ -16,29 +16,9 @@ const menu = [
     roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
   },
   {
-    path: '/vehicles',
-    label: 'Araçlar',
-    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
-  },
-  {
-    path: '/appointments',
-    label: 'Randevular',
-    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
-  },
-  {
     path: '/service-orders',
     label: 'İş Emirleri',
     roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR', 'TECHNICIAN'],
-  },
-  {
-    path: '/quotes',
-    label: 'Teklifler',
-    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
-  },
-  {
-    path: '/maintenance',
-    label: 'Bakım',
-    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
   },
   {
     path: '/inventory',
