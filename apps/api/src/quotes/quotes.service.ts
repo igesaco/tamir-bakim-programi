@@ -6,6 +6,7 @@ import {
 import {
   QuoteStatus,
   ServiceItemType,
+  UserRole,
 } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
@@ -20,6 +21,7 @@ export class QuotesService {
   async create(
     organizationId: string,
     branchId: string | null,
+    actorRole: UserRole,
     dto: CreateQuoteDto,
   ) {
     if (!branchId) {
@@ -27,6 +29,9 @@ export class QuotesService {
         'Şube seçimi gerekli.',
       );
     }
+
+    let effectiveBranchId =
+      branchId;
 
     if (!dto.items?.length) {
       throw new BadRequestException(
@@ -57,14 +62,21 @@ export class QuotesService {
             organizationId,
             customerId: dto.customerId,
             vehicleId: dto.vehicleId,
+            ...(actorRole ===
+            UserRole.SERVICE_ADVISOR
+              ? { branchId }
+              : {}),
           },
         });
 
       if (!serviceOrder) {
         throw new BadRequestException(
-          'İş emri teklif bilgileriyle eşleşmiyor.',
+          'İş emri teklif bilgileriyle eşleşmiyor veya bu iş emrine erişim yetkiniz yok.',
         );
       }
+
+      effectiveBranchId =
+        serviceOrder.branchId;
     }
 
     const quoteNumber =
@@ -158,7 +170,7 @@ export class QuotesService {
     return this.prisma.quote.create({
       data: {
         organizationId,
-        branchId,
+        branchId: effectiveBranchId,
         customerId: dto.customerId,
         vehicleId: dto.vehicleId,
         serviceOrderId:
@@ -183,9 +195,23 @@ export class QuotesService {
     });
   }
 
-  findAll(organizationId: string) {
+  findAll(
+    organizationId: string,
+    actorRole: UserRole,
+    branchId: string | null,
+  ) {
     return this.prisma.quote.findMany({
-      where: { organizationId },
+      where: {
+        organizationId,
+        ...(actorRole ===
+        UserRole.SERVICE_ADVISOR
+          ? {
+              branchId:
+                branchId ??
+                '__branch_not_assigned__',
+            }
+          : {}),
+      },
       include: {
         customer: true,
         vehicle: true,
@@ -200,12 +226,22 @@ export class QuotesService {
   async findOne(
     organizationId: string,
     id: string,
+    actorRole: UserRole,
+    branchId: string | null,
   ) {
     const quote =
       await this.prisma.quote.findFirst({
         where: {
           id,
           organizationId,
+          ...(actorRole ===
+          UserRole.SERVICE_ADVISOR
+            ? {
+                branchId:
+                  branchId ??
+                  '__branch_not_assigned__',
+              }
+            : {}),
         },
         include: {
           organization: true,
@@ -230,12 +266,22 @@ export class QuotesService {
     organizationId: string,
     id: string,
     status: QuoteStatus,
+    actorRole: UserRole,
+    branchId: string | null,
   ) {
     const quote =
       await this.prisma.quote.findFirst({
         where: {
           id,
           organizationId,
+          ...(actorRole ===
+          UserRole.SERVICE_ADVISOR
+            ? {
+                branchId:
+                  branchId ??
+                  '__branch_not_assigned__',
+              }
+            : {}),
         },
       });
 
