@@ -1,8 +1,11 @@
 ﻿import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import api from '../api/client';
 
-const statuses = [
+import api from '../api/client';
+import { useAuth } from '../auth/AuthContext';
+import { statusLabel } from '../utils/status';
+
+const allStatuses = [
   'ARRIVED',
   'ACCEPTED',
   'INSPECTION',
@@ -17,10 +20,32 @@ const statuses = [
   'CANCELLED',
 ];
 
+const technicianStatuses = [
+  'ACCEPTED',
+  'IN_PROGRESS',
+  'PART_WAITING',
+  'QUALITY_CONTROL',
+  'READY',
+];
+
 export default function ServiceOrderDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
 
   const [order, setOrder] = useState(null);
+  const [technicians, setTechnicians] = useState([]);
+  const [assignmentBusy, setAssignmentBusy] = useState(false);
+
+  const canAssign = [
+    'OWNER',
+    'MANAGER',
+    'SERVICE_ADVISOR',
+  ].includes(user?.role);
+
+  const statuses =
+    user?.role === 'TECHNICIAN'
+      ? technicianStatuses
+      : allStatuses;
 
   async function load() {
     const response = await api.get(
@@ -32,7 +57,14 @@ export default function ServiceOrderDetail() {
 
   useEffect(() => {
     load();
-  }, [id]);
+
+    if (canAssign) {
+      api.get('/users/technicians')
+        .then((response) => {
+          setTechnicians(response.data);
+        });
+    }
+  }, [id, canAssign]);
 
   async function changeStatus(status) {
     await api.patch(
@@ -41,6 +73,24 @@ export default function ServiceOrderDetail() {
     );
 
     await load();
+  }
+
+  async function assignTechnician(technicianId) {
+    setAssignmentBusy(true);
+
+    try {
+      await api.patch(
+        `/service-orders/${id}/assign-technician`,
+        {
+          technicianId:
+            technicianId || null,
+        },
+      );
+
+      await load();
+    } finally {
+      setAssignmentBusy(false);
+    }
   }
 
   if (!order) {
@@ -85,7 +135,7 @@ export default function ServiceOrderDetail() {
         <div className="stat-card">
           <span>Durum</span>
           <strong className="smaller-stat">
-            {order.status}
+            {statusLabel(order.status)}
           </strong>
         </div>
 
@@ -101,20 +151,14 @@ export default function ServiceOrderDetail() {
         <div className="stat-card">
           <span>İşlem Tutarı</span>
           <strong>
-            {itemTotal.toLocaleString(
-              'tr-TR',
-            )}{' '}
-            ₺
+            {itemTotal.toLocaleString('tr-TR')} ₺
           </strong>
         </div>
 
         <div className="stat-card">
           <span>Ödenen</span>
           <strong>
-            {paymentTotal.toLocaleString(
-              'tr-TR',
-            )}{' '}
-            ₺
+            {paymentTotal.toLocaleString('tr-TR')} ₺
           </strong>
         </div>
       </div>
@@ -135,11 +179,53 @@ export default function ServiceOrderDetail() {
                 changeStatus(status)
               }
             >
-              {status}
+              {statusLabel(status)}
             </button>
           ))}
         </div>
       </div>
+
+      {canAssign && (
+        <div className="panel-card spaced-card">
+          <h3>Personel Atama</h3>
+
+          <select
+            value={
+              order.assignedTechnicianId || ''
+            }
+            disabled={assignmentBusy}
+            onChange={(e) =>
+              assignTechnician(
+                e.target.value,
+              )
+            }
+          >
+            <option value="">
+              Teknisyen atanmamış
+            </option>
+
+            {technicians
+              .filter(
+                (technician) =>
+                  !order.branchId ||
+                  technician.branchId ===
+                    order.branchId,
+              )
+              .map((technician) => (
+                <option
+                  key={technician.id}
+                  value={technician.id}
+                >
+                  {technician.firstName}{' '}
+                  {technician.lastName}
+                  {technician.branch?.name
+                    ? ` - ${technician.branch.name}`
+                    : ''}
+                </option>
+              ))}
+          </select>
+        </div>
+      )}
 
       <div className="dashboard-grid spaced-card">
         <div className="panel-card">
@@ -172,8 +258,7 @@ export default function ServiceOrderDetail() {
             <div>
               <span>Telefon</span>
               <strong>
-                {order.customer?.phone ||
-                  '-'}
+                {order.customer?.phone || '-'}
               </strong>
             </div>
           </div>
@@ -209,130 +294,125 @@ export default function ServiceOrderDetail() {
         </div>
       </div>
 
-      <div className="panel-card spaced-card">
-        <h3>Yapılan İşlemler / Parçalar</h3>
+      {user?.role !== 'TECHNICIAN' && (
+        <>
+          <div className="panel-card spaced-card">
+            <h3>Yapılan İşlemler / Parçalar</h3>
 
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Tür</th>
-                <th>İşlem</th>
-                <th>Miktar</th>
-                <th>Birim</th>
-                <th>Toplam</th>
-              </tr>
-            </thead>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tür</th>
+                    <th>İşlem</th>
+                    <th>Miktar</th>
+                    <th>Birim</th>
+                    <th>Toplam</th>
+                  </tr>
+                </thead>
 
-            <tbody>
-              {order.items?.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.type}</td>
-                  <td>{item.name}</td>
-                  <td>{item.quantity}</td>
-                  <td>
+                <tbody>
+                  {order.items?.map((item) => (
+                    <tr key={item.id}>
+                      <td>{statusLabel(item.type)}</td>
+                      <td>{item.name}</td>
+                      <td>{item.quantity}</td>
+                      <td>
+                        {Number(
+                          item.unitPrice || 0,
+                        ).toLocaleString('tr-TR')} ₺
+                      </td>
+                      <td>
+                        {Number(
+                          item.totalPrice || 0,
+                        ).toLocaleString('tr-TR')} ₺
+                      </td>
+                    </tr>
+                  ))}
+
+                  {!order.items?.length && (
+                    <tr>
+                      <td colSpan="5">
+                        Henüz işlem eklenmemiş.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="dashboard-grid spaced-card">
+            <div className="panel-card">
+              <h3>Kontroller</h3>
+
+              {order.inspections?.map(
+                (inspection) => (
+                  <div
+                    className="detail-record"
+                    key={inspection.id}
+                  >
+                    <strong>
+                      {statusLabel(inspection.status)}
+                    </strong>
+
+                    <span>
+                      KM: {inspection.mileage}
+                    </span>
+
+                    <span>
+                      Yakıt:{' '}
+                      {inspection.fuelLevel || '-'}
+                    </span>
+
+                    <span>
+                      Hasar:{' '}
+                      {inspection.existingDamage || '-'}
+                    </span>
+                  </div>
+                ),
+              )}
+
+              {!order.inspections?.length && (
+                <div className="empty-state">
+                  Kontrol kaydı yok.
+                </div>
+              )}
+            </div>
+
+            <div className="panel-card">
+              <h3>Teklifler</h3>
+
+              {order.quotes?.map((quote) => (
+                <div
+                  className="detail-record"
+                  key={quote.id}
+                >
+                  <strong>
+                    {quote.quoteNumber}
+                  </strong>
+
+                  <span>
+                    {statusLabel(quote.status)}
+                  </span>
+
+                  <span>
                     {Number(
-                      item.unitPrice || 0,
-                    ).toLocaleString(
-                      'tr-TR',
-                    )}{' '}
-                    ₺
-                  </td>
-                  <td>
-                    {Number(
-                      item.totalPrice || 0,
-                    ).toLocaleString(
-                      'tr-TR',
-                    )}{' '}
-                    ₺
-                  </td>
-                </tr>
+                      quote.total || 0,
+                    ).toLocaleString('tr-TR')} ₺
+                  </span>
+                </div>
               ))}
 
-              {!order.items?.length && (
-                <tr>
-                  <td colSpan="5">
-                    Henüz işlem eklenmemiş.
-                  </td>
-                </tr>
+              {!order.quotes?.length && (
+                <div className="empty-state">
+                  Teklif yok.
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="dashboard-grid spaced-card">
-        <div className="panel-card">
-          <h3>Kontroller</h3>
-
-          {order.inspections?.map(
-            (inspection) => (
-              <div
-                className="detail-record"
-                key={inspection.id}
-              >
-                <strong>
-                  {inspection.status}
-                </strong>
-
-                <span>
-                  KM: {inspection.mileage}
-                </span>
-
-                <span>
-                  Yakıt:{' '}
-                  {inspection.fuelLevel ||
-                    '-'}
-                </span>
-
-                <span>
-                  Hasar:{' '}
-                  {inspection.existingDamage ||
-                    '-'}
-                </span>
-              </div>
-            ),
-          )}
-
-          {!order.inspections?.length && (
-            <div className="empty-state">
-              Kontrol kaydı yok.
             </div>
-          )}
-        </div>
-
-        <div className="panel-card">
-          <h3>Teklifler</h3>
-
-          {order.quotes?.map((quote) => (
-            <div
-              className="detail-record"
-              key={quote.id}
-            >
-              <strong>
-                {quote.quoteNumber}
-              </strong>
-
-              <span>{quote.status}</span>
-
-              <span>
-                {Number(
-                  quote.total || 0,
-                ).toLocaleString(
-                  'tr-TR',
-                )}{' '}
-                ₺
-              </span>
-            </div>
-          ))}
-
-          {!order.quotes?.length && (
-            <div className="empty-state">
-              Teklif yok.
-            </div>
-          )}
-        </div>
-      </div>
+          </div>
+        </>
+      )}
     </>
   );
 }
