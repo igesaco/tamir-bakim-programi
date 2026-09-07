@@ -29,9 +29,9 @@ export class RolesGuard
           context.getHandler(),
           context.getClass(),
         ],
-      );
+      ) ?? [];
 
-    if (!requiredRoles?.length) {
+    if (!requiredRoles.length) {
       return true;
     }
 
@@ -40,19 +40,30 @@ export class RolesGuard
         .switchToHttp()
         .getRequest();
 
-    const user = request.user;
+    const rawRole =
+      request.user?.role;
 
-    if (!user?.role) {
+    if (!rawRole) {
       throw new ForbiddenException(
         'Yetkiniz bulunmuyor.',
       );
     }
 
-    if (
-      !requiredRoles.includes(
-        user.role,
-      )
-    ) {
+    const userRole =
+      String(rawRole)
+        .trim()
+        .toUpperCase();
+
+    const allowed =
+      requiredRoles.some(
+        (role) =>
+          String(role)
+            .trim()
+            .toUpperCase() ===
+          userRole,
+      );
+
+    if (!allowed) {
       throw new ForbiddenException(
         'Bu işlem için yetkiniz bulunmuyor.',
       );
