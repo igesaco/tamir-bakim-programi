@@ -1,4 +1,4 @@
-﻿import {
+import {
   IsEmail,
   IsOptional,
   IsString,
@@ -22,6 +22,10 @@ export class UpdateCustomerDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @IsOptional()
+  @IsString()
+  branchId?: string;
 
   @IsOptional()
   @IsString()
