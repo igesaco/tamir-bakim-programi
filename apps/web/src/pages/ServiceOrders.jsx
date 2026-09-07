@@ -1,15 +1,30 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { Link } from 'react-router-dom';
+
 import api from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 import { statusLabel } from '../utils/status';
 
 export default function ServiceOrders() {
+  const { user } = useAuth();
+
   const [orders, setOrders] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
+  const [technicians, setTechnicians] = useState([]);
 
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
+
+  const canCreate = [
+    'OWNER',
+    'MANAGER',
+    'SERVICE_ADVISOR',
+  ].includes(user?.role);
 
   const [form, setForm] = useState({
     customerId: '',
@@ -17,27 +32,39 @@ export default function ServiceOrders() {
     mileage: '',
     complaint: '',
     internalNote: '',
+    assignedTechnicianId: '',
   });
 
   async function load() {
+    if (user?.role === 'TECHNICIAN') {
+      const orderRes =
+        await api.get('/service-orders');
+
+      setOrders(orderRes.data);
+      return;
+    }
+
     const [
       orderRes,
       customerRes,
       vehicleRes,
+      technicianRes,
     ] = await Promise.all([
       api.get('/service-orders'),
       api.get('/customers'),
       api.get('/vehicles'),
+      api.get('/users/technicians'),
     ]);
 
     setOrders(orderRes.data);
     setCustomers(customerRes.data);
     setVehicles(vehicleRes.data);
+    setTechnicians(technicianRes.data);
   }
 
   useEffect(() => {
     load();
-  }, []);
+  }, [user?.role]);
 
   const customerVehicles = vehicles.filter(
     (vehicle) =>
@@ -71,6 +98,8 @@ export default function ServiceOrders() {
         order.customer?.lastName,
         order.customer?.phone,
         order.complaint,
+        order.assignedTechnician?.firstName,
+        order.assignedTechnician?.lastName,
       ]
         .filter(Boolean)
         .join(' ')
@@ -86,6 +115,9 @@ export default function ServiceOrders() {
     await api.post('/service-orders', {
       ...form,
       mileage: Number(form.mileage || 0),
+      assignedTechnicianId:
+        form.assignedTechnicianId ||
+        undefined,
     });
 
     setForm({
@@ -94,143 +126,208 @@ export default function ServiceOrders() {
       mileage: '',
       complaint: '',
       internalNote: '',
+      assignedTechnicianId: '',
     });
 
     await load();
   }
 
+  const statusOptions = [
+    'ACCEPTED',
+    'IN_PROGRESS',
+    'PART_WAITING',
+    'QUALITY_CONTROL',
+    'READY',
+    'PAYMENT_WAITING',
+    'DELIVERED',
+    'CANCELLED',
+  ];
+
   return (
     <>
       <div className="page-heading">
         <div>
-          <h1>İş Emirleri</h1>
-          <p>Servisteki aktif işleri yönetin.</p>
+          <h1>
+            {user?.role === 'TECHNICIAN'
+              ? 'Atanan İşlerim'
+              : 'İş Emirleri'}
+          </h1>
+          <p>
+            {user?.role === 'TECHNICIAN'
+              ? 'Size atanmış bakım işlerini görüntüleyin.'
+              : 'Servisteki aktif işleri yönetin.'}
+          </p>
         </div>
       </div>
 
-      <div className="content-grid">
-        <div className="panel-card">
-          <h3>Yeni İş Emri</h3>
+      <div
+        className={
+          canCreate
+            ? 'content-grid'
+            : ''
+        }
+      >
+        {canCreate && (
+          <div className="panel-card">
+            <h3>Yeni İş Emri</h3>
 
-          <form
-            className="form-grid"
-            onSubmit={submit}
-          >
-            <select
-              value={form.customerId}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  customerId:
-                    e.target.value,
-                  vehicleId: '',
-                })
-              }
-              required
+            <form
+              className="form-grid"
+              onSubmit={submit}
             >
-              <option value="">
-                Müşteri seç
-              </option>
-
-              {customers.map((customer) => (
-                <option
-                  key={customer.id}
-                  value={customer.id}
-                >
-                  {customer.firstName}{' '}
-                  {customer.lastName}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={form.vehicleId}
-              onChange={(e) => {
-                const selected =
-                  vehicles.find(
-                    (vehicle) =>
-                      vehicle.id ===
+              <select
+                value={form.customerId}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    customerId:
                       e.target.value,
-                  );
+                    vehicleId: '',
+                    mileage: '',
+                  })
+                }
+                required
+              >
+                <option value="">
+                  Müşteri seç
+                </option>
 
-                setForm({
-                  ...form,
-                  vehicleId:
-                    e.target.value,
-                  mileage:
-                    selected?.mileage ??
-                    '',
-                });
-              }}
-              required
-            >
-              <option value="">
-                Araç seç
-              </option>
-
-              {customerVehicles.map(
-                (vehicle) => (
+                {customers.map((customer) => (
                   <option
-                    key={vehicle.id}
-                    value={vehicle.id}
+                    key={customer.id}
+                    value={customer.id}
                   >
-                    {vehicle.plate} -{' '}
-                    {vehicle.brand}{' '}
-                    {vehicle.model}
+                    {customer.firstName}{' '}
+                    {customer.lastName}
                   </option>
-                ),
-              )}
-            </select>
+                ))}
+              </select>
 
-            <input
-              type="number"
-              placeholder="Kilometre"
-              value={form.mileage}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  mileage:
-                    e.target.value,
-                })
-              }
-              required
-            />
+              <select
+                value={form.vehicleId}
+                onChange={(e) => {
+                  const selected =
+                    vehicles.find(
+                      (vehicle) =>
+                        vehicle.id ===
+                        e.target.value,
+                    );
 
-            <textarea
-              className="full"
-              placeholder="Müşteri şikayeti / yapılacak işlem"
-              value={form.complaint}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  complaint:
-                    e.target.value,
-                })
-              }
-            />
+                  setForm({
+                    ...form,
+                    vehicleId:
+                      e.target.value,
+                    mileage:
+                      selected?.mileage ??
+                      '',
+                  });
+                }}
+                required
+              >
+                <option value="">
+                  Araç seç
+                </option>
 
-            <textarea
-              className="full"
-              placeholder="Servis iç notu"
-              value={form.internalNote}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  internalNote:
-                    e.target.value,
-                })
-              }
-            />
+                {customerVehicles.map(
+                  (vehicle) => (
+                    <option
+                      key={vehicle.id}
+                      value={vehicle.id}
+                    >
+                      {vehicle.plate} -{' '}
+                      {vehicle.brand}{' '}
+                      {vehicle.model}
+                    </option>
+                  ),
+                )}
+              </select>
 
-            <button className="primary-button full">
-              İş Emri Aç
-            </button>
-          </form>
-        </div>
+              <select
+                value={
+                  form.assignedTechnicianId
+                }
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    assignedTechnicianId:
+                      e.target.value,
+                  })
+                }
+              >
+                <option value="">
+                  Teknisyen atama (opsiyonel)
+                </option>
+
+                {technicians.map(
+                  (technician) => (
+                    <option
+                      key={technician.id}
+                      value={technician.id}
+                    >
+                      {technician.firstName}{' '}
+                      {technician.lastName}
+                      {technician.branch?.name
+                        ? ` - ${technician.branch.name}`
+                        : ''}
+                    </option>
+                  ),
+                )}
+              </select>
+
+              <input
+                type="number"
+                placeholder="Kilometre"
+                value={form.mileage}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    mileage:
+                      e.target.value,
+                  })
+                }
+                required
+              />
+
+              <textarea
+                className="full"
+                placeholder="Müşteri şikayeti / yapılacak işlem"
+                value={form.complaint}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    complaint:
+                      e.target.value,
+                  })
+                }
+              />
+
+              <textarea
+                className="full"
+                placeholder="Servis iç notu"
+                value={form.internalNote}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    internalNote:
+                      e.target.value,
+                  })
+                }
+              />
+
+              <button className="primary-button full">
+                İş Emri Aç
+              </button>
+            </form>
+          </div>
+        )}
 
         <div className="panel-card">
           <div className="card-title-row">
-            <h3>İş Emirleri</h3>
+            <h3>
+              {user?.role === 'TECHNICIAN'
+                ? 'Atanan İşler'
+                : 'İş Emirleri'}
+            </h3>
 
             <div className="filter-row">
               <input
@@ -252,39 +349,17 @@ export default function ServiceOrders() {
                 <option value="">
                   Tüm durumlar
                 </option>
-                <option value="ACCEPTED">
-                  Kabul Edildi
-                </option>
-                <option value="INSPECTION">
-                  Kontrol Ediliyor
-                </option>
-                <option value="QUOTE_WAITING">
-                  Teklif Bekliyor
-                </option>
-                <option value="APPROVED">
-                  Onaylandı
-                </option>
-                <option value="IN_PROGRESS">
-                  İşlemde
-                </option>
-                <option value="PART_WAITING">
-                  Parça Bekliyor
-                </option>
-                <option value="QUALITY_CONTROL">
-                  Kalite Kontrol
-                </option>
-                <option value="READY">
-                  Teslime Hazır
-                </option>
-                <option value="PAYMENT_WAITING">
-                  Ödeme Bekliyor
-                </option>
-                <option value="DELIVERED">
-                  Teslim Edildi
-                </option>
-                <option value="CANCELLED">
-                  İptal Edildi
-                </option>
+
+                {statusOptions.map(
+                  (item) => (
+                    <option
+                      key={item}
+                      value={item}
+                    >
+                      {statusLabel(item)}
+                    </option>
+                  ),
+                )}
               </select>
             </div>
           </div>
@@ -296,9 +371,9 @@ export default function ServiceOrders() {
                   <th>No</th>
                   <th>Plaka</th>
                   <th>Müşteri</th>
+                  <th>Teknisyen</th>
                   <th>Durum</th>
-                  <th>KM</th>
-                  <th>İşlem</th>
+                  <th></th>
                 </tr>
               </thead>
 
@@ -317,10 +392,14 @@ export default function ServiceOrders() {
                       </td>
 
                       <td>
-                        {order.customer
-                          ?.firstName}{' '}
-                        {order.customer
-                          ?.lastName}
+                        {order.customer?.firstName}{' '}
+                        {order.customer?.lastName}
+                      </td>
+
+                      <td>
+                        {order.assignedTechnician
+                          ? `${order.assignedTechnician.firstName} ${order.assignedTechnician.lastName}`
+                          : 'Atanmadı'}
                       </td>
 
                       <td>
@@ -329,14 +408,6 @@ export default function ServiceOrders() {
                             order.status,
                           )}
                         </span>
-                      </td>
-
-                      <td>
-                        {Number(
-                          order.mileage || 0,
-                        ).toLocaleString(
-                          'tr-TR',
-                        )}
                       </td>
 
                       <td>
