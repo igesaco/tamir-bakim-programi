@@ -18,6 +18,8 @@ export default function Users() {
 
   const [users, setUsers] = useState([]);
   const [branches, setBranches] = useState([]);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   const [form, setForm] = useState({
     firstName: '',
@@ -52,7 +54,11 @@ export default function Users() {
   async function submit(e) {
     e.preventDefault();
 
-    await api.post('/users', {
+    setMessage('');
+    setError('');
+
+    try {
+      await api.post('/users', {
       ...form,
       branchId:
         form.branchId || undefined,
@@ -68,7 +74,19 @@ export default function Users() {
       branchId: '',
     });
 
-    await load();
+      await load();
+      setMessage('Personel oluşturuldu.');
+    } catch (err) {
+      const detail =
+        err?.response?.data?.message;
+
+      setError(
+        Array.isArray(detail)
+          ? detail.join(', ')
+          : detail ||
+              'Personel oluşturulamadı.',
+      );
+    }
   }
 
   async function toggle(user) {
@@ -82,6 +100,104 @@ export default function Users() {
     await load();
   }
 
+  async function changeBranch(
+    user,
+    branchId,
+  ) {
+    setMessage('');
+    setError('');
+
+    try {
+      await api.patch(
+        `/users/${user.id}/branch`,
+        {
+          branchId:
+            branchId || undefined,
+        },
+      );
+
+      await load();
+      setMessage(
+        'Personel şubesi güncellendi.',
+      );
+    } catch (err) {
+      const detail =
+        err?.response?.data?.message;
+
+      setError(
+        Array.isArray(detail)
+          ? detail.join(', ')
+          : detail ||
+              'Şube değiştirilemedi.',
+      );
+    }
+  }
+
+  async function changeRole(
+    user,
+    role,
+  ) {
+    setMessage('');
+    setError('');
+
+    try {
+      await api.patch(
+        `/users/${user.id}/role`,
+        { role },
+      );
+
+      await load();
+      setMessage(
+        'Personel rolü güncellendi.',
+      );
+    } catch (err) {
+      const detail =
+        err?.response?.data?.message;
+
+      setError(
+        Array.isArray(detail)
+          ? detail.join(', ')
+          : detail ||
+              'Rol değiştirilemedi.',
+      );
+    }
+  }
+
+  async function resetPassword(user) {
+    const password =
+      window.prompt(
+        `${user.firstName} ${user.lastName} için yeni şifreyi yazın (en az 8 karakter):`,
+      );
+
+    if (!password) {
+      return;
+    }
+
+    setMessage('');
+    setError('');
+
+    try {
+      await api.patch(
+        `/users/${user.id}/password`,
+        { password },
+      );
+
+      setMessage(
+        'Personel şifresi yenilendi.',
+      );
+    } catch (err) {
+      const detail =
+        err?.response?.data?.message;
+
+      setError(
+        Array.isArray(detail)
+          ? detail.join(', ')
+          : detail ||
+              'Şifre yenilenemedi.',
+      );
+    }
+  }
+
   return (
     <>
       <div className="page-heading">
@@ -92,6 +208,18 @@ export default function Users() {
           </p>
         </div>
       </div>
+
+      {message && (
+        <div className="page-message success-message">
+          {message}
+        </div>
+      )}
+
+      {error && (
+        <div className="page-message error-message">
+          {error}
+        </div>
+      )}
 
       <div className="content-grid">
         <div className="panel-card">
@@ -153,7 +281,8 @@ export default function Users() {
 
             <input
               type="password"
-              placeholder="Şifre"
+              minLength="8"
+              placeholder="Şifre (en az 8 karakter)"
               value={form.password}
               onChange={(e) =>
                 setForm({
@@ -259,12 +388,84 @@ export default function Users() {
                     </td>
 
                     <td>
-                      {roleLabels[u.role] ||
-                        u.role}
+                      <select
+                        className="inline-select"
+                        value={u.role}
+                        disabled={
+                          u.id ===
+                            currentUser?.id ||
+                          (u.role ===
+                            'OWNER' &&
+                            currentUser?.role !==
+                              'OWNER')
+                        }
+                        onChange={(e) =>
+                          changeRole(
+                            u,
+                            e.target.value,
+                          )
+                        }
+                      >
+                        <option value="MANAGER">
+                          Yönetici
+                        </option>
+
+                        <option value="SERVICE_ADVISOR">
+                          Servis Danışmanı
+                        </option>
+
+                        <option value="TECHNICIAN">
+                          Teknik Bakım Personeli
+                        </option>
+
+                        {currentUser?.role ===
+                          'OWNER' && (
+                          <option value="OWNER">
+                            Kurucu
+                          </option>
+                        )}
+                      </select>
                     </td>
 
                     <td>
-                      {u.branch?.name || '-'}
+                      <select
+                        className="inline-select"
+                        value={
+                          u.branchId || ''
+                        }
+                        disabled={
+                          u.role === 'OWNER' &&
+                          currentUser?.role !==
+                            'OWNER'
+                        }
+                        onChange={(e) =>
+                          changeBranch(
+                            u,
+                            e.target.value,
+                          )
+                        }
+                      >
+                        <option value="">
+                          Şube yok
+                        </option>
+
+                        {branches.map(
+                          (branch) => (
+                            <option
+                              key={
+                                branch.id
+                              }
+                              value={
+                                branch.id
+                              }
+                            >
+                              {
+                                branch.name
+                              }
+                            </option>
+                          ),
+                        )}
+                      </select>
                     </td>
 
                     <td>
@@ -282,16 +483,27 @@ export default function Users() {
                     </td>
 
                     <td>
-                      <button
-                        className="small-button"
-                        onClick={() =>
-                          toggle(u)
-                        }
-                      >
-                        {u.active
-                          ? 'Pasif Yap'
-                          : 'Aktif Yap'}
-                      </button>
+                      <div className="action-row">
+                        <button
+                          className="small-button"
+                          onClick={() =>
+                            resetPassword(u)
+                          }
+                        >
+                          Şifre Yenile
+                        </button>
+
+                        <button
+                          className="small-button"
+                          onClick={() =>
+                            toggle(u)
+                          }
+                        >
+                          {u.active
+                            ? 'Pasif Yap'
+                            : 'Aktif Yap'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
