@@ -9,11 +9,20 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { UserRole } from '@prisma/client';
 
-import { NotificationsService } from './notifications.service';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { CreateNotificationDto } from './dto/create-notification.dto';
+import { NotificationsService } from './notifications.service';
 
 @UseGuards(AuthGuard('jwt'))
+@Roles(
+  UserRole.OWNER,
+  UserRole.MANAGER,
+  UserRole.SERVICE_ADVISOR,
+)
+@UseGuards(RolesGuard)
 @Controller('notifications')
 export class NotificationsController {
   constructor(
