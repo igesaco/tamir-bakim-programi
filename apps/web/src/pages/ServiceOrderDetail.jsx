@@ -72,6 +72,7 @@ export default function ServiceOrderDetail() {
     quantity: 1,
     unitPrice: '',
     discountAmount: 0,
+    vatRate: 20,
   });
 
   const canAssign = [
@@ -203,6 +204,11 @@ export default function ServiceOrderDetail() {
               itemForm.discountAmount ||
                 0,
             ),
+          vatRate:
+            Number(
+              itemForm.vatRate ||
+                0,
+            ),
         },
       );
 
@@ -214,6 +220,7 @@ export default function ServiceOrderDetail() {
         quantity: 1,
         unitPrice: '',
         discountAmount: 0,
+        vatRate: 20,
       });
 
       await load();
@@ -476,15 +483,38 @@ export default function ServiceOrderDetail() {
 
   const itemTotal =
     order.items?.reduce(
-      (sum, item) =>
-        sum + Number(item.totalPrice || 0),
+      (sum, item) => {
+        const gross =
+          Number(
+            item.grossTotal || 0,
+          );
+
+        return (
+          sum +
+          (gross > 0
+            ? gross
+            : Number(
+                item.totalPrice ||
+                  0,
+              ) +
+              Number(
+                item.vatAmount ||
+                  0,
+              ))
+        );
+      },
       0,
     ) || 0;
 
   const paymentTotal =
     order.payments?.reduce(
       (sum, item) =>
-        sum + Number(item.amount || 0),
+        item.status === 'PAID'
+          ? sum +
+            Number(
+              item.amount || 0,
+            )
+          : sum,
       0,
     ) || 0;
 
@@ -1274,6 +1304,25 @@ export default function ServiceOrderDetail() {
               />
 
               <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                placeholder="KDV %"
+                value={
+                  itemForm.vatRate
+                }
+                onChange={(e) =>
+                  setItemForm({
+                    ...itemForm,
+                    vatRate:
+                      e.target.value,
+                  })
+                }
+                required
+              />
+
+              <input
                 className="service-item-description"
                 placeholder="Açıklama / not"
                 value={
@@ -1313,7 +1362,8 @@ export default function ServiceOrderDetail() {
                     <th>Miktar</th>
                     <th>Birim</th>
                     <th>İndirim</th>
-                    <th>Toplam</th>
+                    <th>KDV</th>
+                    <th>Genel Toplam</th>
                     <th>Durum</th>
                     <th></th>
                   </tr>
@@ -1360,8 +1410,35 @@ export default function ServiceOrderDetail() {
                       </td>
 
                       <td>
+                        %{Number(
+                          item.vatRate ??
+                            20,
+                        )}{' '}
+                        /{' '}
                         {Number(
-                          item.totalPrice || 0,
+                          item.vatAmount ||
+                            0,
+                        ).toLocaleString(
+                          'tr-TR',
+                        )}{' '}
+                        ₺
+                      </td>
+
+                      <td>
+                        {Number(
+                          Number(
+                            item.grossTotal ||
+                              0,
+                          ) > 0
+                            ? item.grossTotal
+                            : Number(
+                                item.totalPrice ||
+                                  0,
+                              ) +
+                              Number(
+                                item.vatAmount ||
+                                  0,
+                              ),
                         ).toLocaleString(
                           'tr-TR',
                         )}{' '}
@@ -1400,7 +1477,7 @@ export default function ServiceOrderDetail() {
 
                   {!order.items?.length && (
                     <tr>
-                      <td colSpan="8">
+                      <td colSpan="9">
                         Henüz işlem eklenmemiş.
                       </td>
                     </tr>
