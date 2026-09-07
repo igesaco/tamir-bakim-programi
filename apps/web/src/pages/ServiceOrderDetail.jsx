@@ -38,6 +38,31 @@ export default function ServiceOrderDetail() {
   const [assignmentBusy, setAssignmentBusy] = useState(false);
   const [itemBusy, setItemBusy] = useState(false);
   const [itemError, setItemError] = useState('');
+  const [inspectionBusy, setInspectionBusy] = useState(false);
+  const [inspectionError, setInspectionError] = useState('');
+  const [uploadBusy, setUploadBusy] = useState(false);
+
+  const [inspectionForm, setInspectionForm] = useState({
+    mileage: '',
+    fuelLevel: '',
+    customerComplaint: '',
+    existingDamage: '',
+    valuablesNote: '',
+  });
+
+  const [checklistForm, setChecklistForm] = useState({
+    category: 'GENEL',
+    name: '',
+    condition: '',
+    note: '',
+    recommendedAction: '',
+  });
+
+  const [uploadForm, setUploadForm] = useState({
+    type: 'ACCEPTANCE',
+    description: '',
+    file: null,
+  });
 
   const [itemForm, setItemForm] = useState({
     type: 'LABOR',
@@ -66,6 +91,18 @@ export default function ServiceOrderDetail() {
     );
 
     setOrder(response.data);
+
+    setInspectionForm((current) => ({
+      ...current,
+      mileage:
+        current.mileage ||
+        response.data.mileage ||
+        '',
+      customerComplaint:
+        current.customerComplaint ||
+        response.data.complaint ||
+        '',
+    }));
 
     if (user?.role !== 'TECHNICIAN') {
       const partsResponse =
@@ -222,6 +259,215 @@ export default function ServiceOrderDetail() {
     );
 
     await load();
+  }
+
+  async function createInspection(e) {
+    e.preventDefault();
+
+    setInspectionBusy(true);
+    setInspectionError('');
+
+    try {
+      await api.post('/inspections', {
+        vehicleId: order.vehicle?.id || order.vehicleId,
+        serviceOrderId: order.id,
+        mileage: Number(
+          inspectionForm.mileage || 0,
+        ),
+        fuelLevel:
+          inspectionForm.fuelLevel ||
+          undefined,
+        customerComplaint:
+          inspectionForm.customerComplaint ||
+          undefined,
+        existingDamage:
+          inspectionForm.existingDamage ||
+          undefined,
+        valuablesNote:
+          inspectionForm.valuablesNote ||
+          undefined,
+      });
+
+      setInspectionForm({
+        mileage:
+          order.mileage || '',
+        fuelLevel: '',
+        customerComplaint:
+          order.complaint || '',
+        existingDamage: '',
+        valuablesNote: '',
+      });
+
+      await load();
+    } catch (err) {
+      const message =
+        err?.response?.data?.message;
+
+      setInspectionError(
+        Array.isArray(message)
+          ? message.join(', ')
+          : message ||
+              'Araç kabul kaydı oluşturulamadı.',
+      );
+    } finally {
+      setInspectionBusy(false);
+    }
+  }
+
+  async function addChecklistItem(
+    inspectionId,
+  ) {
+    if (!checklistForm.name.trim()) {
+      return;
+    }
+
+    setInspectionBusy(true);
+    setInspectionError('');
+
+    try {
+      await api.post(
+        `/inspections/${inspectionId}/items`,
+        {
+          category:
+            checklistForm.category ||
+            'GENEL',
+          name:
+            checklistForm.name.trim(),
+          condition:
+            checklistForm.condition ||
+            undefined,
+          note:
+            checklistForm.note ||
+            undefined,
+          recommendedAction:
+            checklistForm.recommendedAction ||
+            undefined,
+        },
+      );
+
+      setChecklistForm({
+        category: 'GENEL',
+        name: '',
+        condition: '',
+        note: '',
+        recommendedAction: '',
+      });
+
+      await load();
+    } catch (err) {
+      const message =
+        err?.response?.data?.message;
+
+      setInspectionError(
+        Array.isArray(message)
+          ? message.join(', ')
+          : message ||
+              'Kontrol maddesi eklenemedi.',
+      );
+    } finally {
+      setInspectionBusy(false);
+    }
+  }
+
+  async function completeInspection(
+    inspectionId,
+  ) {
+    await api.patch(
+      `/inspections/${inspectionId}/complete`,
+    );
+
+    await load();
+  }
+
+  async function uploadInspectionMedia(
+    inspectionId,
+  ) {
+    if (!uploadForm.file) {
+      setInspectionError(
+        'Yüklenecek dosyayı seçin.',
+      );
+      return;
+    }
+
+    setUploadBusy(true);
+    setInspectionError('');
+
+    try {
+      const data = new FormData();
+
+      data.append(
+        'file',
+        uploadForm.file,
+      );
+      data.append(
+        'type',
+        uploadForm.type,
+      );
+      data.append(
+        'vehicleId',
+        order.vehicle?.id ||
+          order.vehicleId,
+      );
+      data.append(
+        'serviceOrderId',
+        order.id,
+      );
+      data.append(
+        'inspectionId',
+        inspectionId,
+      );
+
+      if (
+        uploadForm.description.trim()
+      ) {
+        data.append(
+          'description',
+          uploadForm.description.trim(),
+        );
+      }
+
+      await api.post(
+        '/media/upload',
+        data,
+      );
+
+      setUploadForm({
+        type: 'ACCEPTANCE',
+        description: '',
+        file: null,
+      });
+
+      const input =
+        document.getElementById(
+          `inspection-file-${inspectionId}`,
+        );
+
+      if (input) {
+        input.value = '';
+      }
+
+      await load();
+    } catch (err) {
+      const message =
+        err?.response?.data?.message;
+
+      setInspectionError(
+        Array.isArray(message)
+          ? message.join(', ')
+          : message ||
+              'Dosya yüklenemedi.',
+      );
+    } finally {
+      setUploadBusy(false);
+    }
+  }
+
+  function mediaUrl(media) {
+    const key = String(
+      media.storageKey || '',
+    ).replace(/^\/+/, '');
+
+    return `${api.defaults.baseURL}/${key}`;
   }
 
   if (!order) {
@@ -431,6 +677,455 @@ export default function ServiceOrderDetail() {
 
       {user?.role !== 'TECHNICIAN' && (
         <>
+          <div className="panel-card spaced-card">
+            <div className="card-title-row">
+              <div>
+                <h3>Araç Kabul / Kontrol</h3>
+                <p className="sub-text">
+                  Kilometre, yakıt, mevcut hasar, araç içi değerli eşya ve kabul fotoğraflarını iş emrine bağlayın.
+                </p>
+              </div>
+            </div>
+
+            <form
+              className="inspection-form"
+              onSubmit={createInspection}
+            >
+              <input
+                type="number"
+                min="0"
+                placeholder="Kilometre"
+                value={inspectionForm.mileage}
+                onChange={(e) =>
+                  setInspectionForm({
+                    ...inspectionForm,
+                    mileage: e.target.value,
+                  })
+                }
+                required
+              />
+
+              <select
+                value={inspectionForm.fuelLevel}
+                onChange={(e) =>
+                  setInspectionForm({
+                    ...inspectionForm,
+                    fuelLevel: e.target.value,
+                  })
+                }
+              >
+                <option value="">
+                  Yakıt seviyesi
+                </option>
+                <option value="EMPTY">Boş</option>
+                <option value="1/4">1/4</option>
+                <option value="1/2">1/2</option>
+                <option value="3/4">3/4</option>
+                <option value="FULL">Dolu</option>
+              </select>
+
+              <input
+                placeholder="Müşteri şikayeti"
+                value={
+                  inspectionForm.customerComplaint
+                }
+                onChange={(e) =>
+                  setInspectionForm({
+                    ...inspectionForm,
+                    customerComplaint:
+                      e.target.value,
+                  })
+                }
+              />
+
+              <input
+                placeholder="Mevcut hasar / çizik"
+                value={
+                  inspectionForm.existingDamage
+                }
+                onChange={(e) =>
+                  setInspectionForm({
+                    ...inspectionForm,
+                    existingDamage:
+                      e.target.value,
+                  })
+                }
+              />
+
+              <input
+                placeholder="Araç içi değerli eşya notu"
+                value={
+                  inspectionForm.valuablesNote
+                }
+                onChange={(e) =>
+                  setInspectionForm({
+                    ...inspectionForm,
+                    valuablesNote:
+                      e.target.value,
+                  })
+                }
+              />
+
+              <button
+                className="primary-button"
+                disabled={inspectionBusy}
+              >
+                {inspectionBusy
+                  ? 'Kaydediliyor...'
+                  : 'Araç Kabul Kaydı Oluştur'}
+              </button>
+            </form>
+
+            {inspectionError && (
+              <div className="page-message error-message spaced-card">
+                {inspectionError}
+              </div>
+            )}
+
+            <div className="inspection-records spaced-card">
+              {order.inspections?.map(
+                (inspection) => (
+                  <div
+                    className="inspection-card"
+                    key={inspection.id}
+                  >
+                    <div className="inspection-card-head">
+                      <div>
+                        <strong>
+                          {statusLabel(
+                            inspection.status,
+                          )}
+                        </strong>
+
+                        <span>
+                          KM:{' '}
+                          {Number(
+                            inspection.mileage ||
+                              0,
+                          ).toLocaleString(
+                            'tr-TR',
+                          )}
+                          {' · '}Yakıt:{' '}
+                          {inspection.fuelLevel ||
+                            '-'}
+                        </span>
+                      </div>
+
+                      {inspection.status !==
+                        'COMPLETED' && (
+                        <button
+                          className="small-button"
+                          onClick={() =>
+                            completeInspection(
+                              inspection.id,
+                            )
+                          }
+                        >
+                          Kontrolü Tamamla
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="detail-info compact-detail-info">
+                      <div>
+                        <span>Şikayet</span>
+                        <strong>
+                          {inspection.customerComplaint ||
+                            '-'}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>Mevcut Hasar</span>
+                        <strong>
+                          {inspection.existingDamage ||
+                            '-'}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>Değerli Eşya</span>
+                        <strong>
+                          {inspection.valuablesNote ||
+                            '-'}
+                        </strong>
+                      </div>
+                    </div>
+
+                    {inspection.status !==
+                      'COMPLETED' && (
+                      <div className="inspection-tools">
+                        <select
+                          value={
+                            checklistForm.category
+                          }
+                          onChange={(e) =>
+                            setChecklistForm({
+                              ...checklistForm,
+                              category:
+                                e.target.value,
+                            })
+                          }
+                        >
+                          <option value="GENEL">
+                            Genel
+                          </option>
+                          <option value="KAPORTA">
+                            Kaporta
+                          </option>
+                          <option value="LASTIK">
+                            Lastik
+                          </option>
+                          <option value="FREN">
+                            Fren
+                          </option>
+                          <option value="MOTOR">
+                            Motor
+                          </option>
+                          <option value="ELEKTRIK">
+                            Elektrik
+                          </option>
+                          <option value="IC_MEKAN">
+                            İç Mekan
+                          </option>
+                        </select>
+
+                        <input
+                          placeholder="Kontrol maddesi"
+                          value={
+                            checklistForm.name
+                          }
+                          onChange={(e) =>
+                            setChecklistForm({
+                              ...checklistForm,
+                              name:
+                                e.target.value,
+                            })
+                          }
+                        />
+
+                        <select
+                          value={
+                            checklistForm.condition
+                          }
+                          onChange={(e) =>
+                            setChecklistForm({
+                              ...checklistForm,
+                              condition:
+                                e.target.value,
+                            })
+                          }
+                        >
+                          <option value="">
+                            Durum
+                          </option>
+                          <option value="GOOD">
+                            İyi
+                          </option>
+                          <option value="ATTENTION">
+                            Kontrol Gerekli
+                          </option>
+                          <option value="BAD">
+                            Değişim Gerekli
+                          </option>
+                        </select>
+
+                        <input
+                          placeholder="Kontrol notu"
+                          value={
+                            checklistForm.note
+                          }
+                          onChange={(e) =>
+                            setChecklistForm({
+                              ...checklistForm,
+                              note:
+                                e.target.value,
+                            })
+                          }
+                        />
+
+                        <button
+                          className="small-button"
+                          onClick={() =>
+                            addChecklistItem(
+                              inspection.id,
+                            )
+                          }
+                          disabled={
+                            inspectionBusy
+                          }
+                        >
+                          Madde Ekle
+                        </button>
+                      </div>
+                    )}
+
+                    {inspection.items?.length >
+                      0 && (
+                      <div className="inspection-checklist">
+                        {inspection.items.map(
+                          (item) => (
+                            <div
+                              key={item.id}
+                            >
+                              <span>
+                                {item.category}
+                              </span>
+
+                              <strong>
+                                {item.name}
+                              </strong>
+
+                              <small>
+                                {item.condition ||
+                                  '-'}
+                                {item.note
+                                  ? ` · ${item.note}`
+                                  : ''}
+                              </small>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    )}
+
+                    <div className="inspection-upload">
+                      <select
+                        value={
+                          uploadForm.type
+                        }
+                        onChange={(e) =>
+                          setUploadForm({
+                            ...uploadForm,
+                            type:
+                              e.target.value,
+                          })
+                        }
+                      >
+                        <option value="ACCEPTANCE">
+                          Araç Kabul
+                        </option>
+                        <option value="DAMAGE">
+                          Hasar
+                        </option>
+                        <option value="ODOMETER">
+                          Kilometre
+                        </option>
+                        <option value="ENGINE">
+                          Motor
+                        </option>
+                        <option value="BEFORE">
+                          İşlem Öncesi
+                        </option>
+                        <option value="AFTER">
+                          İşlem Sonrası
+                        </option>
+                        <option value="DOCUMENT">
+                          Belge
+                        </option>
+                        <option value="OTHER">
+                          Diğer
+                        </option>
+                      </select>
+
+                      <input
+                        id={`inspection-file-${inspection.id}`}
+                        type="file"
+                        accept="image/*,application/pdf"
+                        onChange={(e) =>
+                          setUploadForm({
+                            ...uploadForm,
+                            file:
+                              e.target
+                                .files?.[0] ||
+                              null,
+                          })
+                        }
+                      />
+
+                      <input
+                        placeholder="Fotoğraf / belge açıklaması"
+                        value={
+                          uploadForm.description
+                        }
+                        onChange={(e) =>
+                          setUploadForm({
+                            ...uploadForm,
+                            description:
+                              e.target.value,
+                          })
+                        }
+                      />
+
+                      <button
+                        className="small-button"
+                        disabled={uploadBusy}
+                        onClick={() =>
+                          uploadInspectionMedia(
+                            inspection.id,
+                          )
+                        }
+                      >
+                        {uploadBusy
+                          ? 'Yükleniyor...'
+                          : 'Dosya Yükle'}
+                      </button>
+                    </div>
+
+                    {inspection.media?.length >
+                      0 && (
+                      <div className="inspection-media-grid">
+                        {inspection.media.map(
+                          (media) => (
+                            <a
+                              key={media.id}
+                              className="inspection-media-card"
+                              href={mediaUrl(
+                                media,
+                              )}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {media.mimeType?.startsWith(
+                                'image/',
+                              ) ? (
+                                <img
+                                  src={mediaUrl(
+                                    media,
+                                  )}
+                                  alt={
+                                    media.description ||
+                                    media.fileName
+                                  }
+                                />
+                              ) : (
+                                <div className="inspection-document-preview">
+                                  PDF / Belge
+                                </div>
+                              )}
+
+                              <span>
+                                {statusLabel(
+                                  media.type,
+                                )}
+                              </span>
+                            </a>
+                          ),
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ),
+              )}
+
+              {!order.inspections?.length && (
+                <div className="empty-state">
+                  Henüz araç kabul / kontrol kaydı yok.
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="panel-card spaced-card">
             <div className="card-title-row">
               <div>
