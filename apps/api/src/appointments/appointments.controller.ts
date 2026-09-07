@@ -41,6 +41,7 @@ export class AppointmentsController {
     return this.appointmentsService.create(
       req.user.organizationId,
       req.user.branchId,
+      req.user.role,
       req.user.sub,
       dto,
     );
@@ -50,6 +51,8 @@ export class AppointmentsController {
   findAll(@Req() req: any) {
     return this.appointmentsService.findAll(
       req.user.organizationId,
+      req.user.role,
+      req.user.branchId,
     );
   }
 
@@ -67,6 +70,8 @@ export class AppointmentsController {
       req.user.organizationId,
       id,
       status,
+      req.user.role,
+      req.user.branchId,
     );
   }
 }
