@@ -1,7 +1,21 @@
-﻿import { useEffect, useState } from 'react';
+﻿import {
+  useEffect,
+  useState,
+} from 'react';
+
 import api from '../api/client';
+import { useAuth } from '../auth/AuthContext';
+
+const roleLabels = {
+  OWNER: 'Kurucu',
+  MANAGER: 'Yönetici',
+  SERVICE_ADVISOR: 'Servis Danışmanı',
+  TECHNICIAN: 'Teknik Bakım Personeli',
+};
 
 export default function Users() {
+  const { user: currentUser } = useAuth();
+
   const [users, setUsers] = useState([]);
   const [branches, setBranches] = useState([]);
 
@@ -29,12 +43,18 @@ export default function Users() {
     load();
   }, []);
 
+  const branchRequired = [
+    'SERVICE_ADVISOR',
+    'TECHNICIAN',
+  ].includes(form.role);
+
   async function submit(e) {
     e.preventDefault();
 
     await api.post('/users', {
       ...form,
-      branchId: form.branchId || undefined,
+      branchId:
+        form.branchId || undefined,
     });
 
     setForm({
@@ -51,9 +71,12 @@ export default function Users() {
   }
 
   async function toggle(user) {
-    await api.patch(`/users/${user.id}/active`, {
-      active: !user.active,
-    });
+    await api.patch(
+      `/users/${user.id}/active`,
+      {
+        active: !user.active,
+      },
+    );
 
     await load();
   }
@@ -63,7 +86,9 @@ export default function Users() {
       <div className="page-heading">
         <div>
           <h1>Personel</h1>
-          <p>Kullanıcıları, rolleri ve personel erişimini yönetin.</p>
+          <p>
+            Kullanıcıları, rolleri ve şube erişimini yönetin.
+          </p>
         </div>
       </div>
 
@@ -71,14 +96,18 @@ export default function Users() {
         <div className="panel-card">
           <h3>Yeni Personel</h3>
 
-          <form className="form-grid" onSubmit={submit}>
+          <form
+            className="form-grid"
+            onSubmit={submit}
+          >
             <input
               placeholder="Ad"
               value={form.firstName}
               onChange={(e) =>
                 setForm({
                   ...form,
-                  firstName: e.target.value,
+                  firstName:
+                    e.target.value,
                 })
               }
               required
@@ -90,7 +119,8 @@ export default function Users() {
               onChange={(e) =>
                 setForm({
                   ...form,
-                  lastName: e.target.value,
+                  lastName:
+                    e.target.value,
                 })
               }
               required
@@ -127,7 +157,8 @@ export default function Users() {
               onChange={(e) =>
                 setForm({
                   ...form,
-                  password: e.target.value,
+                  password:
+                    e.target.value,
                 })
               }
               required
@@ -139,14 +170,28 @@ export default function Users() {
                 setForm({
                   ...form,
                   role: e.target.value,
+                  branchId: '',
                 })
               }
             >
-              <option value="MANAGER">Yönetici</option>
+              <option value="MANAGER">
+                Yönetici
+              </option>
+
               <option value="SERVICE_ADVISOR">
                 Servis Danışmanı
               </option>
-              <option value="TECHNICIAN">Teknisyen</option>
+
+              <option value="TECHNICIAN">
+                Teknik Bakım Personeli
+              </option>
+
+              {currentUser?.role ===
+                'OWNER' && (
+                <option value="OWNER">
+                  Kurucu
+                </option>
+              )}
             </select>
 
             <select
@@ -155,13 +200,23 @@ export default function Users() {
               onChange={(e) =>
                 setForm({
                   ...form,
-                  branchId: e.target.value,
+                  branchId:
+                    e.target.value,
                 })
               }
+              required={branchRequired}
             >
-              <option value="">Şube seç</option>
+              <option value="">
+                {branchRequired
+                  ? 'Şube seç (zorunlu)'
+                  : 'Şube seç (opsiyonel)'}
+              </option>
+
               {branches.map((b) => (
-                <option key={b.id} value={b.id}>
+                <option
+                  key={b.id}
+                  value={b.id}
+                >
                   {b.name}
                 </option>
               ))}
@@ -193,16 +248,23 @@ export default function Users() {
                   <tr key={u.id}>
                     <td>
                       <strong>
-                        {u.firstName} {u.lastName}
+                        {u.firstName}{' '}
+                        {u.lastName}
                       </strong>
+
                       <div className="sub-text">
                         {u.email}
                       </div>
                     </td>
 
-                    <td>{u.role}</td>
+                    <td>
+                      {roleLabels[u.role] ||
+                        u.role}
+                    </td>
 
-                    <td>{u.branch?.name || '-'}</td>
+                    <td>
+                      {u.branch?.name || '-'}
+                    </td>
 
                     <td>
                       <span
@@ -212,14 +274,18 @@ export default function Users() {
                             : 'status-badge danger'
                         }
                       >
-                        {u.active ? 'Aktif' : 'Pasif'}
+                        {u.active
+                          ? 'Aktif'
+                          : 'Pasif'}
                       </span>
                     </td>
 
                     <td>
                       <button
                         className="small-button"
-                        onClick={() => toggle(u)}
+                        onClick={() =>
+                          toggle(u)
+                        }
                       >
                         {u.active
                           ? 'Pasif Yap'
