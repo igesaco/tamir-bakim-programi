@@ -16,13 +16,13 @@ import { RolesGuard } from '../auth/roles.guard';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { NotificationsService } from './notifications.service';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(
   UserRole.OWNER,
   UserRole.MANAGER,
   UserRole.SERVICE_ADVISOR,
 )
-@UseGuards(RolesGuard)
+
 @Controller('notifications')
 export class NotificationsController {
   constructor(
