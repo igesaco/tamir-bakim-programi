@@ -17,13 +17,13 @@ import { CreateInspectionDto } from './dto/create-inspection.dto';
 import { CreateInspectionItemDto } from './dto/create-inspection-item.dto';
 import { InspectionsService } from './inspections.service';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(
   UserRole.OWNER,
   UserRole.MANAGER,
   UserRole.SERVICE_ADVISOR,
 )
-@UseGuards(RolesGuard)
+
 @Controller('inspections')
 export class InspectionsController {
   constructor(
