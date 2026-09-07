@@ -5,12 +5,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  InventoryMovementType,
+  ServiceItemType,
   ServiceOrderStatus,
   UserRole,
 } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateServiceOrderDto } from './dto/create-service-order.dto';
+import { CreateServiceOrderItemDto } from './dto/create-service-order-item.dto';
 
 const TECHNICIAN_ALLOWED_STATUSES =
   new Set<ServiceOrderStatus>([
@@ -430,6 +433,469 @@ export class ServiceOrdersService {
         assignedTechnician: true,
       },
     });
+  }
+
+  private async findOfficeOrder(
+    organizationId: string,
+    id: string,
+    actorRole: UserRole,
+    actorBranchId: string | null,
+  ) {
+    const order =
+      await this.prisma.serviceOrder.findFirst({
+        where: {
+          id,
+          organizationId,
+          ...(actorRole ===
+          UserRole.SERVICE_ADVISOR
+            ? {
+                branchId:
+                  actorBranchId ??
+                  '__branch_not_assigned__',
+              }
+            : {}),
+        },
+      });
+
+    if (!order) {
+      throw new NotFoundException(
+        'İş emri bulunamadı veya bu iş emrine erişim yetkiniz yok.',
+      );
+    }
+
+    return order;
+  }
+
+  async availableParts(
+    organizationId: string,
+    id: string,
+    actorRole: UserRole,
+    actorBranchId: string | null,
+  ) {
+    const order =
+      await this.findOfficeOrder(
+        organizationId,
+        id,
+        actorRole,
+        actorBranchId,
+      );
+
+    const inventory =
+      await this.prisma.inventory.findMany({
+        where: {
+          organizationId,
+          branchId: order.branchId,
+          quantity: {
+            gt: 0,
+          },
+          part: {
+            active: true,
+          },
+        },
+        include: {
+          part: true,
+        },
+        orderBy: {
+          part: {
+            name: 'asc',
+          },
+        },
+      });
+
+    return inventory.map((item) => ({
+      inventoryId: item.id,
+      partId: item.partId,
+      name: item.part.name,
+      sku: item.part.sku,
+      oemCode: item.part.oemCode,
+      barcode: item.part.barcode,
+      brand: item.part.brand,
+      unit: item.part.unit,
+      quantity: item.quantity,
+      salePrice: item.part.salePrice,
+      purchasePrice: item.part.purchasePrice,
+    }));
+  }
+
+  async addItem(
+    organizationId: string,
+    id: string,
+    actorId: string,
+    actorRole: UserRole,
+    actorBranchId: string | null,
+    dto: CreateServiceOrderItemDto,
+  ) {
+    const order =
+      await this.findOfficeOrder(
+        organizationId,
+        id,
+        actorRole,
+        actorBranchId,
+      );
+
+    const quantity =
+      Number(dto.quantity);
+
+    let unitPrice =
+      dto.unitPrice === undefined
+        ? undefined
+        : Number(dto.unitPrice);
+
+    const discountAmount =
+      Number(
+        dto.discountAmount ?? 0,
+      );
+
+    if (dto.partId) {
+      if (
+        dto.type !==
+        ServiceItemType.PART
+      ) {
+        throw new BadRequestException(
+          'Stok parçası yalnızca parça türünde eklenebilir.',
+        );
+      }
+
+      return this.prisma.$transaction(
+        async (tx) => {
+          const inventory =
+            await tx.inventory.findUnique({
+              where: {
+                branchId_partId: {
+                  branchId:
+                    order.branchId,
+                  partId: dto.partId!,
+                },
+              },
+              include: {
+                part: true,
+              },
+            });
+
+          if (
+            !inventory ||
+            inventory.organizationId !==
+              organizationId ||
+            inventory.part
+              .organizationId !==
+              organizationId ||
+            !inventory.part.active
+          ) {
+            throw new NotFoundException(
+              'Seçilen parça bu şubenin stoklarında bulunamadı.',
+            );
+          }
+
+          if (
+            Number(
+              inventory.quantity,
+            ) < quantity
+          ) {
+            throw new BadRequestException(
+              'Seçilen parça için yeterli stok bulunmuyor.',
+            );
+          }
+
+          if (
+            unitPrice === undefined
+          ) {
+            unitPrice = Number(
+              inventory.part
+                .salePrice,
+            );
+          }
+
+          const baseTotal =
+            quantity * unitPrice;
+
+          if (
+            discountAmount >
+            baseTotal
+          ) {
+            throw new BadRequestException(
+              'İndirim tutarı satır toplamından büyük olamaz.',
+            );
+          }
+
+          const totalPrice =
+            baseTotal -
+            discountAmount;
+
+          const item =
+            await tx.serviceOrderItem.create({
+              data: {
+                serviceOrderId:
+                  order.id,
+                partId: dto.partId,
+                type:
+                  ServiceItemType.PART,
+                name:
+                  dto.name ||
+                  inventory.part.name,
+                description:
+                  dto.description,
+                quantity,
+                unitPrice,
+                discountAmount,
+                totalPrice,
+              },
+              include: {
+                part: true,
+              },
+            });
+
+          await tx.inventory.update({
+            where: {
+              branchId_partId: {
+                branchId:
+                  order.branchId,
+                partId: dto.partId!,
+              },
+            },
+            data: {
+              quantity: {
+                decrement: quantity,
+              },
+            },
+          });
+
+          await tx.inventoryMovement.create({
+            data: {
+              organizationId,
+              branchId:
+                order.branchId,
+              partId: dto.partId!,
+              serviceOrderId:
+                order.id,
+              createdById:
+                actorId,
+              type:
+                InventoryMovementType.OUT,
+              quantity,
+              unitCost:
+                inventory.part
+                  .purchasePrice,
+              note:
+                `SERVICE_ORDER_ITEM:${item.id}`,
+            },
+          });
+
+          return item;
+        },
+      );
+    }
+
+    if (
+      unitPrice === undefined
+    ) {
+      throw new BadRequestException(
+        'Birim fiyat bilgisi gerekli.',
+      );
+    }
+
+    const baseTotal =
+      quantity * unitPrice;
+
+    if (
+      discountAmount >
+      baseTotal
+    ) {
+      throw new BadRequestException(
+        'İndirim tutarı satır toplamından büyük olamaz.',
+      );
+    }
+
+    return this.prisma.serviceOrderItem.create({
+      data: {
+        serviceOrderId:
+          order.id,
+        type: dto.type,
+        name: dto.name,
+        description:
+          dto.description,
+        quantity,
+        unitPrice,
+        discountAmount,
+        totalPrice:
+          baseTotal -
+          discountAmount,
+      },
+      include: {
+        part: true,
+      },
+    });
+  }
+
+  async setItemComplete(
+    organizationId: string,
+    id: string,
+    itemId: string,
+    actorRole: UserRole,
+    actorBranchId: string | null,
+    completed: boolean,
+  ) {
+    const order =
+      await this.findOfficeOrder(
+        organizationId,
+        id,
+        actorRole,
+        actorBranchId,
+      );
+
+    const item =
+      await this.prisma.serviceOrderItem.findFirst({
+        where: {
+          id: itemId,
+          serviceOrderId:
+            order.id,
+        },
+      });
+
+    if (!item) {
+      throw new NotFoundException(
+        'İş emri kalemi bulunamadı.',
+      );
+    }
+
+    return this.prisma.serviceOrderItem.update({
+      where: {
+        id: itemId,
+      },
+      data: {
+        completed:
+          Boolean(completed),
+      },
+      include: {
+        part: true,
+      },
+    });
+  }
+
+  async removeItem(
+    organizationId: string,
+    id: string,
+    itemId: string,
+    actorId: string,
+    actorRole: UserRole,
+    actorBranchId: string | null,
+  ) {
+    const order =
+      await this.findOfficeOrder(
+        organizationId,
+        id,
+        actorRole,
+        actorBranchId,
+      );
+
+    const item =
+      await this.prisma.serviceOrderItem.findFirst({
+        where: {
+          id: itemId,
+          serviceOrderId:
+            order.id,
+        },
+        include: {
+          part: true,
+        },
+      });
+
+    if (!item) {
+      throw new NotFoundException(
+        'İş emri kalemi bulunamadı.',
+      );
+    }
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        if (item.partId) {
+          const trackedMovement =
+            await tx.inventoryMovement.findFirst({
+              where: {
+                organizationId,
+                branchId:
+                  order.branchId,
+                partId:
+                  item.partId,
+                serviceOrderId:
+                  order.id,
+                type:
+                  InventoryMovementType.OUT,
+                note:
+                  `SERVICE_ORDER_ITEM:${item.id}`,
+              },
+            });
+
+          if (trackedMovement) {
+            await tx.inventory.upsert({
+              where: {
+                branchId_partId: {
+                  branchId:
+                    order.branchId,
+                  partId:
+                    item.partId,
+                },
+              },
+              create: {
+                organizationId,
+                branchId:
+                  order.branchId,
+                partId:
+                  item.partId,
+                quantity:
+                  item.quantity,
+                minQuantity:
+                  item.part
+                    ?.minimumStock ??
+                  0,
+              },
+              update: {
+                quantity: {
+                  increment:
+                    item.quantity,
+                },
+              },
+            });
+
+            await tx.inventoryMovement.create({
+              data: {
+                organizationId,
+                branchId:
+                  order.branchId,
+                partId:
+                  item.partId,
+                serviceOrderId:
+                  order.id,
+                createdById:
+                  actorId,
+                type:
+                  InventoryMovementType.RETURN,
+                quantity:
+                  item.quantity,
+                unitCost:
+                  item.part
+                    ?.purchasePrice,
+                note:
+                  `SERVICE_ORDER_ITEM_RETURN:${item.id}`,
+              },
+            });
+          }
+        }
+
+        await tx.serviceOrderItem.delete({
+          where: {
+            id: item.id,
+          },
+        });
+
+        return {
+          success: true,
+          restoredStock:
+            Boolean(
+              item.partId,
+            ),
+        };
+      },
+    );
   }
 
   async updateStatus(
