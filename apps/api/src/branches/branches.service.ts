@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,7 +9,9 @@ import { CreateBranchDto } from './dto/create-branch.dto';
 
 @Injectable()
 export class BranchesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+  ) {}
 
   create(
     organizationId: string,
@@ -47,17 +50,54 @@ export class BranchesService {
     id: string,
     active: boolean,
   ) {
-    const branch = await this.prisma.branch.findFirst({
-      where: {
-        id,
-        organizationId,
-      },
-    });
+    const branch =
+      await this.prisma.branch.findFirst({
+        where: {
+          id,
+          organizationId,
+        },
+      });
 
     if (!branch) {
       throw new NotFoundException(
-        '�ube bulunamad�.',
+        'Şube bulunamadı.',
       );
+    }
+
+    if (!active) {
+      const [
+        activeUsers,
+        openOrders,
+      ] = await Promise.all([
+        this.prisma.user.count({
+          where: {
+            organizationId,
+            branchId: id,
+            active: true,
+          },
+        }),
+        this.prisma.serviceOrder.count({
+          where: {
+            organizationId,
+            branchId: id,
+            status: {
+              notIn: [
+                'DELIVERED',
+                'CANCELLED',
+              ],
+            },
+          },
+        }),
+      ]);
+
+      if (
+        activeUsers > 0 ||
+        openOrders > 0
+      ) {
+        throw new BadRequestException(
+          'Aktif personeli veya açık iş emri bulunan şube pasif yapılamaz.',
+        );
+      }
     }
 
     return this.prisma.branch.update({
