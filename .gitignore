@@ -8,3 +8,4 @@ coverage/
 .cursor/
 .devin/
 uploads/
+*.tsbuildinfo
