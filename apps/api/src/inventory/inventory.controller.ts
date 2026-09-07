@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -12,12 +13,15 @@ import { UserRole } from '@prisma/client';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreatePartDto } from './dto/create-part.dto';
-import { InventoryService } from './inventory.service';
 import { StockMovementDto } from './dto/stock-movement.dto';
+import { InventoryService } from './inventory.service';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('inventory')
-@Roles(UserRole.OWNER, UserRole.MANAGER)
+@Roles(
+  UserRole.OWNER,
+  UserRole.MANAGER,
+)
 @UseGuards(RolesGuard)
 export class InventoryController {
   constructor(
@@ -43,18 +47,26 @@ export class InventoryController {
   }
 
   @Get('stock')
-  findStock(@Req() req: any) {
+  findStock(
+    @Req() req: any,
+    @Query('branchId') branchId?: string,
+  ) {
     return this.inventoryService.findStock(
       req.user.organizationId,
-      req.user.branchId,
+      branchId ??
+        req.user.branchId,
     );
   }
 
   @Get('low-stock')
-  findLowStock(@Req() req: any) {
+  findLowStock(
+    @Req() req: any,
+    @Query('branchId') branchId?: string,
+  ) {
     return this.inventoryService.findLowStock(
       req.user.organizationId,
-      req.user.branchId,
+      branchId ??
+        req.user.branchId,
     );
   }
 
@@ -65,7 +77,8 @@ export class InventoryController {
   ) {
     return this.inventoryService.stockIn(
       req.user.organizationId,
-      req.user.branchId,
+      dto.branchId ??
+        req.user.branchId,
       req.user.sub,
       dto,
     );
@@ -78,17 +91,22 @@ export class InventoryController {
   ) {
     return this.inventoryService.stockOut(
       req.user.organizationId,
-      req.user.branchId,
+      dto.branchId ??
+        req.user.branchId,
       req.user.sub,
       dto,
     );
   }
 
   @Get('movements')
-  findMovements(@Req() req: any) {
+  findMovements(
+    @Req() req: any,
+    @Query('branchId') branchId?: string,
+  ) {
     return this.inventoryService.findMovements(
       req.user.organizationId,
-      req.user.branchId,
+      branchId ??
+        req.user.branchId,
     );
   }
 }
