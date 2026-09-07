@@ -35,6 +35,16 @@ export default function VehicleDetail() {
     return <div>Araç yükleniyor...</div>;
   }
 
+  const publicQrUrl =
+    `${window.location.origin}/qr/${vehicle.qrToken}`;
+
+  const qrImageUrl =
+    'https://quickchart.io/qr' +
+    `?text=${encodeURIComponent(
+      publicQrUrl,
+    )}` +
+    '&size=260&margin=2&ecLevel=H';
+
   return (
     <>
       <div className="page-heading">
@@ -146,18 +156,44 @@ export default function VehicleDetail() {
             açılacak genel bakım görünümüdür.
           </p>
 
-          <a
-            className="primary-link-button"
-            target="_blank"
-            rel="noreferrer"
-            href={`/qr/${vehicle.qrToken}`}
-          >
-            QR Sayfasını Aç
-          </a>
+          {vehicle.qrActive === false ? (
+            <div className="page-message error-message">
+              Bu aracın QR kartı pasif.
+            </div>
+          ) : (
+            <>
+              <div className="vehicle-qr-preview">
+                <img
+                  src={qrImageUrl}
+                  alt={`${vehicle.plate} QR kodu`}
+                />
+              </div>
 
-          <div className="qr-token-box">
-            {vehicle.qrToken}
-          </div>
+              <div className="action-row">
+                <a
+                  className="primary-link-button"
+                  target="_blank"
+                  rel="noreferrer"
+                  href={`/qr/${vehicle.qrToken}`}
+                >
+                  QR Sayfasını Aç
+                </a>
+
+                <a
+                  className="secondary-button"
+                  target="_blank"
+                  rel="noreferrer"
+                  href={`/vehicles/${vehicle.id}/qr-print`}
+                >
+                  QR Yazdır
+                </a>
+              </div>
+
+              <div className="qr-token-box">
+                {vehicle.qrToken}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
