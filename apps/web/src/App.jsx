@@ -33,6 +33,7 @@ import Users from './pages/Users';
 import Branches from './pages/Branches';
 import Notifications from './pages/Notifications';
 import Reports from './pages/Reports';
+import Cashier from './pages/Cashier';
 import Settings from './pages/Settings';
 
 import PublicVehicle from './pages/PublicVehicle';
@@ -256,6 +257,17 @@ export default function App() {
                   roles={SERVICE_ROLES}
                 >
                   <Notifications />
+                </ForRoles>
+              }
+            />
+
+            <Route
+              path="cashier"
+              element={
+                <ForRoles
+                  roles={MANAGEMENT_ROLES}
+                >
+                  <Cashier />
                 </ForRoles>
               }
             />
