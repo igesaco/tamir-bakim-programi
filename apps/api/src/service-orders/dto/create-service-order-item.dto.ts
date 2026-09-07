@@ -5,6 +5,7 @@ import {
   IsString,
   Max,
   Min,
+  MinLength,
 } from 'class-validator';
 import { ServiceItemType } from '@prisma/client';
 
@@ -17,6 +18,7 @@ export class CreateServiceOrderItemDto {
   partId?: string;
 
   @IsString()
+  @MinLength(1)
   name: string;
 
   @IsOptional()
