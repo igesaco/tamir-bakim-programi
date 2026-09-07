@@ -1063,11 +1063,26 @@ export class ServiceOrdersService {
         if (!existingRecord) {
           const totalAmount =
             updatedOrder.items.reduce(
-              (sum, item) =>
-                sum +
-                Number(
-                  item.totalPrice,
-                ),
+              (sum, item) => {
+                const gross =
+                  Number(
+                    item.grossTotal ??
+                      0,
+                  );
+
+                return (
+                  sum +
+                  (gross > 0
+                    ? gross
+                    : Number(
+                        item.totalPrice,
+                      ) +
+                      Number(
+                        item.vatAmount ??
+                          0,
+                      ))
+                );
+              },
               0,
             );
 
