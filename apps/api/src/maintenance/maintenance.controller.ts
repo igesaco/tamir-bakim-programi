@@ -19,13 +19,13 @@ import { CreateMaintenancePlanDto } from './dto/create-maintenance-plan.dto';
 import { CreateMaintenanceRecordDto } from './dto/create-maintenance-record.dto';
 import { MaintenanceService } from './maintenance.service';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(
   UserRole.OWNER,
   UserRole.MANAGER,
   UserRole.SERVICE_ADVISOR,
 )
-@UseGuards(RolesGuard)
+
 @Controller('maintenance')
 export class MaintenanceController {
   constructor(
