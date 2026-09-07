@@ -1,6 +1,9 @@
-import { ValidationPipe } from '@nestjs/common';
+﻿import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import {
+  DocumentBuilder,
+  SwaggerModule,
+} from '@nestjs/swagger';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
@@ -10,12 +13,21 @@ async function bootstrap() {
 
   app.use(helmet());
 
+  const defaultOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:5173',
+  ];
+
+  const corsOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : defaultOrigins;
+
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:5173',
-    ],
+    origin: corsOrigins,
     credentials: true,
   });
 
@@ -27,25 +39,38 @@ async function bootstrap() {
     }),
   );
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Tamir Bakım API')
-    .setDescription('Tamir ve bakım yönetim sistemi API dokümantasyonu')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
+  const swaggerEnabled =
+    process.env.NODE_ENV !== 'production' ||
+    process.env.SWAGGER_ENABLED === 'true';
 
-  const document = SwaggerModule.createDocument(
-    app,
-    swaggerConfig,
+  if (swaggerEnabled) {
+    const swaggerConfig =
+      new DocumentBuilder()
+        .setTitle('Tamir Bakım API')
+        .setDescription(
+          'Tamir ve bakım yönetim sistemi API dokümantasyonu',
+        )
+        .setVersion('1.0')
+        .addBearerAuth()
+        .build();
+
+    const document =
+      SwaggerModule.createDocument(
+        app,
+        swaggerConfig,
+      );
+
+    SwaggerModule.setup(
+      'api-docs',
+      app,
+      document,
+    );
+  }
+
+  await app.listen(
+    Number(process.env.PORT) || 3000,
+    '0.0.0.0',
   );
-
-  SwaggerModule.setup(
-    'api-docs',
-    app,
-    document,
-  );
-
-  await app.listen(process.env.PORT ?? 3000);
 }
 
 bootstrap();
