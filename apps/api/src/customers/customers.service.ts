@@ -1,5 +1,6 @@
 ﻿import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -33,27 +34,89 @@ export class CustomersService {
     };
   }
 
-  create(
+  private async validateBranch(
     organizationId: string,
-    branchId: string | null,
-    role: UserRole,
-    dto: CreateCustomerDto,
+    branchId: string,
   ) {
-    if (
-      role ===
-        UserRole.SERVICE_ADVISOR &&
-      !branchId
-    ) {
+    const branch =
+      await this.prisma.branch.findFirst({
+        where: {
+          id: branchId,
+          organizationId,
+          active: true,
+        },
+      });
+
+    if (!branch) {
       throw new BadRequestException(
-        'Servis danışmanı için şube ataması gerekli.',
+        'Geçerli ve aktif bir şube seçiniz.',
       );
     }
 
+    return branch;
+  }
+
+  async create(
+    organizationId: string,
+    actorBranchId: string | null,
+    role: UserRole,
+    dto: CreateCustomerDto,
+  ) {
+    let branchId =
+      actorBranchId;
+
+    if (
+      role === UserRole.OWNER ||
+      role === UserRole.MANAGER
+    ) {
+      branchId =
+        dto.branchId ??
+        actorBranchId;
+    } else if (
+      dto.branchId &&
+      dto.branchId !==
+        actorBranchId
+    ) {
+      throw new ForbiddenException(
+        'Servis danışmanı yalnızca kendi şubesine müşteri ekleyebilir.',
+      );
+    }
+
+    if (!branchId) {
+      throw new BadRequestException(
+        'Müşteri için şube seçimi gerekli.',
+      );
+    }
+
+    await this.validateBranch(
+      organizationId,
+      branchId,
+    );
+
     return this.prisma.customer.create({
       data: {
-        ...dto,
+        firstName:
+          dto.firstName.trim(),
+        lastName:
+          dto.lastName?.trim(),
+        phone:
+          dto.phone?.trim(),
+        email:
+          dto.email
+            ?.trim()
+            .toLocaleLowerCase(
+              'tr-TR',
+            ),
+        address:
+          dto.address,
+        notes:
+          dto.notes,
         organizationId,
         branchId,
+      },
+      include: {
+        branch: true,
+        vehicles: true,
       },
     });
   }
@@ -70,6 +133,7 @@ export class CustomersService {
         branchId,
       ),
       include: {
+        branch: true,
         vehicles: true,
       },
       orderBy: {
@@ -95,6 +159,7 @@ export class CustomersService {
           ),
         },
         include: {
+          branch: true,
           vehicles: true,
           payments: {
             orderBy: {
@@ -118,30 +183,92 @@ export class CustomersService {
     organizationId: string,
     id: string,
     role: UserRole,
-    branchId: string | null,
+    actorBranchId: string | null,
     dto: UpdateCustomerDto,
   ) {
-    await this.findOne(
-      organizationId,
-      id,
-      role,
-      branchId,
-    );
+    const customer =
+      await this.findOne(
+        organizationId,
+        id,
+        role,
+        actorBranchId,
+      );
 
-    return this.prisma.customer.update({
-      where: { id },
-      data: {
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        phone: dto.phone,
-        email: dto.email,
-        address: dto.address,
-        notes: dto.notes,
+    let targetBranchId =
+      customer.branchId;
+
+    if (dto.branchId) {
+      if (
+        role ===
+          UserRole.SERVICE_ADVISOR &&
+        dto.branchId !==
+          actorBranchId
+      ) {
+        throw new ForbiddenException(
+          'Servis danışmanı müşteri şubesini değiştiremez.',
+        );
+      }
+
+      await this.validateBranch(
+        organizationId,
+        dto.branchId,
+      );
+
+      targetBranchId =
+        dto.branchId;
+    }
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const updated =
+          await tx.customer.update({
+            where: { id },
+            data: {
+              branchId:
+                targetBranchId,
+              firstName:
+                dto.firstName,
+              lastName:
+                dto.lastName,
+              phone:
+                dto.phone,
+              email:
+                dto.email
+                  ?.trim()
+                  .toLocaleLowerCase(
+                    'tr-TR',
+                  ),
+              address:
+                dto.address,
+              notes:
+                dto.notes,
+            },
+            include: {
+              branch: true,
+              vehicles: true,
+            },
+          });
+
+        if (
+          dto.branchId &&
+          dto.branchId !==
+            customer.branchId
+        ) {
+          await tx.vehicle.updateMany({
+            where: {
+              organizationId,
+              customerId: id,
+            },
+            data: {
+              branchId:
+                dto.branchId,
+            },
+          });
+        }
+
+        return updated;
       },
-      include: {
-        vehicles: true,
-      },
-    });
+    );
   }
 
   async remove(
