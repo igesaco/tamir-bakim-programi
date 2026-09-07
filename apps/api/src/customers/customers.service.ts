@@ -107,6 +107,8 @@ export class CustomersService {
             .toLocaleLowerCase(
               'tr-TR',
             ),
+        taxNumber:
+          dto.taxNumber?.trim(),
         address:
           dto.address,
         notes:
@@ -232,6 +234,8 @@ export class CustomersService {
                   .toLocaleLowerCase(
                     'tr-TR',
                   ),
+              taxNumber:
+                dto.taxNumber,
               address:
                 dto.address,
               notes:
