@@ -256,11 +256,15 @@ export default function QuoteProforma() {
                   </td>
                   <td>
                     {money(
-                      item.grossTotal ||
-                        Number(
-                          item.totalPrice ||
-                            0,
-                        ) +
+                      Number(
+                        item.grossTotal ||
+                          0,
+                      ) > 0
+                        ? item.grossTotal
+                        : Number(
+                            item.totalPrice ||
+                              0,
+                          ) +
                           Number(
                             item.vatAmount ||
                               0,
