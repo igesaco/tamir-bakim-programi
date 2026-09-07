@@ -80,6 +80,16 @@ const menu = [
     label: 'Ayarlar',
     roles: ['OWNER', 'MANAGER'],
   },
+  {
+    path: '/account',
+    label: 'Hesabım',
+    roles: [
+      'OWNER',
+      'MANAGER',
+      'SERVICE_ADVISOR',
+      'TECHNICIAN',
+    ],
+  },
 ];
 
 const roleLabels = {
