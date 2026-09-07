@@ -10,10 +10,13 @@
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { UserRole } from '@prisma/client';
 
-import { VehiclesService } from './vehicles.service';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
+import { VehiclesService } from './vehicles.service';
 
 @Controller('vehicles')
 export class VehiclesController {
@@ -21,7 +24,12 @@ export class VehiclesController {
     private readonly vehiclesService: VehiclesService,
   ) {}
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+  )
   @Post()
   create(
     @Req() req: any,
@@ -34,7 +42,12 @@ export class VehiclesController {
     );
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+  )
   @Get()
   findAll(@Req() req: any) {
     return this.vehiclesService.findAll(
@@ -51,7 +64,12 @@ export class VehiclesController {
     );
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+  )
   @Get(':id')
   findOne(
     @Req() req: any,
@@ -63,7 +81,12 @@ export class VehiclesController {
     );
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+  )
   @Patch(':id')
   update(
     @Req() req: any,
@@ -77,7 +100,12 @@ export class VehiclesController {
     );
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+  )
   @Delete(':id')
   remove(
     @Req() req: any,
