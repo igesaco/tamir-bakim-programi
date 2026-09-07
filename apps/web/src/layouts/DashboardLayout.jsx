@@ -5,24 +5,91 @@
 import { useAuth } from '../auth/AuthContext';
 
 const menu = [
-  ['/', 'Dashboard'],
-  ['/customers', 'Müşteriler'],
-  ['/vehicles', 'Araçlar'],
-  ['/appointments', 'Randevular'],
-  ['/service-orders', 'İş Emirleri'],
-  ['/quotes', 'Teklifler'],
-  ['/maintenance', 'Bakım'],
-  ['/inventory', 'Stok'],
-  ['/suppliers', 'Tedarikçiler'],
-  ['/users', 'Personel'],
-  ['/branches', 'Şubeler'],
-  ['/notifications', 'Bildirimler'],
-  ['/reports', 'Raporlar'],
-  ['/settings', 'Ayarlar'],
+  {
+    path: '/',
+    label: 'Dashboard',
+    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
+  },
+  {
+    path: '/customers',
+    label: 'Müşteriler',
+    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
+  },
+  {
+    path: '/vehicles',
+    label: 'Araçlar',
+    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
+  },
+  {
+    path: '/appointments',
+    label: 'Randevular',
+    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
+  },
+  {
+    path: '/service-orders',
+    label: 'İş Emirleri',
+    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR', 'TECHNICIAN'],
+  },
+  {
+    path: '/quotes',
+    label: 'Teklifler',
+    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
+  },
+  {
+    path: '/maintenance',
+    label: 'Bakım',
+    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
+  },
+  {
+    path: '/inventory',
+    label: 'Stok',
+    roles: ['OWNER', 'MANAGER'],
+  },
+  {
+    path: '/suppliers',
+    label: 'Tedarikçiler',
+    roles: ['OWNER', 'MANAGER'],
+  },
+  {
+    path: '/users',
+    label: 'Personel',
+    roles: ['OWNER', 'MANAGER'],
+  },
+  {
+    path: '/branches',
+    label: 'Şubeler',
+    roles: ['OWNER', 'MANAGER'],
+  },
+  {
+    path: '/notifications',
+    label: 'Bildirimler',
+    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
+  },
+  {
+    path: '/reports',
+    label: 'Raporlar',
+    roles: ['OWNER', 'MANAGER'],
+  },
+  {
+    path: '/settings',
+    label: 'Ayarlar',
+    roles: ['OWNER', 'MANAGER'],
+  },
 ];
+
+const roleLabels = {
+  OWNER: 'Kurucu',
+  MANAGER: 'Yönetici',
+  SERVICE_ADVISOR: 'Servis Danışmanı',
+  TECHNICIAN: 'Teknik Bakım Personeli',
+};
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
+
+  const visibleMenu = menu.filter(
+    (item) => item.roles.includes(user?.role),
+  );
 
   return (
     <div className="app-shell">
@@ -36,16 +103,16 @@ export default function DashboardLayout() {
         </div>
 
         <nav className="sidebar-nav">
-          {menu.map(([path, label]) => (
+          {visibleMenu.map((item) => (
             <NavLink
-              key={path}
-              to={path}
-              end={path === '/'}
+              key={item.path}
+              to={item.path}
+              end={item.path === '/'}
               className={({ isActive }) =>
                 isActive ? 'nav-item active' : 'nav-item'
               }
             >
-              {label}
+              {item.label}
             </NavLink>
           ))}
         </nav>
@@ -55,7 +122,9 @@ export default function DashboardLayout() {
             <strong>
               {user?.firstName} {user?.lastName}
             </strong>
-            <span>{user?.role}</span>
+            <span>
+              {roleLabels[user?.role] || user?.role}
+            </span>
           </div>
 
           <button onClick={logout}>
@@ -83,4 +152,3 @@ export default function DashboardLayout() {
     </div>
   );
 }
-
