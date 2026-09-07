@@ -36,6 +36,7 @@ import Notifications from './pages/Notifications';
 import Reports from './pages/Reports';
 import Cashier from './pages/Cashier';
 import Settings from './pages/Settings';
+import Account from './pages/Account';
 
 import PublicVehicle from './pages/PublicVehicle';
 
@@ -295,6 +296,11 @@ export default function App() {
                   <Reports />
                 </ForRoles>
               }
+            />
+
+            <Route
+              path="account"
+              element={<Account />}
             />
 
             <Route
