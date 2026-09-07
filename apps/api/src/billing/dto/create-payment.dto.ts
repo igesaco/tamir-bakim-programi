@@ -16,6 +16,10 @@ export class CreatePaymentDto {
 
   @IsOptional()
   @IsString()
+  branchId?: string;
+
+  @IsOptional()
+  @IsString()
   serviceOrderId?: string;
 
   @IsOptional()
