@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
-import { InspectionsService } from './inspections.service';
+
+import { RolesGuard } from '../auth/roles.guard';
 import { InspectionsController } from './inspections.controller';
+import { InspectionsService } from './inspections.service';
 
 @Module({
-  providers: [InspectionsService],
-  controllers: [InspectionsController]
+  controllers: [InspectionsController],
+  providers: [InspectionsService, RolesGuard],
 })
 export class InspectionsModule {}
