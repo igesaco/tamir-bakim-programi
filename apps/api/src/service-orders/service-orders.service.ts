@@ -15,6 +15,16 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateServiceOrderDto } from './dto/create-service-order.dto';
 import { CreateServiceOrderItemDto } from './dto/create-service-order-item.dto';
 
+function money(value: number) {
+  return (
+    Math.round(
+      (value +
+        Number.EPSILON) *
+        100,
+    ) / 100
+  );
+}
+
 const TECHNICIAN_ALLOWED_STATUSES =
   new Set<ServiceOrderStatus>([
     ServiceOrderStatus.ACCEPTED,
@@ -539,12 +549,66 @@ export class ServiceOrdersService {
     let unitPrice =
       dto.unitPrice === undefined
         ? undefined
-        : Number(dto.unitPrice);
+        : money(
+            Number(
+              dto.unitPrice,
+            ),
+          );
 
     const discountAmount =
-      Number(
-        dto.discountAmount ?? 0,
+      money(
+        Number(
+          dto.discountAmount ??
+            0,
+        ),
       );
+
+    const vatRate =
+      Number(
+        dto.vatRate ?? 20,
+      );
+
+    const calculateTotals = (
+      price: number,
+    ) => {
+      const baseTotal =
+        money(
+          quantity * price,
+        );
+
+      if (
+        discountAmount >
+        baseTotal
+      ) {
+        throw new BadRequestException(
+          'İndirim tutarı satır toplamından büyük olamaz.',
+        );
+      }
+
+      const totalPrice =
+        money(
+          baseTotal -
+            discountAmount,
+        );
+
+      const vatAmount =
+        money(
+          totalPrice *
+            (vatRate / 100),
+        );
+
+      const grossTotal =
+        money(
+          totalPrice +
+            vatAmount,
+        );
+
+      return {
+        totalPrice,
+        vatAmount,
+        grossTotal,
+      };
+    };
 
     if (dto.partId) {
       if (
@@ -564,7 +628,8 @@ export class ServiceOrdersService {
                 branchId_partId: {
                   branchId:
                     order.branchId,
-                  partId: dto.partId!,
+                  partId:
+                    dto.partId!,
                 },
               },
               include: {
@@ -599,45 +664,44 @@ export class ServiceOrdersService {
           if (
             unitPrice === undefined
           ) {
-            unitPrice = Number(
-              inventory.part
-                .salePrice,
-            );
+            unitPrice =
+              money(
+                Number(
+                  inventory.part
+                    .salePrice,
+                ),
+              );
           }
 
-          const baseTotal =
-            quantity * unitPrice;
-
-          if (
-            discountAmount >
-            baseTotal
-          ) {
-            throw new BadRequestException(
-              'İndirim tutarı satır toplamından büyük olamaz.',
+          const totals =
+            calculateTotals(
+              unitPrice,
             );
-          }
-
-          const totalPrice =
-            baseTotal -
-            discountAmount;
 
           const item =
             await tx.serviceOrderItem.create({
               data: {
                 serviceOrderId:
                   order.id,
-                partId: dto.partId,
+                partId:
+                  dto.partId,
                 type:
                   ServiceItemType.PART,
                 name:
-                  dto.name ||
+                  dto.name.trim() ||
                   inventory.part.name,
                 description:
-                  dto.description,
+                  dto.description?.trim(),
                 quantity,
                 unitPrice,
                 discountAmount,
-                totalPrice,
+                totalPrice:
+                  totals.totalPrice,
+                vatRate,
+                vatAmount:
+                  totals.vatAmount,
+                grossTotal:
+                  totals.grossTotal,
               },
               include: {
                 part: true,
@@ -649,12 +713,14 @@ export class ServiceOrdersService {
               branchId_partId: {
                 branchId:
                   order.branchId,
-                partId: dto.partId!,
+                partId:
+                  dto.partId!,
               },
             },
             data: {
               quantity: {
-                decrement: quantity,
+                decrement:
+                  quantity,
               },
             },
           });
@@ -664,7 +730,8 @@ export class ServiceOrdersService {
               organizationId,
               branchId:
                 order.branchId,
-              partId: dto.partId!,
+              partId:
+                dto.partId!,
               serviceOrderId:
                 order.id,
               createdById:
@@ -693,32 +760,31 @@ export class ServiceOrdersService {
       );
     }
 
-    const baseTotal =
-      quantity * unitPrice;
-
-    if (
-      discountAmount >
-      baseTotal
-    ) {
-      throw new BadRequestException(
-        'İndirim tutarı satır toplamından büyük olamaz.',
+    const totals =
+      calculateTotals(
+        unitPrice,
       );
-    }
 
     return this.prisma.serviceOrderItem.create({
       data: {
         serviceOrderId:
           order.id,
-        type: dto.type,
-        name: dto.name,
+        type:
+          dto.type,
+        name:
+          dto.name.trim(),
         description:
-          dto.description,
+          dto.description?.trim(),
         quantity,
         unitPrice,
         discountAmount,
         totalPrice:
-          baseTotal -
-          discountAmount,
+          totals.totalPrice,
+        vatRate,
+        vatAmount:
+          totals.vatAmount,
+        grossTotal:
+          totals.grossTotal,
       },
       include: {
         part: true,
