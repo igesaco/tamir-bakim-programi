@@ -1,6 +1,8 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+
 import api from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 
 function getApiMessage(error) {
   const message = error?.response?.data?.message;
@@ -13,8 +15,15 @@ function getApiMessage(error) {
 }
 
 export default function Customers() {
+  const { user } = useAuth();
+
   const [customers, setCustomers] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [search, setSearch] = useState('');
+
+  const canChooseBranch =
+    user?.role === 'OWNER' ||
+    user?.role === 'MANAGER';
 
   const [form, setForm] = useState({
     firstName: '',
@@ -22,6 +31,7 @@ export default function Customers() {
     phone: '',
     email: '',
     address: '',
+    branchId: user?.branchId || '',
   });
 
   const [editing, setEditing] = useState(null);
@@ -30,13 +40,31 @@ export default function Customers() {
   const [error, setError] = useState('');
 
   async function load() {
-    const response = await api.get('/customers');
-    setCustomers(response.data);
+    const requests = [
+      api.get('/customers'),
+    ];
+
+    if (canChooseBranch) {
+      requests.push(
+        api.get('/branches'),
+      );
+    }
+
+    const responses =
+      await Promise.all(requests);
+
+    setCustomers(
+      responses[0].data,
+    );
+
+    setBranches(
+      responses[1]?.data || [],
+    );
   }
 
   useEffect(() => {
     load();
-  }, []);
+  }, [canChooseBranch]);
 
   const filteredCustomers = useMemo(() => {
     const term = search
@@ -79,6 +107,10 @@ export default function Customers() {
         phone: form.phone || undefined,
         email: form.email || undefined,
         address: form.address || undefined,
+        branchId:
+          canChooseBranch
+            ? form.branchId || undefined
+            : undefined,
       });
 
       setForm({
@@ -87,6 +119,8 @@ export default function Customers() {
         phone: '',
         email: '',
         address: '',
+        branchId:
+          user?.branchId || '',
       });
 
       setMessage('Müşteri başarıyla eklendi.');
@@ -110,6 +144,8 @@ export default function Customers() {
       email: customer.email || '',
       address: customer.address || '',
       notes: customer.notes || '',
+      branchId:
+        customer.branchId || '',
     });
   }
 
@@ -130,6 +166,10 @@ export default function Customers() {
           email: editing.email || undefined,
           address: editing.address || undefined,
           notes: editing.notes || undefined,
+          branchId:
+            canChooseBranch
+              ? editing.branchId || undefined
+              : undefined,
         },
       );
 
@@ -240,6 +280,39 @@ export default function Customers() {
               }
             />
 
+            {canChooseBranch && (
+              <select
+                className="full"
+                value={form.branchId}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    branchId:
+                      e.target.value,
+                  })
+                }
+                required
+              >
+                <option value="">
+                  Şube seç
+                </option>
+
+                {branches
+                  .filter(
+                    (branch) =>
+                      branch.active,
+                  )
+                  .map((branch) => (
+                    <option
+                      key={branch.id}
+                      value={branch.id}
+                    >
+                      {branch.name}
+                    </option>
+                  ))}
+              </select>
+            )}
+
             <input
               className="full"
               placeholder="Adres"
@@ -284,6 +357,7 @@ export default function Customers() {
                   <th>Ad Soyad</th>
                   <th>Telefon</th>
                   <th>E-posta</th>
+                  <th>Şube</th>
                   <th>Araç</th>
                   <th>İşlem</th>
                 </tr>
@@ -304,6 +378,10 @@ export default function Customers() {
 
                       <td>
                         {customer.email || '-'}
+                      </td>
+
+                      <td>
+                        {customer.branch?.name || '-'}
                       </td>
 
                       <td>
@@ -344,7 +422,7 @@ export default function Customers() {
 
                 {!filteredCustomers.length && (
                   <tr>
-                    <td colSpan="5">
+                    <td colSpan="6">
                       Kayıt bulunamadı.
                     </td>
                   </tr>
@@ -431,6 +509,39 @@ export default function Customers() {
                   })
                 }
               />
+
+              {canChooseBranch && (
+                <select
+                  className="full"
+                  value={editing.branchId}
+                  onChange={(e) =>
+                    setEditing({
+                      ...editing,
+                      branchId:
+                        e.target.value,
+                    })
+                  }
+                  required
+                >
+                  <option value="">
+                    Şube seç
+                  </option>
+
+                  {branches
+                    .filter(
+                      (branch) =>
+                        branch.active,
+                    )
+                    .map((branch) => (
+                      <option
+                        key={branch.id}
+                        value={branch.id}
+                      >
+                        {branch.name}
+                      </option>
+                    ))}
+                </select>
+              )}
 
               <input
                 className="full"
