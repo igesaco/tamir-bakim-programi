@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -81,17 +82,46 @@ export class MediaController {
         file,
         callback,
       ) => {
+        const mimeTypes =
+          new Set([
+            'image/jpeg',
+            'image/png',
+            'image/webp',
+            'image/gif',
+            'image/heic',
+            'image/heif',
+            'application/pdf',
+          ]);
+
+        const extensions =
+          new Set([
+            '.jpg',
+            '.jpeg',
+            '.png',
+            '.webp',
+            '.gif',
+            '.heic',
+            '.heif',
+            '.pdf',
+          ]);
+
+        const extension =
+          extname(
+            file.originalname,
+          ).toLowerCase();
+
         const allowed =
-          file.mimetype.startsWith(
-            'image/',
-          ) ||
-          file.mimetype ===
-            'application/pdf';
+          mimeTypes.has(
+            file.mimetype,
+          ) &&
+          extensions.has(
+            extension,
+          );
 
         if (!allowed) {
           return callback(
-            new Error(
-              'Yalnızca görsel veya PDF dosyası yüklenebilir.',
+            new BadRequestException(
+              'Yalnızca JPG, PNG, WEBP, GIF, HEIC/HEIF veya PDF dosyası yüklenebilir.',
             ),
             false,
           );
