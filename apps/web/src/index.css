@@ -1661,3 +1661,165 @@ button.status-badge {
     gap: 40px;
   }
 }
+
+
+/* === CUSTOMER WORKSPACE === */
+.customer-workspace-heading {
+  align-items: flex-start;
+}
+
+.customer-workspace-eyebrow {
+  display: inline-block;
+  margin-bottom: 6px;
+  color: #f59e0b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+}
+
+.customer-workspace-summary,
+.customer-account-stats {
+  display: grid;
+  grid-template-columns:
+    repeat(5, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.customer-workspace-summary > div {
+  padding: 16px;
+  border: 1px solid #2a3037;
+  border-radius: 12px;
+  background: #111418;
+}
+
+.customer-workspace-summary span {
+  display: block;
+  margin-bottom: 7px;
+  color: #7f8790;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+}
+
+.customer-workspace-summary strong {
+  font-size: 22px;
+}
+
+.customer-workspace-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 6px;
+  border: 1px solid #2a3037;
+  border-radius: 12px;
+  background: #101317;
+}
+
+.customer-workspace-tab {
+  flex: 0 0 auto;
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #8f98a1;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.customer-workspace-tab:hover {
+  background: #171b20;
+  color: #fff;
+}
+
+.customer-workspace-tab.active {
+  background: #f59e0b;
+  color: #111;
+}
+
+.customer-workspace-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(320px, .9fr)
+    minmax(420px, 1.4fr);
+  gap: 14px;
+}
+
+.customer-card-list,
+.customer-contact-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.customer-vehicle-card,
+.customer-appointment-card,
+.customer-contact-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid #2b3138;
+  border-radius: 10px;
+  background: #0e1115;
+  color: #fff;
+  text-decoration: none;
+}
+
+.customer-vehicle-card:hover,
+.customer-contact-action:hover {
+  border-color: #f59e0b;
+}
+
+.customer-vehicle-card div,
+.customer-appointment-card div,
+.customer-contact-action {
+  min-width: 0;
+}
+
+.customer-vehicle-card span,
+.customer-appointment-card span,
+.customer-contact-action span {
+  display: block;
+  margin-top: 4px;
+  color: #808891;
+  font-size: 10px;
+}
+
+.customer-contact-action {
+  display: block;
+}
+
+.customer-contact-action strong {
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+
+.customer-account-stats {
+  grid-template-columns:
+    repeat(3, minmax(180px, 1fr));
+}
+
+@media (max-width: 1050px) {
+  .customer-workspace-summary {
+    grid-template-columns:
+      repeat(3, minmax(140px, 1fr));
+  }
+
+  .customer-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .customer-workspace-summary,
+  .customer-account-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .customer-workspace-tabs {
+    padding-bottom: 8px;
+  }
+}
