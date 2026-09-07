@@ -15,6 +15,10 @@ function getApiMessage(error) {
 export default function Vehicles() {
   const [vehicles, setVehicles] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [makes, setMakes] = useState([]);
+  const [createModels, setCreateModels] = useState([]);
+  const [editModels, setEditModels] = useState([]);
+  const [catalogWarning, setCatalogWarning] = useState('');
   const [search, setSearch] = useState('');
 
   const [form, setForm] = useState({
@@ -48,7 +52,52 @@ export default function Vehicles() {
 
   useEffect(() => {
     load();
+
+    api.get('/vehicle-catalog/makes')
+      .then((response) => {
+        setMakes(response.data);
+      })
+      .catch(() => {
+        setCatalogWarning(
+          'Marka kataloğu yüklenemedi. Marka ve modeli manuel yazabilirsiniz.',
+        );
+      });
   }, []);
+
+  async function loadModels(
+    make,
+    year,
+    setter,
+  ) {
+    const cleanMake = String(
+      make || '',
+    ).trim();
+
+    if (!cleanMake) {
+      setter([]);
+      return;
+    }
+
+    try {
+      const response = await api.get(
+        '/vehicle-catalog/models',
+        {
+          params: {
+            make: cleanMake,
+            year: year || undefined,
+          },
+        },
+      );
+
+      setter(response.data);
+      setCatalogWarning('');
+    } catch {
+      setter([]);
+      setCatalogWarning(
+        'Model kataloğu şu anda yüklenemedi. Modeli manuel yazabilirsiniz.',
+      );
+    }
+  }
 
   const filteredVehicles = useMemo(() => {
     const term = search
@@ -130,6 +179,7 @@ export default function Vehicles() {
   function openEdit(vehicle) {
     setMessage('');
     setError('');
+    setEditModels([]);
 
     setEditing({
       id: vehicle.id,
@@ -234,9 +284,42 @@ export default function Vehicles() {
         </div>
       </div>
 
+      <datalist id="vehicle-makes">
+        {makes.map((make) => (
+          <option
+            key={make.id}
+            value={make.name}
+          />
+        ))}
+      </datalist>
+
+      <datalist id="vehicle-models-create">
+        {createModels.map((model) => (
+          <option
+            key={`${model.makeId}-${model.id}-${model.model}`}
+            value={model.model}
+          />
+        ))}
+      </datalist>
+
+      <datalist id="vehicle-models-edit">
+        {editModels.map((model) => (
+          <option
+            key={`${model.makeId}-${model.id}-${model.model}`}
+            value={model.model}
+          />
+        ))}
+      </datalist>
+
       {message && (
         <div className="page-message success-message">
           {message}
+        </div>
+      )}
+
+      {catalogWarning && (
+        <div className="page-message error-message">
+          {catalogWarning}
         </div>
       )}
 
@@ -292,18 +375,28 @@ export default function Vehicles() {
             />
 
             <input
+              list="vehicle-makes"
               placeholder="Marka"
               value={form.brand}
               onChange={(e) =>
                 setForm({
                   ...form,
                   brand: e.target.value,
+                  model: '',
                 })
+              }
+              onBlur={() =>
+                loadModels(
+                  form.brand,
+                  form.modelYear,
+                  setCreateModels,
+                )
               }
               required
             />
 
             <input
+              list="vehicle-models-create"
               placeholder="Model"
               value={form.model}
               onChange={(e) =>
@@ -324,6 +417,13 @@ export default function Vehicles() {
                   ...form,
                   modelYear: e.target.value,
                 })
+              }
+              onBlur={() =>
+                loadModels(
+                  form.brand,
+                  form.modelYear,
+                  setCreateModels,
+                )
               }
             />
 
@@ -558,18 +658,28 @@ export default function Vehicles() {
               />
 
               <input
+                list="vehicle-makes"
                 placeholder="Marka"
                 value={editing.brand}
                 onChange={(e) =>
                   setEditing({
                     ...editing,
                     brand: e.target.value,
+                    model: '',
                   })
+                }
+                onBlur={() =>
+                  loadModels(
+                    editing.brand,
+                    editing.modelYear,
+                    setEditModels,
+                  )
                 }
                 required
               />
 
               <input
+                list="vehicle-models-edit"
                 placeholder="Model"
                 value={editing.model}
                 onChange={(e) =>
@@ -590,6 +700,13 @@ export default function Vehicles() {
                     ...editing,
                     modelYear: e.target.value,
                   })
+                }
+                onBlur={() =>
+                  loadModels(
+                    editing.brand,
+                    editing.modelYear,
+                    setEditModels,
+                  )
                 }
               />
 
