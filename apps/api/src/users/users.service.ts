@@ -126,6 +126,7 @@ export class UsersService {
 
     if (
       (
+        dto.role === UserRole.MANAGER ||
         dto.role ===
           UserRole.SERVICE_ADVISOR ||
         dto.role === UserRole.TECHNICIAN
@@ -133,7 +134,7 @@ export class UsersService {
       !dto.branchId
     ) {
       throw new BadRequestException(
-        'Servis danışmanı ve teknisyen için şube seçimi zorunludur.',
+        'Yönetici, servis danışmanı ve teknisyen için şube seçimi zorunludur.',
       );
     }
 
@@ -270,6 +271,7 @@ export class UsersService {
 
     if (
       (
+        target.role === UserRole.MANAGER ||
         target.role ===
           UserRole.SERVICE_ADVISOR ||
         target.role ===
