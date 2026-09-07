@@ -162,7 +162,7 @@ export class VehicleCatalogService {
       year &&
       (
         !Number.isInteger(year) ||
-        year < 1996 ||
+        year < 1900 ||
         year > 2100
       )
     ) {
@@ -171,8 +171,13 @@ export class VehicleCatalogService {
       );
     }
 
+    const supportedYear =
+      year && year >= 1996
+        ? year
+        : undefined;
+
     const key =
-      `models:${cleanMake.toLowerCase()}:${year ?? 'all'}`;
+      `models:${cleanMake.toLowerCase()}:${supportedYear ?? 'all'}`;
 
     const cached =
       this.getCached<any[]>(key);
@@ -184,8 +189,8 @@ export class VehicleCatalogService {
     const encodedMake =
       encodeURIComponent(cleanMake);
 
-    const path = year
-      ? `GetModelsForMakeYear/make/${encodedMake}/modelyear/${year}?format=json`
+    const path = supportedYear
+      ? `GetModelsForMakeYear/make/${encodedMake}/modelyear/${supportedYear}?format=json`
       : `GetModelsForMake/${encodedMake}?format=json`;
 
     const data =
