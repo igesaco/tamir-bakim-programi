@@ -40,6 +40,20 @@
   LABOR: 'İşçilik',
   PART: 'Parça',
   OTHER: 'Diğer',
+
+  ACCEPTANCE: 'Araç Kabul',
+  DAMAGE: 'Hasar',
+  ENGINE: 'Motor',
+  BEFORE: 'İşlem Öncesi',
+  AFTER: 'İşlem Sonrası',
+  ODOMETER: 'Kilometre',
+  DOCUMENT: 'Belge',
+  INVOICE: 'Fatura',
+  VEHICLE: 'Araç',
+
+  GOOD: 'İyi',
+  ATTENTION: 'Kontrol Gerekli',
+  BAD: 'Değişim Gerekli',
 };
 
 export function statusLabel(value) {
