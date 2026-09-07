@@ -59,7 +59,11 @@ export class NotificationsService {
             organizationId,
             ...(role ===
             UserRole.SERVICE_ADVISOR
-              ? { branchId }
+              ? {
+                  branchId:
+                    branchId ??
+                    '__branch_not_assigned__',
+                }
               : {}),
           },
         });
@@ -95,7 +99,11 @@ export class NotificationsService {
             organizationId,
             ...(role ===
             UserRole.SERVICE_ADVISOR
-              ? { branchId }
+              ? {
+                  branchId:
+                    branchId ??
+                    '__branch_not_assigned__',
+                }
               : {}),
           },
         });
@@ -115,7 +123,11 @@ export class NotificationsService {
             organizationId,
             ...(role ===
             UserRole.SERVICE_ADVISOR
-              ? { branchId }
+              ? {
+                  branchId:
+                    branchId ??
+                    '__branch_not_assigned__',
+                }
               : {}),
           },
         });
