@@ -10,6 +10,21 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 
+const PANEL_USER_ROLES =
+  new Set<UserRole>([
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+    UserRole.TECHNICIAN,
+  ]);
+
+const BRANCH_REQUIRED_ROLES =
+  new Set<UserRole>([
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+    UserRole.TECHNICIAN,
+  ]);
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -137,12 +152,7 @@ export class UsersService {
     }
 
     if (
-      ![
-        UserRole.OWNER,
-        UserRole.MANAGER,
-        UserRole.SERVICE_ADVISOR,
-        UserRole.TECHNICIAN,
-      ].includes(dto.role)
+      !PANEL_USER_ROLES.has(dto.role)
     ) {
       throw new BadRequestException(
         'Bu kullanıcı rolü bu panelde desteklenmiyor.',
@@ -150,11 +160,9 @@ export class UsersService {
     }
 
     if (
-      [
-        UserRole.MANAGER,
-        UserRole.SERVICE_ADVISOR,
-        UserRole.TECHNICIAN,
-      ].includes(dto.role) &&
+      BRANCH_REQUIRED_ROLES.has(
+        dto.role,
+      ) &&
       !dto.branchId
     ) {
       throw new BadRequestException(
@@ -413,11 +421,9 @@ export class UsersService {
     }
 
     if (
-      [
-        UserRole.MANAGER,
-        UserRole.SERVICE_ADVISOR,
-        UserRole.TECHNICIAN,
-      ].includes(target.role) &&
+      BRANCH_REQUIRED_ROLES.has(
+        target.role,
+      ) &&
       !branchId
     ) {
       throw new BadRequestException(
@@ -501,12 +507,7 @@ export class UsersService {
     }
 
     if (
-      ![
-        UserRole.OWNER,
-        UserRole.MANAGER,
-        UserRole.SERVICE_ADVISOR,
-        UserRole.TECHNICIAN,
-      ].includes(role)
+      !PANEL_USER_ROLES.has(role)
     ) {
       throw new BadRequestException(
         'Bu rol bu panelde desteklenmiyor.',
@@ -514,11 +515,9 @@ export class UsersService {
     }
 
     if (
-      [
-        UserRole.MANAGER,
-        UserRole.SERVICE_ADVISOR,
-        UserRole.TECHNICIAN,
-      ].includes(role) &&
+      BRANCH_REQUIRED_ROLES.has(
+        role,
+      ) &&
       !target.branchId
     ) {
       throw new BadRequestException(
