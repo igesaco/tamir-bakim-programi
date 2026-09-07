@@ -3,25 +3,41 @@ import {
   Controller,
   Get,
   Param,
+  ParseEnumPipe,
   Patch,
   Post,
   Req,
   UseGuards,
-  ParseEnumPipe,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { QuoteStatus } from '@prisma/client';
+import {
+  QuoteStatus,
+  UserRole,
+} from '@prisma/client';
 
-import { QuotesService } from './quotes.service';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { CreateQuoteDto } from './dto/create-quote.dto';
+import { QuotesService } from './quotes.service';
 
 @UseGuards(AuthGuard('jwt'))
+@Roles(
+  UserRole.OWNER,
+  UserRole.MANAGER,
+  UserRole.SERVICE_ADVISOR,
+)
+@UseGuards(RolesGuard)
 @Controller('quotes')
 export class QuotesController {
-  constructor(private readonly quotesService: QuotesService) {}
+  constructor(
+    private readonly quotesService: QuotesService,
+  ) {}
 
   @Post()
-  create(@Req() req: any, @Body() dto: CreateQuoteDto) {
+  create(
+    @Req() req: any,
+    @Body() dto: CreateQuoteDto,
+  ) {
     return this.quotesService.create(
       req.user.organizationId,
       req.user.branchId,
@@ -36,11 +52,25 @@ export class QuotesController {
     );
   }
 
+  @Get(':id')
+  findOne(
+    @Req() req: any,
+    @Param('id') id: string,
+  ) {
+    return this.quotesService.findOne(
+      req.user.organizationId,
+      id,
+    );
+  }
+
   @Patch(':id/status')
   updateStatus(
     @Req() req: any,
     @Param('id') id: string,
-    @Body('status', new ParseEnumPipe(QuoteStatus))
+    @Body(
+      'status',
+      new ParseEnumPipe(QuoteStatus),
+    )
     status: QuoteStatus,
   ) {
     return this.quotesService.updateStatus(
