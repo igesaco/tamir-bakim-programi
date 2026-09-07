@@ -16,13 +16,13 @@ import { CreatePartDto } from './dto/create-part.dto';
 import { StockMovementDto } from './dto/stock-movement.dto';
 import { InventoryService } from './inventory.service';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('inventory')
 @Roles(
   UserRole.OWNER,
   UserRole.MANAGER,
 )
-@UseGuards(RolesGuard)
+
 export class InventoryController {
   constructor(
     private readonly inventoryService: InventoryService,
