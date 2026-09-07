@@ -23,6 +23,7 @@ import Appointments from './pages/Appointments';
 
 import ServiceOrders from './pages/ServiceOrders';
 import ServiceOrderDetail from './pages/ServiceOrderDetail';
+import DeliveryReport from './pages/DeliveryReport';
 
 import Quotes from './pages/Quotes';
 import QuoteProforma from './pages/QuoteProforma';
@@ -86,6 +87,19 @@ export default function App() {
           <Route
             path="/qr/:token"
             element={<PublicVehicle />}
+          />
+
+          <Route
+            path="/service-orders/:id/delivery"
+            element={
+              <ProtectedRoute>
+                <ForRoles
+                  roles={SERVICE_ROLES}
+                >
+                  <DeliveryReport />
+                </ForRoles>
+              </ProtectedRoute>
+            }
           />
 
           <Route
