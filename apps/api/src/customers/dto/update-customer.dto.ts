@@ -29,6 +29,10 @@ export class UpdateCustomerDto {
 
   @IsOptional()
   @IsString()
+  taxNumber?: string;
+
+  @IsOptional()
+  @IsString()
   address?: string;
 
   @IsOptional()
