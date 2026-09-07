@@ -1,16 +1,21 @@
 import {
-  BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 
 @Injectable()
 export class SuppliersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+  ) {}
 
-  create(organizationId: string, dto: CreateSupplierDto) {
+  create(
+    organizationId: string,
+    dto: CreateSupplierDto,
+  ) {
     return this.prisma.supplier.create({
       data: {
         organizationId,
@@ -21,7 +26,9 @@ export class SuppliersService {
 
   findAll(organizationId: string) {
     return this.prisma.supplier.findMany({
-      where: { organizationId },
+      where: {
+        organizationId,
+      },
       include: {
         parts: true,
       },
@@ -31,19 +38,25 @@ export class SuppliersService {
     });
   }
 
-  async findOne(organizationId: string, id: string) {
-    const supplier = await this.prisma.supplier.findFirst({
-      where: {
-        id,
-        organizationId,
-      },
-      include: {
-        parts: true,
-      },
-    });
+  async findOne(
+    organizationId: string,
+    id: string,
+  ) {
+    const supplier =
+      await this.prisma.supplier.findFirst({
+        where: {
+          id,
+          organizationId,
+        },
+        include: {
+          parts: true,
+        },
+      });
 
     if (!supplier) {
-      throw new NotFoundException('Tedarikçi bulunamadý.');
+      throw new NotFoundException(
+        'TedarikÃ§i bulunamadÄ±.',
+      );
     }
 
     return supplier;
