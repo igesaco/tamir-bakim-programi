@@ -16,6 +16,7 @@ export default function ServiceOrders() {
   const [customers, setCustomers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [technicians, setTechnicians] = useState([]);
+  const [branches, setBranches] = useState([]);
 
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
@@ -26,6 +27,11 @@ export default function ServiceOrders() {
     'SERVICE_ADVISOR',
   ].includes(user?.role);
 
+  const canChooseBranch = [
+    'OWNER',
+    'MANAGER',
+  ].includes(user?.role);
+
   const [form, setForm] = useState({
     customerId: '',
     vehicleId: '',
@@ -33,6 +39,7 @@ export default function ServiceOrders() {
     complaint: '',
     internalNote: '',
     assignedTechnicianId: '',
+    branchId: user?.branchId || '',
   });
 
   async function load() {
@@ -44,27 +51,40 @@ export default function ServiceOrders() {
       return;
     }
 
+    const requests = [
+      api.get('/service-orders'),
+      api.get('/customers'),
+      api.get('/vehicles'),
+      api.get('/users/technicians'),
+    ];
+
+    if (canChooseBranch) {
+      requests.push(
+        api.get('/branches'),
+      );
+    }
+
+    const responses =
+      await Promise.all(requests);
+
     const [
       orderRes,
       customerRes,
       vehicleRes,
       technicianRes,
-    ] = await Promise.all([
-      api.get('/service-orders'),
-      api.get('/customers'),
-      api.get('/vehicles'),
-      api.get('/users/technicians'),
-    ]);
+      branchRes,
+    ] = responses;
 
     setOrders(orderRes.data);
     setCustomers(customerRes.data);
     setVehicles(vehicleRes.data);
     setTechnicians(technicianRes.data);
+    setBranches(branchRes?.data || []);
   }
 
   useEffect(() => {
     load();
-  }, [user?.role]);
+  }, [user?.role, canChooseBranch]);
 
   const customerVehicles = vehicles.filter(
     (vehicle) =>
@@ -118,6 +138,8 @@ export default function ServiceOrders() {
       assignedTechnicianId:
         form.assignedTechnicianId ||
         undefined,
+      branchId:
+        form.branchId || undefined,
     });
 
     setForm({
@@ -127,6 +149,7 @@ export default function ServiceOrders() {
       complaint: '',
       internalNote: '',
       assignedTechnicianId: '',
+      branchId: user?.branchId || '',
     });
 
     await load();
@@ -175,6 +198,41 @@ export default function ServiceOrders() {
               className="form-grid"
               onSubmit={submit}
             >
+              {canChooseBranch && (
+                <select
+                  className="full"
+                  value={form.branchId}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      branchId:
+                        e.target.value,
+                      assignedTechnicianId:
+                        '',
+                    })
+                  }
+                  required
+                >
+                  <option value="">
+                    İş emri şubesi seç
+                  </option>
+
+                  {branches
+                    .filter(
+                      (branch) =>
+                        branch.active,
+                    )
+                    .map((branch) => (
+                      <option
+                        key={branch.id}
+                        value={branch.id}
+                      >
+                        {branch.name}
+                      </option>
+                    ))}
+                </select>
+              )}
+
               <select
                 value={form.customerId}
                 onChange={(e) =>
@@ -258,7 +316,20 @@ export default function ServiceOrders() {
                   Teknisyen atama (opsiyonel)
                 </option>
 
-                {technicians.map(
+                {technicians
+                  .filter(
+                    (technician) =>
+                      !(
+                        form.branchId ||
+                        user?.branchId
+                      ) ||
+                      technician.branchId ===
+                        (
+                          form.branchId ||
+                          user?.branchId
+                        ),
+                  )
+                  .map(
                   (technician) => (
                     <option
                       key={technician.id}
