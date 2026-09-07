@@ -12,7 +12,9 @@ import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+  ) {}
 
   findByEmail(email: string) {
     return this.prisma.user.findUnique({
@@ -53,50 +55,110 @@ export class UsersService {
     });
   }
 
+  findTechnicians(
+    organizationId: string,
+    requesterRole: UserRole,
+    branchId: string | null,
+  ) {
+    if (
+      requesterRole ===
+        UserRole.SERVICE_ADVISOR &&
+      !branchId
+    ) {
+      throw new BadRequestException(
+        'Servis danışmanı için şube ataması gerekli.',
+      );
+    }
+
+    return this.prisma.user.findMany({
+      where: {
+        organizationId,
+        role: UserRole.TECHNICIAN,
+        active: true,
+        ...(requesterRole ===
+        UserRole.SERVICE_ADVISOR
+          ? { branchId }
+          : {}),
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        role: true,
+        branchId: true,
+        branch: true,
+      },
+      orderBy: [
+        {
+          firstName: 'asc',
+        },
+        {
+          lastName: 'asc',
+        },
+      ],
+    });
+  }
+
   async create(
     organizationId: string,
     actorRole: UserRole,
     dto: CreateUserDto,
   ) {
-    const existing = await this.findByEmail(dto.email);
+    const existing =
+      await this.findByEmail(dto.email);
 
     if (existing) {
       throw new BadRequestException(
-        'Bu e-posta adresi zaten kullan�l�yor.',
+        'Bu e-posta adresi zaten kullanılıyor.',
       );
     }
-if (
-  actorRole !== UserRole.OWNER &&
-  (
-    dto.role === UserRole.OWNER ||
-    dto.role === UserRole.MANAGER
-  )
-) {
-  throw new ForbiddenException(
-    'Bu role sahip kullanıcı oluşturamazsınız.',
-  );
-}
+
+    if (
+      dto.role === UserRole.OWNER &&
+      actorRole !== UserRole.OWNER
+    ) {
+      throw new ForbiddenException(
+        'Kurucu rolüne sahip kullanıcı oluşturamazsınız.',
+      );
+    }
+
+    if (
+      (
+        dto.role ===
+          UserRole.SERVICE_ADVISOR ||
+        dto.role === UserRole.TECHNICIAN
+      ) &&
+      !dto.branchId
+    ) {
+      throw new BadRequestException(
+        'Servis danışmanı ve teknisyen için şube seçimi zorunludur.',
+      );
+    }
 
     if (dto.branchId) {
-      const branch = await this.prisma.branch.findFirst({
-        where: {
-          id: dto.branchId,
-          organizationId,
-          active: true,
-        },
-      });
+      const branch =
+        await this.prisma.branch.findFirst({
+          where: {
+            id: dto.branchId,
+            organizationId,
+            active: true,
+          },
+        });
 
       if (!branch) {
         throw new BadRequestException(
-          'Ge�erli bir �ube se�iniz.',
+          'Geçerli bir şube seçiniz.',
         );
       }
     }
 
-    const passwordHash = await bcrypt.hash(
-      dto.password,
-      12,
-    );
+    const passwordHash =
+      await bcrypt.hash(
+        dto.password,
+        12,
+      );
 
     return this.prisma.user.create({
       data: {
@@ -131,22 +193,26 @@ if (
     id: string,
     active: boolean,
   ) {
-    const target = await this.prisma.user.findFirst({
-      where: {
-        id,
-        organizationId,
-      },
-    });
+    const target =
+      await this.prisma.user.findFirst({
+        where: {
+          id,
+          organizationId,
+        },
+      });
 
     if (!target) {
       throw new NotFoundException(
-        'Personel bulunamad�.',
+        'Personel bulunamadı.',
       );
     }
 
-    if (target.id === actorId && !active) {
+    if (
+      target.id === actorId &&
+      !active
+    ) {
       throw new BadRequestException(
-        'Kendi hesab�n�z� pasif yapamazs�n�z.',
+        'Kendi hesabınızı pasif yapamazsınız.',
       );
     }
 
@@ -155,7 +221,7 @@ if (
       actorRole !== UserRole.OWNER
     ) {
       throw new ForbiddenException(
-        'OWNER hesab�n� de�i�tirme yetkiniz yok.',
+        'Kurucu hesabını değiştirme yetkiniz yok.',
       );
     }
 
@@ -179,16 +245,17 @@ if (
     id: string,
     branchId?: string,
   ) {
-    const target = await this.prisma.user.findFirst({
-      where: {
-        id,
-        organizationId,
-      },
-    });
+    const target =
+      await this.prisma.user.findFirst({
+        where: {
+          id,
+          organizationId,
+        },
+      });
 
     if (!target) {
       throw new NotFoundException(
-        'Personel bulunamad�.',
+        'Personel bulunamadı.',
       );
     }
 
@@ -197,22 +264,37 @@ if (
       actorRole !== UserRole.OWNER
     ) {
       throw new ForbiddenException(
-        'OWNER hesab�n� de�i�tirme yetkiniz yok.',
+        'Kurucu hesabını değiştirme yetkiniz yok.',
+      );
+    }
+
+    if (
+      (
+        target.role ===
+          UserRole.SERVICE_ADVISOR ||
+        target.role ===
+          UserRole.TECHNICIAN
+      ) &&
+      !branchId
+    ) {
+      throw new BadRequestException(
+        'Bu personel rolü için şube seçimi zorunludur.',
       );
     }
 
     if (branchId) {
-      const branch = await this.prisma.branch.findFirst({
-        where: {
-          id: branchId,
-          organizationId,
-          active: true,
-        },
-      });
+      const branch =
+        await this.prisma.branch.findFirst({
+          where: {
+            id: branchId,
+            organizationId,
+            active: true,
+          },
+        });
 
       if (!branch) {
         throw new BadRequestException(
-          '�ube bulunamad�.',
+          'Şube bulunamadı.',
         );
       }
     }
