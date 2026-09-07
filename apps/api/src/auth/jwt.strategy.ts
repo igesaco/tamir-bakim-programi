@@ -44,13 +44,24 @@ export class JwtStrategy extends PassportStrategy(
       );
     }
 
+    if (
+      Number(
+        payload.tokenVersion ?? -1,
+      ) !== user.tokenVersion
+    ) {
+      throw new UnauthorizedException(
+        'Oturum güvenlik nedeniyle sonlandırıldı. Lütfen yeniden giriş yapın.',
+      );
+    }
+
     return {
       sub: user.id,
       email: user.email,
       role: user.role,
       organizationId:
         user.organizationId,
-      branchId: user.branchId,
+      branchId:
+        user.branchId,
     };
   }
 }
