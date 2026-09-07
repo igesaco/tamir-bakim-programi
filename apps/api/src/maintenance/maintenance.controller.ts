@@ -10,12 +10,22 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { UserRole } from '@prisma/client';
 
-import { MaintenanceService } from './maintenance.service';
-import { CreateMaintenanceRecordDto } from './dto/create-maintenance-record.dto';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { CreateMaintenancePackageDto } from './dto/create-maintenance-package.dto';
 import { CreateMaintenancePlanDto } from './dto/create-maintenance-plan.dto';
+import { CreateMaintenanceRecordDto } from './dto/create-maintenance-record.dto';
+import { MaintenanceService } from './maintenance.service';
 
 @UseGuards(AuthGuard('jwt'))
+@Roles(
+  UserRole.OWNER,
+  UserRole.MANAGER,
+  UserRole.SERVICE_ADVISOR,
+)
+@UseGuards(RolesGuard)
 @Controller('maintenance')
 export class MaintenanceController {
   constructor(
@@ -76,6 +86,41 @@ export class MaintenanceController {
     return this.maintenanceService.completePlan(
       req.user.organizationId,
       id,
+    );
+  }
+
+  @Get('packages')
+  findPackages(@Req() req: any) {
+    return this.maintenanceService.findPackages(
+      req.user.organizationId,
+    );
+  }
+
+  @Post('packages')
+  @Roles(UserRole.OWNER, UserRole.MANAGER)
+  @UseGuards(RolesGuard)
+  createPackage(
+    @Req() req: any,
+    @Body() dto: CreateMaintenancePackageDto,
+  ) {
+    return this.maintenanceService.createPackage(
+      req.user.organizationId,
+      dto,
+    );
+  }
+
+  @Patch('packages/:id/active')
+  @Roles(UserRole.OWNER, UserRole.MANAGER)
+  @UseGuards(RolesGuard)
+  setPackageActive(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body('active') active: boolean,
+  ) {
+    return this.maintenanceService.setPackageActive(
+      req.user.organizationId,
+      id,
+      active,
     );
   }
 }
