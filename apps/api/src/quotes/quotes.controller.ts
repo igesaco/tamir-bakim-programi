@@ -20,13 +20,13 @@ import { RolesGuard } from '../auth/roles.guard';
 import { CreateQuoteDto } from './dto/create-quote.dto';
 import { QuotesService } from './quotes.service';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(
   UserRole.OWNER,
   UserRole.MANAGER,
   UserRole.SERVICE_ADVISOR,
 )
-@UseGuards(RolesGuard)
+
 @Controller('quotes')
 export class QuotesController {
   constructor(
