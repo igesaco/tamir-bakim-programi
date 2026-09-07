@@ -38,6 +38,7 @@ export class VehiclesController {
     return this.vehiclesService.create(
       req.user.organizationId,
       req.user.branchId,
+      req.user.role,
       dto,
     );
   }
@@ -52,6 +53,8 @@ export class VehiclesController {
   findAll(@Req() req: any) {
     return this.vehiclesService.findAll(
       req.user.organizationId,
+      req.user.role,
+      req.user.branchId,
     );
   }
 
@@ -78,6 +81,8 @@ export class VehiclesController {
     return this.vehiclesService.findOne(
       req.user.organizationId,
       id,
+      req.user.role,
+      req.user.branchId,
     );
   }
 
@@ -96,6 +101,8 @@ export class VehiclesController {
     return this.vehiclesService.update(
       req.user.organizationId,
       id,
+      req.user.role,
+      req.user.branchId,
       dto,
     );
   }
@@ -114,6 +121,8 @@ export class VehiclesController {
     return this.vehiclesService.remove(
       req.user.organizationId,
       id,
+      req.user.role,
+      req.user.branchId,
     );
   }
 }
