@@ -200,6 +200,7 @@ export class AuthService {
     role: UserRole;
     organizationId: string;
     branchId: string | null;
+    tokenVersion: number;
   }) {
     return this.jwtService.signAsync({
       sub: user.id,
@@ -209,6 +210,8 @@ export class AuthService {
         user.organizationId,
       branchId:
         user.branchId,
+      tokenVersion:
+        user.tokenVersion,
     });
   }
 }
