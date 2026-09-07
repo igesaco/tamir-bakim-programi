@@ -50,11 +50,27 @@ export default function DeliveryReport() {
 
     const total =
       order.items?.reduce(
-        (sum, item) =>
-          sum +
-          Number(
-            item.totalPrice || 0,
-          ),
+        (sum, item) => {
+          const gross =
+            Number(
+              item.grossTotal ||
+                0,
+            );
+
+          return (
+            sum +
+            (gross > 0
+              ? gross
+              : Number(
+                  item.totalPrice ||
+                    0,
+                ) +
+                Number(
+                  item.vatAmount ||
+                    0,
+                ))
+          );
+        },
         0,
       ) || 0;
 
@@ -229,7 +245,8 @@ export default function DeliveryReport() {
               <th>Miktar</th>
               <th>Birim Fiyat</th>
               <th>İndirim</th>
-              <th>Toplam</th>
+              <th>KDV</th>
+              <th>Genel Toplam</th>
               <th>Durum</th>
             </tr>
           </thead>
@@ -279,8 +296,33 @@ export default function DeliveryReport() {
                   </td>
 
                   <td>
+                    %{Number(
+                      item.vatRate ??
+                        20,
+                    )}{' '}
+                    /{' '}
                     {money(
-                      item.totalPrice,
+                      item.vatAmount ||
+                        0,
+                    )}{' '}
+                    ₺
+                  </td>
+
+                  <td>
+                    {money(
+                      Number(
+                        item.grossTotal ||
+                          0,
+                      ) > 0
+                        ? item.grossTotal
+                        : Number(
+                            item.totalPrice ||
+                              0,
+                          ) +
+                          Number(
+                            item.vatAmount ||
+                              0,
+                          ),
                     )}{' '}
                     ₺
                   </td>
@@ -296,7 +338,7 @@ export default function DeliveryReport() {
 
             {!order.items?.length && (
               <tr>
-                <td colSpan="8">
+                <td colSpan="9">
                   İşlem kaydı bulunmuyor.
                 </td>
               </tr>
