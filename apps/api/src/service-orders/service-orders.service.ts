@@ -926,7 +926,8 @@ export class ServiceOrdersService {
     }
 
     if (
-      actorRole === UserRole.TECHNICIAN &&
+      actorRole ===
+        UserRole.TECHNICIAN &&
       !TECHNICIAN_ALLOWED_STATUSES.has(
         status,
       )
@@ -936,19 +937,116 @@ export class ServiceOrdersService {
       );
     }
 
-    return this.prisma.serviceOrder.update({
-      where: { id },
-      data: {
-        status,
-        deliveredAt:
-          status ===
-          ServiceOrderStatus.DELIVERED
-            ? new Date()
-            : undefined,
+    if (
+      status !==
+      ServiceOrderStatus.DELIVERED
+    ) {
+      return this.prisma.serviceOrder.update({
+        where: { id },
+        data: {
+          status,
+        },
+        include: {
+          assignedTechnician: true,
+        },
+      });
+    }
+
+    const deliveredAt =
+      new Date();
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const updatedOrder =
+          await tx.serviceOrder.update({
+            where: { id },
+            data: {
+              status:
+                ServiceOrderStatus.DELIVERED,
+              deliveredAt,
+            },
+            include: {
+              assignedTechnician: true,
+              items: true,
+            },
+          });
+
+        await tx.vehicle.updateMany({
+          where: {
+            id:
+              order.vehicleId,
+            organizationId,
+            mileage: {
+              lt: order.mileage,
+            },
+          },
+          data: {
+            mileage:
+              order.mileage,
+          },
+        });
+
+        const existingRecord =
+          await tx.maintenanceRecord.findUnique({
+            where: {
+              serviceOrderId:
+                id,
+            },
+          });
+
+        if (!existingRecord) {
+          const totalAmount =
+            updatedOrder.items.reduce(
+              (sum, item) =>
+                sum +
+                Number(
+                  item.totalPrice,
+                ),
+              0,
+            );
+
+          await tx.maintenanceRecord.create({
+            data: {
+              organizationId,
+              branchId:
+                order.branchId,
+              vehicleId:
+                order.vehicleId,
+              serviceOrderId:
+                order.id,
+              mileage:
+                order.mileage,
+              performedAt:
+                deliveredAt,
+              totalAmount,
+              notes:
+                order.internalNote ??
+                order.complaint,
+              items: {
+                create:
+                  updatedOrder.items.map(
+                    (item) => ({
+                      partId:
+                        item.partId,
+                      name:
+                        item.name,
+                      description:
+                        item.description,
+                      quantity:
+                        item.quantity,
+                      unitPrice:
+                        item.unitPrice,
+                      totalPrice:
+                        item.totalPrice,
+                    }),
+                  ),
+              },
+            },
+          });
+        }
+
+        return updatedOrder;
       },
-      include: {
-        assignedTechnician: true,
-      },
-    });
+    );
   }
 }
