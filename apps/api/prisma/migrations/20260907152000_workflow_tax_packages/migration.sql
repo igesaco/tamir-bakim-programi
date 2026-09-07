@@ -1,3 +1,8 @@
+-- Add organization invoice details
+ALTER TABLE "Organization"
+ADD COLUMN "taxOffice" TEXT,
+ADD COLUMN "address" TEXT;
+
 -- Add VAT totals to quotes
 ALTER TABLE "Quote"
 ADD COLUMN "taxTotal" DECIMAL(12,2) NOT NULL DEFAULT 0;
