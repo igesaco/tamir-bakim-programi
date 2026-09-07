@@ -27,6 +27,10 @@ export default function Settings() {
         name: organization.name,
         taxNumber:
           organization.taxNumber || undefined,
+        taxOffice:
+          organization.taxOffice || undefined,
+        address:
+          organization.address || undefined,
         phone:
           organization.phone || undefined,
         email:
@@ -97,13 +101,35 @@ export default function Settings() {
             />
 
             <input
-              className="full"
               placeholder="Vergi numarası"
               value={organization.taxNumber || ''}
               onChange={(e) =>
                 setOrganization({
                   ...organization,
                   taxNumber: e.target.value,
+                })
+              }
+            />
+
+            <input
+              placeholder="Vergi dairesi"
+              value={organization.taxOffice || ''}
+              onChange={(e) =>
+                setOrganization({
+                  ...organization,
+                  taxOffice: e.target.value,
+                })
+              }
+            />
+
+            <textarea
+              className="full"
+              placeholder="Fatura / işletme adresi"
+              value={organization.address || ''}
+              onChange={(e) =>
+                setOrganization({
+                  ...organization,
+                  address: e.target.value,
                 })
               }
             />
