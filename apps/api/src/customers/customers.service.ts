@@ -104,9 +104,7 @@ export class CustomersService {
         email:
           dto.email
             ?.trim()
-            .toLocaleLowerCase(
-              'tr-TR',
-            ),
+            .toLowerCase(),
         taxNumber:
           dto.taxNumber?.trim(),
         address:
@@ -231,9 +229,7 @@ export class CustomersService {
               email:
                 dto.email
                   ?.trim()
-                  .toLocaleLowerCase(
-                    'tr-TR',
-                  ),
+                  .toLowerCase(),
               taxNumber:
                 dto.taxNumber,
               address:
