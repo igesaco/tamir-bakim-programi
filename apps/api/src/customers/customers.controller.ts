@@ -39,6 +39,7 @@ export class CustomersController {
     return this.customersService.create(
       req.user.organizationId,
       req.user.branchId,
+      req.user.role,
       dto,
     );
   }
@@ -47,6 +48,8 @@ export class CustomersController {
   findAll(@Req() req: any) {
     return this.customersService.findAll(
       req.user.organizationId,
+      req.user.role,
+      req.user.branchId,
     );
   }
 
@@ -58,6 +61,8 @@ export class CustomersController {
     return this.customersService.findOne(
       req.user.organizationId,
       id,
+      req.user.role,
+      req.user.branchId,
     );
   }
 
@@ -70,6 +75,8 @@ export class CustomersController {
     return this.customersService.update(
       req.user.organizationId,
       id,
+      req.user.role,
+      req.user.branchId,
       dto,
     );
   }
@@ -82,6 +89,8 @@ export class CustomersController {
     return this.customersService.remove(
       req.user.organizationId,
       id,
+      req.user.role,
+      req.user.branchId,
     );
   }
 }
