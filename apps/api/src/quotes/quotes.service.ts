@@ -7,12 +7,15 @@ import {
   QuoteStatus,
   ServiceItemType,
 } from '@prisma/client';
+
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateQuoteDto } from './dto/create-quote.dto';
 
 @Injectable()
 export class QuotesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+  ) {}
 
   async create(
     organizationId: string,
@@ -20,54 +23,137 @@ export class QuotesService {
     dto: CreateQuoteDto,
   ) {
     if (!branchId) {
-      throw new BadRequestException('�ube se�imi gerekli.');
+      throw new BadRequestException(
+        'Şube seçimi gerekli.',
+      );
     }
 
-    const vehicle = await this.prisma.vehicle.findFirst({
-      where: {
-        id: dto.vehicleId,
-        customerId: dto.customerId,
-        organizationId,
-      },
-    });
+    if (!dto.items?.length) {
+      throw new BadRequestException(
+        'Teklifte en az bir kalem bulunmalıdır.',
+      );
+    }
+
+    const vehicle =
+      await this.prisma.vehicle.findFirst({
+        where: {
+          id: dto.vehicleId,
+          customerId: dto.customerId,
+          organizationId,
+        },
+      });
 
     if (!vehicle) {
-      throw new BadRequestException('M��teri veya ara� bilgisi ge�ersiz.');
+      throw new BadRequestException(
+        'Müşteri veya araç bilgisi geçersiz.',
+      );
+    }
+
+    if (dto.serviceOrderId) {
+      const serviceOrder =
+        await this.prisma.serviceOrder.findFirst({
+          where: {
+            id: dto.serviceOrderId,
+            organizationId,
+            customerId: dto.customerId,
+            vehicleId: dto.vehicleId,
+          },
+        });
+
+      if (!serviceOrder) {
+        throw new BadRequestException(
+          'İş emri teklif bilgileriyle eşleşmiyor.',
+        );
+      }
     }
 
     const quoteNumber =
-      'QT-' +
-      new Date().toISOString().replace(/\D/g, '').slice(0, 14) +
+      'PRF-' +
+      new Date()
+        .toISOString()
+        .replace(/\D/g, '')
+        .slice(0, 14) +
       '-' +
-      Math.floor(1000 + Math.random() * 9000);
+      Math.floor(
+        1000 + Math.random() * 9000,
+      );
 
-    const items = dto.items.map((item) => {
-      const discount = item.discountAmount ?? 0;
-      const total = item.quantity * item.unitPrice - discount;
+    const items = dto.items.map(
+      (item) => {
+        const discount =
+          item.discountAmount ?? 0;
+        const vatRate =
+          item.vatRate ?? 20;
 
-      return {
-        partId: item.partId,
-        type: item.type as ServiceItemType,
-        name: item.name,
-        description: item.description,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        discountAmount: discount,
-        totalPrice: total,
-      };
-    });
+        const base =
+          item.quantity *
+          item.unitPrice;
+
+        if (discount > base) {
+          throw new BadRequestException(
+            `${item.name} kalemindeki indirim tutarı satır toplamından büyük olamaz.`,
+          );
+        }
+
+        const netTotal =
+          base - discount;
+
+        const vatAmount =
+          netTotal *
+          (vatRate / 100);
+
+        const grossTotal =
+          netTotal + vatAmount;
+
+        return {
+          partId: item.partId,
+          type:
+            item.type as ServiceItemType,
+          name: item.name,
+          description:
+            item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          discountAmount: discount,
+          totalPrice: netTotal,
+          vatRate,
+          vatAmount,
+          grossTotal,
+        };
+      },
+    );
 
     const subtotal = dto.items.reduce(
-      (sum, item) => sum + item.quantity * item.unitPrice,
+      (sum, item) =>
+        sum +
+        item.quantity *
+          item.unitPrice,
       0,
     );
 
-    const discountTotal = dto.items.reduce(
-      (sum, item) => sum + (item.discountAmount ?? 0),
+    const discountTotal =
+      items.reduce(
+        (sum, item) =>
+          sum +
+          Number(
+            item.discountAmount,
+          ),
+        0,
+      );
+
+    const taxTotal = items.reduce(
+      (sum, item) =>
+        sum +
+        Number(item.vatAmount),
       0,
     );
 
-    const total = subtotal - discountTotal;
+    const total = items.reduce(
+      (sum, item) =>
+        sum +
+        Number(item.grossTotal),
+      0,
+    );
 
     return this.prisma.quote.create({
       data: {
@@ -75,10 +161,12 @@ export class QuotesService {
         branchId,
         customerId: dto.customerId,
         vehicleId: dto.vehicleId,
-        serviceOrderId: dto.serviceOrderId,
+        serviceOrderId:
+          dto.serviceOrderId,
         quoteNumber,
         subtotal,
         discountTotal,
+        taxTotal,
         total,
         notes: dto.notes,
         items: {
@@ -86,6 +174,8 @@ export class QuotesService {
         },
       },
       include: {
+        organization: true,
+        branch: true,
         customer: true,
         vehicle: true,
         items: true,
@@ -107,17 +197,52 @@ export class QuotesService {
     });
   }
 
+  async findOne(
+    organizationId: string,
+    id: string,
+  ) {
+    const quote =
+      await this.prisma.quote.findFirst({
+        where: {
+          id,
+          organizationId,
+        },
+        include: {
+          organization: true,
+          branch: true,
+          customer: true,
+          vehicle: true,
+          serviceOrder: true,
+          items: true,
+        },
+      });
+
+    if (!quote) {
+      throw new NotFoundException(
+        'Teklif bulunamadı.',
+      );
+    }
+
+    return quote;
+  }
+
   async updateStatus(
     organizationId: string,
     id: string,
     status: QuoteStatus,
   ) {
-    const quote = await this.prisma.quote.findFirst({
-      where: { id, organizationId },
-    });
+    const quote =
+      await this.prisma.quote.findFirst({
+        where: {
+          id,
+          organizationId,
+        },
+      });
 
     if (!quote) {
-      throw new NotFoundException('Teklif bulunamad�.');
+      throw new NotFoundException(
+        'Teklif bulunamadı.',
+      );
     }
 
     return this.prisma.quote.update({
@@ -129,7 +254,8 @@ export class QuotesService {
             ? new Date()
             : undefined,
         approvedAt:
-          status === QuoteStatus.APPROVED
+          status ===
+          QuoteStatus.APPROVED
             ? new Date()
             : undefined,
       },
