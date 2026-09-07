@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Tamir Bakım",
+    "slug": "tamir-bakim-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.igesa.tamirbakim"
+    }
+  }
+}
