@@ -1282,33 +1282,46 @@ export default function CustomerDetail() {
             <div className="customer-card-list">
               {vehicles.map(
                 (vehicle) => (
-                  <Link
+                  <div
                     className="customer-vehicle-card"
                     key={vehicle.id}
-                    to={`/vehicles/${vehicle.id}`}
                   >
-                    <div>
-                      <strong>
-                        {vehicle.plate}
-                      </strong>
-                      <span>
-                        {vehicle.brand}{' '}
-                        {vehicle.model}
-                      </span>
-                    </div>
+                    <Link
+                      className="customer-vehicle-main"
+                      to={`/vehicles/${vehicle.id}`}
+                    >
+                      <div>
+                        <strong>
+                          {vehicle.plate}
+                        </strong>
+                        <span>
+                          {vehicle.brand}{' '}
+                          {vehicle.model}
+                        </span>
+                      </div>
 
-                    <div>
-                      <span>KM</span>
-                      <strong>
-                        {Number(
-                          vehicle.mileage ||
-                            0,
-                        ).toLocaleString(
-                          'tr-TR',
-                        )}
-                      </strong>
-                    </div>
-                  </Link>
+                      <div>
+                        <span>KM</span>
+                        <strong>
+                          {Number(
+                            vehicle.mileage ||
+                              0,
+                          ).toLocaleString(
+                            'tr-TR',
+                          )}
+                        </strong>
+                      </div>
+                    </Link>
+
+                    <a
+                      className="small-button customer-qr-button"
+                      href={`/vehicles/${vehicle.id}/qr-print`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      QR / Yazdır
+                    </a>
+                  </div>
                 ),
               )}
 
