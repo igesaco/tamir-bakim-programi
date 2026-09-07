@@ -12,6 +12,12 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateQuoteDto } from './dto/create-quote.dto';
 
+function money(value: number) {
+  return Math.round(
+    (value + Number.EPSILON) * 100,
+  ) / 100;
+}
+
 @Injectable()
 export class QuotesService {
   constructor(
@@ -24,15 +30,6 @@ export class QuotesService {
     actorRole: UserRole,
     dto: CreateQuoteDto,
   ) {
-    if (!branchId) {
-      throw new BadRequestException(
-        'Şube seçimi gerekli.',
-      );
-    }
-
-    let effectiveBranchId =
-      branchId;
-
     if (!dto.items?.length) {
       throw new BadRequestException(
         'Teklifte en az bir kalem bulunmalıdır.',
@@ -43,14 +40,33 @@ export class QuotesService {
       await this.prisma.vehicle.findFirst({
         where: {
           id: dto.vehicleId,
-          customerId: dto.customerId,
+          customerId:
+            dto.customerId,
           organizationId,
+          ...(actorRole ===
+          UserRole.SERVICE_ADVISOR
+            ? {
+                branchId:
+                  branchId ??
+                  '__branch_not_assigned__',
+              }
+            : {}),
         },
       });
 
     if (!vehicle) {
       throw new BadRequestException(
-        'Müşteri veya araç bilgisi geçersiz.',
+        'Müşteri veya araç bilgisi geçersiz ya da erişim yetkiniz yok.',
+      );
+    }
+
+    let effectiveBranchId =
+      vehicle.branchId ??
+      branchId;
+
+    if (!effectiveBranchId) {
+      throw new BadRequestException(
+        'Teklif için şube bilgisi gerekli.',
       );
     }
 
@@ -60,12 +76,12 @@ export class QuotesService {
           where: {
             id: dto.serviceOrderId,
             organizationId,
-            customerId: dto.customerId,
-            vehicleId: dto.vehicleId,
-            ...(actorRole ===
-            UserRole.SERVICE_ADVISOR
-              ? { branchId }
-              : {}),
+            customerId:
+              dto.customerId,
+            vehicleId:
+              dto.vehicleId,
+            branchId:
+              effectiveBranchId,
           },
         });
 
@@ -79,6 +95,44 @@ export class QuotesService {
         serviceOrder.branchId;
     }
 
+    const partIds = [
+      ...new Set(
+        dto.items
+          .map((item) => item.partId)
+          .filter(
+            (
+              item,
+            ): item is string =>
+              Boolean(item),
+          ),
+      ),
+    ];
+
+    if (partIds.length) {
+      const parts =
+        await this.prisma.part.findMany({
+          where: {
+            id: {
+              in: partIds,
+            },
+            organizationId,
+            active: true,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+      if (
+        parts.length !==
+        partIds.length
+      ) {
+        throw new BadRequestException(
+          'Teklifte seçilen parçalardan biri geçersiz veya başka bir işletmeye ait.',
+        );
+      }
+    }
+
     const quoteNumber =
       'PRF-' +
       new Date()
@@ -87,47 +141,81 @@ export class QuotesService {
         .slice(0, 14) +
       '-' +
       Math.floor(
-        1000 + Math.random() * 9000,
+        1000 +
+          Math.random() *
+            9000,
       );
 
     const items = dto.items.map(
       (item) => {
+        const quantity =
+          Number(item.quantity);
+        const unitPrice =
+          money(
+            Number(
+              item.unitPrice,
+            ),
+          );
         const discount =
-          item.discountAmount ?? 0;
+          money(
+            Number(
+              item.discountAmount ??
+                0,
+            ),
+          );
         const vatRate =
-          item.vatRate ?? 20;
+          Number(
+            item.vatRate ?? 20,
+          );
 
         const base =
-          item.quantity *
-          item.unitPrice;
+          money(
+            quantity *
+              unitPrice,
+          );
 
-        if (discount > base) {
+        if (
+          discount >
+          base
+        ) {
           throw new BadRequestException(
             `${item.name} kalemindeki indirim tutarı satır toplamından büyük olamaz.`,
           );
         }
 
         const netTotal =
-          base - discount;
+          money(
+            base -
+              discount,
+          );
 
         const vatAmount =
-          netTotal *
-          (vatRate / 100);
+          money(
+            netTotal *
+              (vatRate / 100),
+          );
 
         const grossTotal =
-          netTotal + vatAmount;
+          money(
+            netTotal +
+              vatAmount,
+          );
 
         return {
-          partId: item.partId,
+          partId:
+            item.partId,
           type:
             item.type as ServiceItemType,
-          name: item.name,
+          name:
+            item.name.trim(),
           description:
-            item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          discountAmount: discount,
-          totalPrice: netTotal,
+            item.description?.trim(),
+          quantity,
+          unitPrice,
+          discountAmount:
+            discount,
+          totalPrice:
+            netTotal,
           vatRate,
           vatAmount,
           grossTotal,
@@ -135,44 +223,66 @@ export class QuotesService {
       },
     );
 
-    const subtotal = dto.items.reduce(
-      (sum, item) =>
-        sum +
-        item.quantity *
-          item.unitPrice,
-      0,
-    );
-
-    const discountTotal =
-      items.reduce(
-        (sum, item) =>
-          sum +
-          Number(
-            item.discountAmount,
-          ),
-        0,
+    const subtotal =
+      money(
+        dto.items.reduce(
+          (sum, item) =>
+            sum +
+            Number(
+              item.quantity,
+            ) *
+              Number(
+                item.unitPrice,
+              ),
+          0,
+        ),
       );
 
-    const taxTotal = items.reduce(
-      (sum, item) =>
-        sum +
-        Number(item.vatAmount),
-      0,
-    );
+    const discountTotal =
+      money(
+        items.reduce(
+          (sum, item) =>
+            sum +
+            Number(
+              item.discountAmount,
+            ),
+          0,
+        ),
+      );
 
-    const total = items.reduce(
-      (sum, item) =>
-        sum +
-        Number(item.grossTotal),
-      0,
-    );
+    const taxTotal =
+      money(
+        items.reduce(
+          (sum, item) =>
+            sum +
+            Number(
+              item.vatAmount,
+            ),
+          0,
+        ),
+      );
+
+    const total =
+      money(
+        items.reduce(
+          (sum, item) =>
+            sum +
+            Number(
+              item.grossTotal,
+            ),
+          0,
+        ),
+      );
 
     return this.prisma.quote.create({
       data: {
         organizationId,
-        branchId: effectiveBranchId,
-        customerId: dto.customerId,
-        vehicleId: dto.vehicleId,
+        branchId:
+          effectiveBranchId,
+        customerId:
+          dto.customerId,
+        vehicleId:
+          dto.vehicleId,
         serviceOrderId:
           dto.serviceOrderId,
         quoteNumber,
@@ -180,7 +290,8 @@ export class QuotesService {
         discountTotal,
         taxTotal,
         total,
-        notes: dto.notes,
+        notes:
+          dto.notes?.trim(),
         items: {
           create: items,
         },
@@ -216,6 +327,7 @@ export class QuotesService {
         customer: true,
         vehicle: true,
         items: true,
+        branch: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -255,7 +367,7 @@ export class QuotesService {
 
     if (!quote) {
       throw new NotFoundException(
-        'Teklif bulunamadı.',
+        'Teklif bulunamadı veya erişim yetkiniz yok.',
       );
     }
 
@@ -287,7 +399,7 @@ export class QuotesService {
 
     if (!quote) {
       throw new NotFoundException(
-        'Teklif bulunamadı.',
+        'Teklif bulunamadı veya erişim yetkiniz yok.',
       );
     }
 
@@ -296,7 +408,8 @@ export class QuotesService {
       data: {
         status,
         sentAt:
-          status === QuoteStatus.SENT
+          status ===
+          QuoteStatus.SENT
             ? new Date()
             : undefined,
         approvedAt:
