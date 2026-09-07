@@ -14,9 +14,12 @@ import { UserRole } from '@prisma/client';
 
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ResetUserPasswordDto } from './dto/reset-user-password.dto';
 import { UpdateUserActiveDto } from './dto/update-user-active.dto';
 import { UpdateUserBranchDto } from './dto/update-user-branch.dto';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UsersService } from './users.service';
 
 @Controller('users')
@@ -45,6 +48,18 @@ export class UsersController {
     } = user;
 
     return safeUser;
+  }
+
+  @Patch('me/password')
+  changeOwnPassword(
+    @Req() req: any,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.usersService.changeOwnPassword(
+      req.user.sub,
+      dto.currentPassword,
+      dto.newPassword,
+    );
   }
 
   @Get('technicians')
@@ -127,6 +142,45 @@ export class UsersController {
       req.user.role,
       id,
       dto.branchId,
+    );
+  }
+
+  @Patch(':id/role')
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+  )
+  @UseGuards(RolesGuard)
+  changeRole(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateUserRoleDto,
+  ) {
+    return this.usersService.changeRole(
+      req.user.organizationId,
+      req.user.sub,
+      req.user.role,
+      id,
+      dto.role,
+    );
+  }
+
+  @Patch(':id/password')
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+  )
+  @UseGuards(RolesGuard)
+  resetPassword(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: ResetUserPasswordDto,
+  ) {
+    return this.usersService.resetPassword(
+      req.user.organizationId,
+      req.user.role,
+      id,
+      dto.password,
     );
   }
 }
