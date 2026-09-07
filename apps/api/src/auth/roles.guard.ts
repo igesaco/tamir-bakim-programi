@@ -6,15 +6,24 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '@prisma/client';
+
 import { ROLES_KEY } from './roles.decorator';
 
 @Injectable()
-export class RolesGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+export class RolesGuard
+  implements CanActivate
+{
+  constructor(
+    private readonly reflector: Reflector,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  canActivate(
+    context: ExecutionContext,
+  ): boolean {
     const requiredRoles =
-      this.reflector.getAllAndOverride<UserRole[]>(
+      this.reflector.getAllAndOverride<
+        UserRole[]
+      >(
         ROLES_KEY,
         [
           context.getHandler(),
@@ -26,16 +35,26 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request =
+      context
+        .switchToHttp()
+        .getRequest();
+
     const user = request.user;
 
     if (!user?.role) {
-      throw new ForbiddenException('Yetkiniz bulunmuyor.');
+      throw new ForbiddenException(
+        'Yetkiniz bulunmuyor.',
+      );
     }
 
-    if (!requiredRoles.includes(user.role)) {
+    if (
+      !requiredRoles.includes(
+        user.role,
+      )
+    ) {
       throw new ForbiddenException(
-        'Bu iþlem için yetkiniz bulunmuyor.',
+        'Bu iÅŸlem iÃ§in yetkiniz bulunmuyor.',
       );
     }
 
