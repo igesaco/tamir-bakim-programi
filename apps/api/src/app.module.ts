@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 import { Module } from '@nestjs/common';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import {
