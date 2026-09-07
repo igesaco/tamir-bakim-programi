@@ -11,13 +11,18 @@ import DashboardLayout from './layouts/DashboardLayout';
 
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+
 import Customers from './pages/Customers';
 import CustomerDetail from './pages/CustomerDetail';
+
 import Vehicles from './pages/Vehicles';
 import VehicleDetail from './pages/VehicleDetail';
+
 import Appointments from './pages/Appointments';
+
 import ServiceOrders from './pages/ServiceOrders';
 import ServiceOrderDetail from './pages/ServiceOrderDetail';
+
 import Quotes from './pages/Quotes';
 import Maintenance from './pages/Maintenance';
 import Inventory from './pages/Inventory';
@@ -27,6 +32,8 @@ import Branches from './pages/Branches';
 import Notifications from './pages/Notifications';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+
+import PublicVehicle from './pages/PublicVehicle';
 
 function ProtectedLayout() {
   return (
@@ -44,6 +51,11 @@ export default function App() {
           <Route
             path="/login"
             element={<Login />}
+          />
+
+          <Route
+            path="/qr/:token"
+            element={<PublicVehicle />}
           />
 
           <Route element={<ProtectedLayout />}>
@@ -135,7 +147,9 @@ export default function App() {
 
           <Route
             path="*"
-            element={<Navigate to="/" replace />}
+            element={
+              <Navigate to="/" replace />
+            }
           />
         </Routes>
       </AuthProvider>

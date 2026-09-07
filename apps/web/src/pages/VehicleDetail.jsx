@@ -150,7 +150,7 @@ export default function VehicleDetail() {
             className="primary-link-button"
             target="_blank"
             rel="noreferrer"
-            href={`http://localhost:3000/vehicles/qr/${vehicle.qrToken}`}
+            href={`/qr/${vehicle.qrToken}`}
           >
             QR Sayfasını Aç
           </a>

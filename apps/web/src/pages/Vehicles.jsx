@@ -235,7 +235,7 @@ export default function Vehicles() {
                     <td>
                       <a
                         className="table-link"
-                        href={`http://localhost:3000/vehicles/qr/${vehicle.qrToken}`}
+                        href={`/qr/${vehicle.qrToken}`}
                         target="_blank"
                         rel="noreferrer"
                       >
