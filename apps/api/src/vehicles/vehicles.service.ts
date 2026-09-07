@@ -75,6 +75,13 @@ export class VehiclesService {
       );
     }
 
+    const normalizedVin =
+      dto.vin?.trim()
+        ? dto.vin
+            .trim()
+            .toUpperCase()
+        : null;
+
     try {
       return await this.prisma.vehicle.create({
         data: {
@@ -84,9 +91,7 @@ export class VehiclesService {
           plate: dto.plate
             .trim()
             .toUpperCase(),
-          vin: dto.vin
-            ?.trim()
-            .toUpperCase(),
+          vin: normalizedVin,
           brand: dto.brand,
           model: dto.model,
           modelYear: dto.modelYear,
@@ -247,9 +252,11 @@ export class VehiclesService {
             : undefined,
           vin:
             dto.vin !== undefined
-              ? dto.vin
-                  .trim()
-                  .toUpperCase()
+              ? dto.vin.trim()
+                ? dto.vin
+                    .trim()
+                    .toUpperCase()
+                : null
               : undefined,
           brand: dto.brand,
           model: dto.model,
