@@ -11,6 +11,7 @@ export default function Maintenance() {
   const [records, setRecords] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [packages, setPackages] = useState([]);
+  const [alerts, setAlerts] = useState([]);
 
   const [form, setForm] = useState({
     vehicleId: '',
@@ -25,18 +26,25 @@ export default function Maintenance() {
   });
 
   async function load() {
-    const [p, r, v, packageResponse] =
-      await Promise.all([
-        api.get('/maintenance/plans'),
-        api.get('/maintenance/records'),
-        api.get('/vehicles'),
-        api.get('/maintenance/packages'),
-      ]);
+    const [
+      p,
+      r,
+      v,
+      packageResponse,
+      alertResponse,
+    ] = await Promise.all([
+      api.get('/maintenance/plans'),
+      api.get('/maintenance/records'),
+      api.get('/vehicles'),
+      api.get('/maintenance/packages'),
+      api.get('/maintenance/alerts'),
+    ]);
 
     setPlans(p.data);
     setRecords(r.data);
     setVehicles(v.data);
     setPackages(packageResponse.data);
+    setAlerts(alertResponse.data);
   }
 
   useEffect(() => {
@@ -109,6 +117,162 @@ export default function Maintenance() {
         <div>
           <h1>Bakım</h1>
           <p>Geçmiş bakımları ve gelecek bakım planlarını yönetin.</p>
+        </div>
+      </div>
+
+      <div className="stats-grid">
+        <div className="stat-card">
+          <span>Geciken Bakım</span>
+          <strong>
+            {
+              alerts.filter(
+                (item) =>
+                  item.alertStatus ===
+                  'OVERDUE',
+              ).length
+            }
+          </strong>
+        </div>
+
+        <div className="stat-card">
+          <span>Yaklaşan Bakım</span>
+          <strong>
+            {
+              alerts.filter(
+                (item) =>
+                  item.alertStatus ===
+                  'DUE_SOON',
+              ).length
+            }
+          </strong>
+        </div>
+
+        <div className="stat-card">
+          <span>Aktif Plan</span>
+          <strong>{plans.length}</strong>
+        </div>
+
+        <div className="stat-card">
+          <span>Bakım Kaydı</span>
+          <strong>{records.length}</strong>
+        </div>
+      </div>
+
+      <div className="panel-card spaced-card">
+        <div className="card-title-row">
+          <div>
+            <h3>Bakım Uyarıları</h3>
+            <p className="sub-text">
+              Tarihi geçen veya 30 gün / 1.000 km içinde yaklaşan bakımlar.
+            </p>
+          </div>
+        </div>
+
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Durum</th>
+                <th>Araç</th>
+                <th>Müşteri</th>
+                <th>Bakım</th>
+                <th>Güncel KM</th>
+                <th>Hedef KM</th>
+                <th>Hedef Tarih</th>
+                <th>Telefon</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {alerts
+                .filter(
+                  (item) =>
+                    item.alertStatus !==
+                    'UPCOMING',
+                )
+                .map((item) => (
+                  <tr key={item.id}>
+                    <td>
+                      <span
+                        className={
+                          item.alertStatus ===
+                          'OVERDUE'
+                            ? 'status-badge danger'
+                            : 'status-badge'
+                        }
+                      >
+                        {item.alertStatus ===
+                        'OVERDUE'
+                          ? 'Gecikmiş'
+                          : 'Yaklaşıyor'}
+                      </span>
+                    </td>
+
+                    <td>
+                      <strong>
+                        {item.vehicle?.plate}
+                      </strong>
+                      <div className="sub-text">
+                        {item.vehicle?.brand}{' '}
+                        {item.vehicle?.model}
+                      </div>
+                    </td>
+
+                    <td>
+                      {item.customer?.firstName}{' '}
+                      {item.customer?.lastName}
+                    </td>
+
+                    <td>{item.title}</td>
+
+                    <td>
+                      {Number(
+                        item.currentKm || 0,
+                      ).toLocaleString(
+                        'tr-TR',
+                      )}
+                    </td>
+
+                    <td>
+                      {item.nextDueKm
+                        ? Number(
+                            item.nextDueKm,
+                          ).toLocaleString(
+                            'tr-TR',
+                          )
+                        : '-'}
+                    </td>
+
+                    <td>
+                      {item.nextDueDate
+                        ? new Date(
+                            item.nextDueDate,
+                          ).toLocaleDateString(
+                            'tr-TR',
+                          )
+                        : '-'}
+                    </td>
+
+                    <td>
+                      {item.customer?.phone ||
+                        '-'}
+                    </td>
+                  </tr>
+                ))}
+
+              {!alerts.some(
+                (item) =>
+                  item.alertStatus !==
+                  'UPCOMING',
+              ) && (
+                <tr>
+                  <td colSpan="8">
+                    Geciken veya yaklaşan bakım bulunmuyor.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
