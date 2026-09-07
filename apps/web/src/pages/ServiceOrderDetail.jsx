@@ -500,12 +500,25 @@ export default function ServiceOrderDetail() {
           </p>
         </div>
 
-        <a
-          className="small-button"
-          href="/service-orders"
-        >
-          ← İş Emirlerine Dön
-        </a>
+        <div className="action-row">
+          {user?.role !== 'TECHNICIAN' && (
+            <a
+              className="small-button"
+              href={`/service-orders/${id}/delivery`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Teslim Tutanağı
+            </a>
+          )}
+
+          <a
+            className="small-button"
+            href="/service-orders"
+          >
+            ← İş Emirlerine Dön
+          </a>
+        </div>
       </div>
 
       <div className="detail-stats">
