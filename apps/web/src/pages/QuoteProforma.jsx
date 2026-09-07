@@ -98,10 +98,13 @@ export default function QuoteProforma() {
               {branch.name || 'Merkez Şube'}
             </div>
 
-            {branch.address && (
+            {(organization.address ||
+              branch.address) && (
               <div className="proforma-muted">
-                {branch.address}
-                {branch.city
+                {organization.address ||
+                  branch.address}
+                {!organization.address &&
+                branch.city
                   ? ` / ${branch.city}`
                   : ''}
               </div>
@@ -116,6 +119,13 @@ export default function QuoteProforma() {
             <div className="proforma-muted">
               {organization.email || ''}
             </div>
+
+            {organization.taxOffice && (
+              <div className="proforma-muted">
+                Vergi Dairesi:{' '}
+                {organization.taxOffice}
+              </div>
+            )}
 
             {organization.taxNumber && (
               <div className="proforma-muted">
