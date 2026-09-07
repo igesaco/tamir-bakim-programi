@@ -7,13 +7,18 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { UserRole } from '@prisma/client';
 
-import { InventoryService } from './inventory.service';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { CreatePartDto } from './dto/create-part.dto';
+import { InventoryService } from './inventory.service';
 import { StockMovementDto } from './dto/stock-movement.dto';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('inventory')
+@Roles(UserRole.OWNER, UserRole.MANAGER)
+@UseGuards(RolesGuard)
 export class InventoryController {
   constructor(
     private readonly inventoryService: InventoryService,
