@@ -9,7 +9,29 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const jwtSecret =
+    process.env.JWT_SECRET?.trim();
+
+  if (!jwtSecret) {
+    throw new Error(
+      'JWT_SECRET environment variable is required.',
+    );
+  }
+
+  if (
+    process.env.NODE_ENV ===
+      'production' &&
+    jwtSecret.length < 32
+  ) {
+    throw new Error(
+      'JWT_SECRET must be at least 32 characters in production.',
+    );
+  }
+
+  const app =
+    await NestFactory.create(
+      AppModule,
+    );
 
   app.use(helmet());
 
