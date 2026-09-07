@@ -28,6 +28,10 @@ export class CreateCustomerDto {
 
   @IsOptional()
   @IsString()
+  taxNumber?: string;
+
+  @IsOptional()
+  @IsString()
   address?: string;
 
   @IsOptional()
