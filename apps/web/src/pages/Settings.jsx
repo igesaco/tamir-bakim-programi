@@ -3,9 +3,16 @@ import api from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [organization, setOrganization] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
 
   useEffect(() => {
     api.get('/organizations/me')
@@ -48,6 +55,61 @@ export default function Settings() {
     setTimeout(() => {
       setSaved(false);
     }, 2500);
+  }
+
+  async function changePassword(e) {
+    e.preventDefault();
+
+    setPasswordMessage('');
+    setPasswordError('');
+
+    if (
+      passwordForm.newPassword !==
+      passwordForm.confirmPassword
+    ) {
+      setPasswordError(
+        'Yeni şifreler birbiriyle eşleşmiyor.',
+      );
+      return;
+    }
+
+    try {
+      await api.patch(
+        '/users/me/password',
+        {
+          currentPassword:
+            passwordForm.currentPassword,
+          newPassword:
+            passwordForm.newPassword,
+        },
+      );
+
+      setPasswordMessage(
+        'Şifre güncellendi. Güvenlik için yeniden giriş yapmanız gerekiyor.',
+      );
+
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+
+      setTimeout(() => {
+        logout();
+        window.location.href =
+          '/login';
+      }, 1500);
+    } catch (err) {
+      const detail =
+        err?.response?.data?.message;
+
+      setPasswordError(
+        Array.isArray(detail)
+          ? detail.join(', ')
+          : detail ||
+              'Şifre değiştirilemedi.',
+      );
+    }
   }
 
   return (
@@ -174,6 +236,78 @@ export default function Settings() {
               </strong>
             </div>
           </div>
+
+          <form
+            className="form-grid spaced-card"
+            onSubmit={changePassword}
+          >
+            <input
+              className="full"
+              type="password"
+              placeholder="Mevcut şifre"
+              value={
+                passwordForm.currentPassword
+              }
+              onChange={(e) =>
+                setPasswordForm({
+                  ...passwordForm,
+                  currentPassword:
+                    e.target.value,
+                })
+              }
+              required
+            />
+
+            <input
+              type="password"
+              minLength="8"
+              placeholder="Yeni şifre"
+              value={
+                passwordForm.newPassword
+              }
+              onChange={(e) =>
+                setPasswordForm({
+                  ...passwordForm,
+                  newPassword:
+                    e.target.value,
+                })
+              }
+              required
+            />
+
+            <input
+              type="password"
+              minLength="8"
+              placeholder="Yeni şifre tekrar"
+              value={
+                passwordForm.confirmPassword
+              }
+              onChange={(e) =>
+                setPasswordForm({
+                  ...passwordForm,
+                  confirmPassword:
+                    e.target.value,
+                })
+              }
+              required
+            />
+
+            <button className="primary-button full">
+              Şifremi Değiştir
+            </button>
+
+            {passwordMessage && (
+              <div className="success-message full">
+                {passwordMessage}
+              </div>
+            )}
+
+            {passwordError && (
+              <div className="error-message full">
+                {passwordError}
+              </div>
+            )}
+          </form>
         </div>
       </div>
     </>
