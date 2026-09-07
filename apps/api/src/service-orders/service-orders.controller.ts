@@ -19,6 +19,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { AssignTechnicianDto } from './dto/assign-technician.dto';
 import { CreateServiceOrderDto } from './dto/create-service-order.dto';
+import { CreateServiceOrderItemDto } from './dto/create-service-order-item.dto';
 import { ServiceOrdersService } from './service-orders.service';
 
 @UseGuards(AuthGuard('jwt'))
@@ -60,6 +61,92 @@ export class ServiceOrdersController {
       req.user.organizationId,
       req.user.role,
       req.user.sub,
+      req.user.branchId,
+    );
+  }
+
+  @Get(':id/available-parts')
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+  )
+  @UseGuards(RolesGuard)
+  availableParts(
+    @Req() req: any,
+    @Param('id') id: string,
+  ) {
+    return this.serviceOrdersService.availableParts(
+      req.user.organizationId,
+      id,
+      req.user.role,
+      req.user.branchId,
+    );
+  }
+
+  @Post(':id/items')
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+  )
+  @UseGuards(RolesGuard)
+  addItem(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: CreateServiceOrderItemDto,
+  ) {
+    return this.serviceOrdersService.addItem(
+      req.user.organizationId,
+      id,
+      req.user.sub,
+      req.user.role,
+      req.user.branchId,
+      dto,
+    );
+  }
+
+  @Patch(':id/items/:itemId/complete')
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+  )
+  @UseGuards(RolesGuard)
+  setItemComplete(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @Body('completed') completed: boolean,
+  ) {
+    return this.serviceOrdersService.setItemComplete(
+      req.user.organizationId,
+      id,
+      itemId,
+      req.user.role,
+      req.user.branchId,
+      completed,
+    );
+  }
+
+  @Post(':id/items/:itemId/remove')
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+  )
+  @UseGuards(RolesGuard)
+  removeItem(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+  ) {
+    return this.serviceOrdersService.removeItem(
+      req.user.organizationId,
+      id,
+      itemId,
+      req.user.sub,
+      req.user.role,
       req.user.branchId,
     );
   }
