@@ -412,3 +412,157 @@ td {
     grid-template-columns: 1fr;
   }
 }
+.small-button {
+  padding: 7px 11px;
+  border: 1px solid #3c434c;
+  border-radius: 7px;
+  background: #252b32;
+  color: #fff;
+  font-size: 12px;
+}
+
+.small-button:hover {
+  border-color: #f59e0b;
+}
+
+.spaced-card {
+  margin-top: 18px;
+}
+.inventory-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.danger-card strong {
+  color: #ff7b7b;
+}
+
+.danger-button {
+  border: 1px solid #713b3b;
+  border-radius: 10px;
+  background: #3a1c1c;
+  color: #ffb1b1;
+  font-weight: 700;
+}
+
+.sub-text {
+  margin-top: 4px;
+  color: #747e89;
+  font-size: 11px;
+}
+
+.status-badge.success {
+  border-color: #315f46;
+  color: #8ed3a9;
+}
+
+.status-badge.danger {
+  border-color: #683b3b;
+  color: #ee9b9b;
+}
+
+.notification-list {
+  display: grid;
+  gap: 10px;
+}
+
+.notification-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px;
+  border: 1px solid #292f36;
+  border-radius: 11px;
+  background: #12161a;
+}
+
+.notification-item.unread {
+  border-left: 3px solid #f59e0b;
+  background: #17191c;
+}
+
+.notification-title {
+  margin-bottom: 5px;
+  font-weight: 700;
+}
+
+.notification-message {
+  margin-bottom: 8px;
+  color: #a0a7af;
+  font-size: 13px;
+}
+
+.empty-state {
+  padding: 35px;
+  text-align: center;
+  color: #747d87;
+}
+
+.audit-list {
+  display: grid;
+}
+
+.audit-item {
+  display: grid;
+  gap: 4px;
+  padding: 13px 0;
+  border-bottom: 1px solid #292e34;
+}
+
+.audit-item span {
+  color: #9aa2ab;
+  font-size: 13px;
+}
+
+.audit-item small {
+  color: #686f78;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 18px;
+}
+
+.settings-info {
+  display: grid;
+  gap: 20px;
+}
+
+.settings-info div {
+  padding-bottom: 16px;
+  border-bottom: 1px solid #292e34;
+}
+
+.settings-info span,
+.settings-info strong {
+  display: block;
+}
+
+.settings-info span {
+  margin-bottom: 5px;
+  color: #777f89;
+  font-size: 12px;
+}
+
+.success-message {
+  padding: 12px;
+  border: 1px solid #315f46;
+  border-radius: 8px;
+  color: #8ed3a9;
+  background: #14241a;
+  text-align: center;
+}
+
+.reports-stats {
+  margin-bottom: 18px;
+}
+
+@media (max-width: 900px) {
+  .inventory-summary,
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}

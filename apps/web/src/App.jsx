@@ -11,11 +11,19 @@ import DashboardLayout from './layouts/DashboardLayout';
 
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Placeholder from './pages/Placeholder';
-
 import Customers from './pages/Customers';
 import Vehicles from './pages/Vehicles';
+import Appointments from './pages/Appointments';
 import ServiceOrders from './pages/ServiceOrders';
+import Quotes from './pages/Quotes';
+import Maintenance from './pages/Maintenance';
+import Inventory from './pages/Inventory';
+import Suppliers from './pages/Suppliers';
+import Users from './pages/Users';
+import Branches from './pages/Branches';
+import Notifications from './pages/Notifications';
+import Reports from './pages/Reports';
+import Settings from './pages/Settings';
 
 function ProtectedLayout() {
   return (
@@ -53,9 +61,7 @@ export default function App() {
 
             <Route
               path="appointments"
-              element={
-                <Placeholder title="Randevular" />
-              }
+              element={<Appointments />}
             />
 
             <Route
@@ -65,71 +71,55 @@ export default function App() {
 
             <Route
               path="quotes"
-              element={
-                <Placeholder title="Teklifler" />
-              }
+              element={<Quotes />}
             />
 
             <Route
               path="maintenance"
-              element={
-                <Placeholder title="Bakım" />
-              }
+              element={<Maintenance />}
             />
 
             <Route
               path="inventory"
-              element={
-                <Placeholder title="Stok" />
-              }
+              element={<Inventory />}
             />
 
             <Route
               path="suppliers"
-              element={
-                <Placeholder title="Tedarikçiler" />
-              }
+              element={<Suppliers />}
             />
 
             <Route
               path="users"
-              element={
-                <Placeholder title="Personel" />
-              }
+              element={<Users />}
             />
 
             <Route
               path="branches"
-              element={
-                <Placeholder title="Şubeler" />
-              }
+              element={<Branches />}
             />
 
             <Route
               path="notifications"
-              element={
-                <Placeholder title="Bildirimler" />
-              }
+              element={<Notifications />}
             />
 
             <Route
               path="reports"
-              element={
-                <Placeholder title="Raporlar" />
-              }
+              element={<Reports />}
             />
 
             <Route
               path="settings"
-              element={
-                <Placeholder title="Ayarlar" />
-              }
+              element={<Settings />}
             />
           </Route>
 
           <Route
             path="*"
-            element={<Navigate to="/" replace />}
+            element={
+              <Navigate to="/" replace />
+            }
           />
         </Routes>
       </AuthProvider>

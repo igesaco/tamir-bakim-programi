@@ -1,0 +1,155 @@
+﻿import { useEffect, useState } from 'react';
+import api from '../api/client';
+import { useAuth } from '../auth/AuthContext';
+
+export default function Settings() {
+  const { user } = useAuth();
+  const [organization, setOrganization] = useState(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    api.get('/organizations/me')
+      .then((response) => {
+        setOrganization(response.data);
+      });
+  }, []);
+
+  if (!organization) {
+    return <div>Ayarlar yükleniyor...</div>;
+  }
+
+  async function save(e) {
+    e.preventDefault();
+
+    const response = await api.patch(
+      '/organizations/me',
+      {
+        name: organization.name,
+        taxNumber:
+          organization.taxNumber || undefined,
+        phone:
+          organization.phone || undefined,
+        email:
+          organization.email || undefined,
+      },
+    );
+
+    setOrganization({
+      ...organization,
+      ...response.data,
+    });
+
+    setSaved(true);
+
+    setTimeout(() => {
+      setSaved(false);
+    }, 2500);
+  }
+
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <h1>Ayarlar</h1>
+          <p>İşletme ve hesap bilgilerini yönetin.</p>
+        </div>
+      </div>
+
+      <div className="settings-grid">
+        <div className="panel-card">
+          <h3>İşletme Bilgileri</h3>
+
+          <form className="form-grid" onSubmit={save}>
+            <input
+              className="full"
+              placeholder="İşletme adı"
+              value={organization.name || ''}
+              onChange={(e) =>
+                setOrganization({
+                  ...organization,
+                  name: e.target.value,
+                })
+              }
+              required
+            />
+
+            <input
+              placeholder="Telefon"
+              value={organization.phone || ''}
+              onChange={(e) =>
+                setOrganization({
+                  ...organization,
+                  phone: e.target.value,
+                })
+              }
+            />
+
+            <input
+              type="email"
+              placeholder="E-posta"
+              value={organization.email || ''}
+              onChange={(e) =>
+                setOrganization({
+                  ...organization,
+                  email: e.target.value,
+                })
+              }
+            />
+
+            <input
+              className="full"
+              placeholder="Vergi numarası"
+              value={organization.taxNumber || ''}
+              onChange={(e) =>
+                setOrganization({
+                  ...organization,
+                  taxNumber: e.target.value,
+                })
+              }
+            />
+
+            <button className="primary-button full">
+              Değişiklikleri Kaydet
+            </button>
+
+            {saved && (
+              <div className="success-message full">
+                Bilgiler kaydedildi.
+              </div>
+            )}
+          </form>
+        </div>
+
+        <div className="panel-card">
+          <h3>Hesabım</h3>
+
+          <div className="settings-info">
+            <div>
+              <span>Ad Soyad</span>
+              <strong>
+                {user?.firstName} {user?.lastName}
+              </strong>
+            </div>
+
+            <div>
+              <span>E-posta</span>
+              <strong>{user?.email}</strong>
+            </div>
+
+            <div>
+              <span>Rol</span>
+              <strong>{user?.role}</strong>
+            </div>
+
+            <div>
+              <span>Şube</span>
+              <strong>
+                {user?.branch?.name || '-'}
+              </strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
