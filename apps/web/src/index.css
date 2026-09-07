@@ -947,3 +947,315 @@ td {
   color: #777f88;
   font-size: 11px;
 }
+
+/* === QUOTE AND PROFORMA V2 === */
+.quote-form {
+  display: grid;
+  gap: 18px;
+}
+
+.quote-items {
+  display: grid;
+  gap: 10px;
+}
+
+.quote-items-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.quote-items-header strong,
+.quote-items-header span {
+  display: block;
+}
+
+.quote-items-header span {
+  margin-top: 4px;
+  color: #7d8690;
+  font-size: 12px;
+}
+
+.quote-item-row {
+  display: grid;
+  grid-template-columns:
+    120px minmax(180px, 1.5fr)
+    95px 120px 120px 95px 45px;
+  gap: 8px;
+  align-items: center;
+}
+
+.quote-item-row input,
+.quote-item-row select,
+.quote-notes,
+.panel-card > select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #30363d;
+  border-radius: 9px;
+  background: #0f1216;
+  color: #fff;
+  outline: none;
+}
+
+.quote-item-row input:focus,
+.quote-item-row select:focus,
+.quote-notes:focus,
+.panel-card > select:focus {
+  border-color: #f59e0b;
+}
+
+.quote-notes {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.quote-summary {
+  margin-left: auto;
+  width: min(420px, 100%);
+  display: grid;
+  gap: 8px;
+}
+
+.quote-summary > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 9px 12px;
+  border-bottom: 1px solid #282e35;
+}
+
+.quote-summary span {
+  margin: 0;
+}
+
+.quote-summary strong {
+  font-size: 15px;
+}
+
+.quote-grand-total {
+  margin-top: 4px;
+  border: 1px solid #4c3b1a;
+  border-radius: 9px;
+  background: #211b10;
+}
+
+.quote-grand-total strong {
+  color: #f59e0b;
+  font-size: 20px;
+}
+
+.proforma-screen {
+  min-height: 100vh;
+  padding: 26px;
+  background: #e9ecef;
+  color: #16191d;
+}
+
+.proforma-toolbar {
+  width: min(1000px, 100%);
+  margin: 0 auto 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.proforma-sheet {
+  width: min(1000px, 100%);
+  min-height: 1120px;
+  margin: 0 auto;
+  padding: 54px;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .12);
+}
+
+.proforma-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 30px;
+  padding-bottom: 28px;
+  border-bottom: 2px solid #15191e;
+}
+
+.proforma-brand {
+  margin-bottom: 7px;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.proforma-title-block {
+  display: grid;
+  gap: 6px;
+  text-align: right;
+}
+
+.proforma-title-block h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: 1px;
+}
+
+.proforma-title-block span,
+.proforma-muted {
+  color: #646b73;
+  font-size: 12px;
+}
+
+.proforma-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin: 28px 0;
+}
+
+.proforma-info-grid > div {
+  display: grid;
+  gap: 5px;
+}
+
+.proforma-info-grid h3 {
+  margin: 0 0 6px;
+  color: #777e86;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.proforma-info-grid span {
+  font-size: 12px;
+}
+
+.proforma-table {
+  color: #16191d;
+}
+
+.proforma-table th,
+.proforma-table td {
+  border-color: #dfe3e7;
+  white-space: normal;
+}
+
+.proforma-table th {
+  color: #59616a;
+}
+
+.proforma-totals {
+  width: min(430px, 100%);
+  margin: 28px 0 0 auto;
+  display: grid;
+  gap: 7px;
+}
+
+.proforma-totals > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e3e6e9;
+}
+
+.proforma-totals span {
+  color: #6a7178;
+  font-size: 12px;
+}
+
+.proforma-total-final {
+  padding: 14px !important;
+  border: 0 !important;
+  background: #171a1e;
+  color: #fff;
+}
+
+.proforma-total-final span,
+.proforma-total-final strong {
+  color: #fff;
+}
+
+.proforma-total-final strong {
+  font-size: 20px;
+}
+
+.proforma-notes {
+  margin-top: 34px;
+  padding: 16px;
+  border: 1px solid #e1e4e7;
+  background: #f7f8f9;
+}
+
+.proforma-notes p {
+  margin: 8px 0 0;
+  color: #4d555d;
+  font-size: 12px;
+}
+
+.proforma-footer {
+  margin-top: 50px;
+  padding-top: 14px;
+  border-top: 1px solid #e0e4e7;
+  color: #7a8188;
+  font-size: 10px;
+  text-align: center;
+}
+
+@media (max-width: 950px) {
+  .quote-item-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .quote-item-name {
+    grid-column: span 1;
+  }
+
+  .proforma-sheet {
+    padding: 28px;
+  }
+}
+
+@media (max-width: 620px) {
+  .quote-item-row {
+    grid-template-columns: 1fr;
+  }
+
+  .quote-items-header,
+  .proforma-header,
+  .proforma-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .proforma-title-block {
+    text-align: left;
+  }
+
+  .proforma-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+
+  .proforma-screen {
+    padding: 0;
+    background: #fff;
+  }
+
+  .proforma-toolbar {
+    display: none !important;
+  }
+
+  .proforma-sheet {
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 12mm;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
