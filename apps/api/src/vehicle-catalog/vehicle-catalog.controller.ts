@@ -12,13 +12,12 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { VehicleCatalogService } from './vehicle-catalog.service';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(
   UserRole.OWNER,
   UserRole.MANAGER,
   UserRole.SERVICE_ADVISOR,
 )
-@UseGuards(RolesGuard)
 @Controller('vehicle-catalog')
 export class VehicleCatalogController {
   constructor(
