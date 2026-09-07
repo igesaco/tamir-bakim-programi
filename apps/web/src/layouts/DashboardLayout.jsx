@@ -66,6 +66,11 @@ const menu = [
     roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
   },
   {
+    path: '/cashier',
+    label: 'Kasa / Tahsilat',
+    roles: ['OWNER', 'MANAGER'],
+  },
+  {
     path: '/reports',
     label: 'Raporlar',
     roles: ['OWNER', 'MANAGER'],
