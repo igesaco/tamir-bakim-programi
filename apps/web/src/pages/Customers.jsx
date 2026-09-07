@@ -528,7 +528,7 @@ export default function Customers() {
                             className="table-link"
                             to={`/customers/${customer.id}`}
                           >
-                            Detay
+                            Müşteri Paneli
                           </Link>
 
                           <button
