@@ -11,13 +11,15 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { UserRole } from '@prisma/client';
 
-import { BranchesService } from './branches.service';
-import { CreateBranchDto } from './dto/create-branch.dto';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { BranchesService } from './branches.service';
+import { CreateBranchDto } from './dto/create-branch.dto';
 
 @Controller('branches')
 @UseGuards(AuthGuard('jwt'))
+@Roles(UserRole.OWNER, UserRole.MANAGER)
+@UseGuards(RolesGuard)
 export class BranchesController {
   constructor(
     private readonly branchesService: BranchesService,
@@ -31,8 +33,6 @@ export class BranchesController {
   }
 
   @Post()
-  @Roles(UserRole.OWNER, UserRole.MANAGER)
-  @UseGuards(RolesGuard)
   create(
     @Req() req: any,
     @Body() dto: CreateBranchDto,
@@ -44,8 +44,6 @@ export class BranchesController {
   }
 
   @Patch(':id/active')
-  @Roles(UserRole.OWNER, UserRole.MANAGER)
-  @UseGuards(RolesGuard)
   setActive(
     @Req() req: any,
     @Param('id') id: string,
