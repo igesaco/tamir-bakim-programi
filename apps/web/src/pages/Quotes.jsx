@@ -1,84 +1,267 @@
-﻿import { useEffect, useState } from 'react';
+﻿import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import { Link } from 'react-router-dom';
+
 import api from '../api/client';
+import { statusLabel } from '../utils/status';
+
+const emptyItem = () => ({
+  type: 'LABOR',
+  name: '',
+  description: '',
+  quantity: 1,
+  unitPrice: '',
+  discountAmount: 0,
+  vatRate: 20,
+});
+
+function money(value) {
+  return Number(value || 0).toLocaleString(
+    'tr-TR',
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    },
+  );
+}
 
 export default function Quotes() {
   const [quotes, setQuotes] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [vehicles, setVehicles] = useState([]);
+  const [customers, setCustomers] =
+    useState([]);
+  const [vehicles, setVehicles] =
+    useState([]);
   const [orders, setOrders] = useState([]);
+  const [packages, setPackages] =
+    useState([]);
 
   const [form, setForm] = useState({
     customerId: '',
     vehicleId: '',
     serviceOrderId: '',
-    itemName: '',
-    type: 'LABOR',
-    quantity: 1,
-    unitPrice: '',
-    discountAmount: 0,
     notes: '',
   });
 
+  const [items, setItems] = useState([
+    emptyItem(),
+  ]);
+
+  const [selectedPackageId, setSelectedPackageId] =
+    useState('');
+
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
   async function load() {
-    const [q, c, v, o] = await Promise.all([
-      api.get('/quotes'),
-      api.get('/customers'),
-      api.get('/vehicles'),
-      api.get('/service-orders'),
-    ]);
+    const [q, c, v, o, p] =
+      await Promise.all([
+        api.get('/quotes'),
+        api.get('/customers'),
+        api.get('/vehicles'),
+        api.get('/service-orders'),
+        api.get('/maintenance/packages'),
+      ]);
 
     setQuotes(q.data);
     setCustomers(c.data);
     setVehicles(v.data);
     setOrders(o.data);
+    setPackages(p.data);
   }
 
   useEffect(() => {
-    load();
+    load().catch((err) => {
+      setError(
+        err?.response?.data?.message ||
+          'Teklif verileri yüklenemedi.',
+      );
+    });
   }, []);
 
   const filteredVehicles = vehicles.filter(
-    (v) => !form.customerId || v.customerId === form.customerId,
+    (vehicle) =>
+      !form.customerId ||
+      vehicle.customerId ===
+        form.customerId,
   );
+
+  const filteredOrders = orders.filter(
+    (order) =>
+      (!form.customerId ||
+        order.customerId ===
+          form.customerId) &&
+      (!form.vehicleId ||
+        order.vehicleId ===
+          form.vehicleId),
+  );
+
+  const totals = useMemo(() => {
+    return items.reduce(
+      (result, item) => {
+        const quantity =
+          Number(item.quantity) || 0;
+        const unitPrice =
+          Number(item.unitPrice) || 0;
+        const discount =
+          Number(item.discountAmount) || 0;
+        const vatRate =
+          Number(item.vatRate) || 0;
+
+        const base =
+          quantity * unitPrice;
+        const net = Math.max(
+          0,
+          base - discount,
+        );
+        const tax =
+          net * (vatRate / 100);
+
+        result.subtotal += base;
+        result.discount += discount;
+        result.tax += tax;
+        result.total += net + tax;
+
+        return result;
+      },
+      {
+        subtotal: 0,
+        discount: 0,
+        tax: 0,
+        total: 0,
+      },
+    );
+  }, [items]);
+
+  function updateItem(index, field, value) {
+    setItems((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              [field]: value,
+            }
+          : item,
+      ),
+    );
+  }
+
+  function addItem() {
+    setItems((current) => [
+      ...current,
+      emptyItem(),
+    ]);
+  }
+
+  function removeItem(index) {
+    setItems((current) => {
+      if (current.length === 1) {
+        return [emptyItem()];
+      }
+
+      return current.filter(
+        (_, itemIndex) =>
+          itemIndex !== index,
+      );
+    });
+  }
+
+  function applyPackage(packageId) {
+    setSelectedPackageId(packageId);
+
+    const selected = packages.find(
+      (item) => item.id === packageId,
+    );
+
+    if (!selected) {
+      return;
+    }
+
+    setItems(
+      selected.items.map((item) => ({
+        type: item.type,
+        name: item.name,
+        description:
+          item.description || '',
+        quantity:
+          Number(item.quantity) || 1,
+        unitPrice:
+          Number(item.unitPrice) || '',
+        discountAmount: 0,
+        vatRate:
+          Number(item.vatRate) || 20,
+      })),
+    );
+  }
 
   async function submit(e) {
     e.preventDefault();
 
-    await api.post('/quotes', {
-      customerId: form.customerId,
-      vehicleId: form.vehicleId,
-      serviceOrderId: form.serviceOrderId || undefined,
-      notes: form.notes,
-      items: [
-        {
-          type: form.type,
-          name: form.itemName,
-          quantity: Number(form.quantity),
-          unitPrice: Number(form.unitPrice),
-          discountAmount: Number(form.discountAmount || 0),
-        },
-      ],
-    });
+    setBusy(true);
+    setError('');
 
-    setForm({
-      customerId: '',
-      vehicleId: '',
-      serviceOrderId: '',
-      itemName: '',
-      type: 'LABOR',
-      quantity: 1,
-      unitPrice: '',
-      discountAmount: 0,
-      notes: '',
-    });
+    try {
+      await api.post('/quotes', {
+        customerId: form.customerId,
+        vehicleId: form.vehicleId,
+        serviceOrderId:
+          form.serviceOrderId ||
+          undefined,
+        notes: form.notes || undefined,
+        items: items.map((item) => ({
+          type: item.type,
+          name: item.name.trim(),
+          description:
+            item.description.trim() ||
+            undefined,
+          quantity:
+            Number(item.quantity),
+          unitPrice:
+            Number(item.unitPrice),
+          discountAmount:
+            Number(
+              item.discountAmount || 0,
+            ),
+          vatRate:
+            Number(item.vatRate || 0),
+        })),
+      });
 
-    await load();
+      setForm({
+        customerId: '',
+        vehicleId: '',
+        serviceOrderId: '',
+        notes: '',
+      });
+
+      setItems([emptyItem()]);
+      setSelectedPackageId('');
+
+      await load();
+    } catch (err) {
+      const message =
+        err?.response?.data?.message;
+
+      setError(
+        Array.isArray(message)
+          ? message.join(', ')
+          : message ||
+              'Teklif oluşturulamadı.',
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function approve(id) {
-    await api.patch(`/quotes/${id}/status`, {
-      status: 'APPROVED',
-    });
+    await api.patch(
+      `/quotes/${id}/status`,
+      {
+        status: 'APPROVED',
+      },
+    );
 
     await load();
   }
@@ -88,30 +271,51 @@ export default function Quotes() {
       <div className="page-heading">
         <div>
           <h1>Teklifler</h1>
-          <p>Servis tekliflerini ve fiyatlandırmayı yönetin.</p>
+          <p>
+            KDV dahil servis teklifleri ve
+            proforma faturaları yönetin.
+          </p>
         </div>
       </div>
 
-      <div className="content-grid">
-        <div className="panel-card">
-          <h3>Yeni Teklif</h3>
+      {error && (
+        <div className="page-message error-message">
+          {error}
+        </div>
+      )}
 
-          <form className="form-grid" onSubmit={submit}>
+      <div className="panel-card">
+        <h3>Yeni Teklif / Proforma</h3>
+
+        <form
+          className="quote-form"
+          onSubmit={submit}
+        >
+          <div className="form-grid">
             <select
               value={form.customerId}
               onChange={(e) =>
                 setForm({
                   ...form,
-                  customerId: e.target.value,
+                  customerId:
+                    e.target.value,
                   vehicleId: '',
+                  serviceOrderId: '',
                 })
               }
               required
             >
-              <option value="">Müşteri seç</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.firstName} {c.lastName}
+              <option value="">
+                Müşteri seç
+              </option>
+
+              {customers.map((customer) => (
+                <option
+                  key={customer.id}
+                  value={customer.id}
+                >
+                  {customer.firstName}{' '}
+                  {customer.lastName}
                 </option>
               ))}
             </select>
@@ -121,17 +325,29 @@ export default function Quotes() {
               onChange={(e) =>
                 setForm({
                   ...form,
-                  vehicleId: e.target.value,
+                  vehicleId:
+                    e.target.value,
+                  serviceOrderId: '',
                 })
               }
               required
             >
-              <option value="">Araç seç</option>
-              {filteredVehicles.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.plate} - {v.brand} {v.model}
-                </option>
-              ))}
+              <option value="">
+                Araç seç
+              </option>
+
+              {filteredVehicles.map(
+                (vehicle) => (
+                  <option
+                    key={vehicle.id}
+                    value={vehicle.id}
+                  >
+                    {vehicle.plate} -{' '}
+                    {vehicle.brand}{' '}
+                    {vehicle.model}
+                  </option>
+                ),
+              )}
             </select>
 
             <select
@@ -139,153 +355,356 @@ export default function Quotes() {
               onChange={(e) =>
                 setForm({
                   ...form,
-                  serviceOrderId: e.target.value,
+                  serviceOrderId:
+                    e.target.value,
                 })
               }
             >
-              <option value="">İş emri (opsiyonel)</option>
-              {orders.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.orderNumber}
-                </option>
-              ))}
+              <option value="">
+                İş emri (opsiyonel)
+              </option>
+
+              {filteredOrders.map(
+                (order) => (
+                  <option
+                    key={order.id}
+                    value={order.id}
+                  >
+                    {order.orderNumber}
+                  </option>
+                ),
+              )}
             </select>
 
             <select
-              value={form.type}
+              value={selectedPackageId}
               onChange={(e) =>
-                setForm({
-                  ...form,
-                  type: e.target.value,
-                })
+                applyPackage(
+                  e.target.value,
+                )
               }
             >
-              <option value="LABOR">İşçilik</option>
-              <option value="PART">Parça</option>
-              <option value="OTHER">Diğer</option>
+              <option value="">
+                Hazır bakım paketi seç
+              </option>
+
+              {packages
+                .filter(
+                  (item) => item.active,
+                )
+                .map((item) => (
+                  <option
+                    key={item.id}
+                    value={item.id}
+                  >
+                    {item.name}
+                  </option>
+                ))}
             </select>
+          </div>
 
-            <input
-              placeholder="Kalem adı"
-              value={form.itemName}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  itemName: e.target.value,
-                })
-              }
-              required
-            />
+          <div className="quote-items">
+            <div className="quote-items-header">
+              <div>
+                <strong>
+                  Teklif Kalemleri
+                </strong>
+                <span>
+                  Parça, işçilik ve KDV
+                  oranlarını ayrı ayrı
+                  belirleyebilirsiniz.
+                </span>
+              </div>
 
-            <input
-              type="number"
-              placeholder="Adet"
-              value={form.quantity}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  quantity: e.target.value,
-                })
-              }
-              required
-            />
+              <button
+                type="button"
+                className="small-button"
+                onClick={addItem}
+              >
+                + Kalem Ekle
+              </button>
+            </div>
 
-            <input
-              type="number"
-              placeholder="Birim fiyat"
-              value={form.unitPrice}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  unitPrice: e.target.value,
-                })
-              }
-              required
-            />
+            {items.map((item, index) => (
+              <div
+                className="quote-item-row"
+                key={index}
+              >
+                <select
+                  value={item.type}
+                  onChange={(e) =>
+                    updateItem(
+                      index,
+                      'type',
+                      e.target.value,
+                    )
+                  }
+                >
+                  <option value="LABOR">
+                    İşçilik
+                  </option>
+                  <option value="PART">
+                    Parça
+                  </option>
+                  <option value="OTHER">
+                    Diğer
+                  </option>
+                </select>
 
-            <input
-              type="number"
-              placeholder="İndirim"
-              value={form.discountAmount}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  discountAmount: e.target.value,
-                })
-              }
-            />
+                <input
+                  className="quote-item-name"
+                  placeholder="Kalem adı"
+                  value={item.name}
+                  onChange={(e) =>
+                    updateItem(
+                      index,
+                      'name',
+                      e.target.value,
+                    )
+                  }
+                  required
+                />
 
-            <textarea
-              className="full"
-              placeholder="Teklif notu"
-              value={form.notes}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  notes: e.target.value,
-                })
-              }
-            />
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="Miktar"
+                  value={item.quantity}
+                  onChange={(e) =>
+                    updateItem(
+                      index,
+                      'quantity',
+                      e.target.value,
+                    )
+                  }
+                  required
+                />
 
-            <button className="primary-button full">
-              Teklif Oluştur
-            </button>
-          </form>
-        </div>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Birim ₺"
+                  value={item.unitPrice}
+                  onChange={(e) =>
+                    updateItem(
+                      index,
+                      'unitPrice',
+                      e.target.value,
+                    )
+                  }
+                  required
+                />
 
-        <div className="panel-card">
-          <h3>Teklif Listesi</h3>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="İndirim ₺"
+                  value={
+                    item.discountAmount
+                  }
+                  onChange={(e) =>
+                    updateItem(
+                      index,
+                      'discountAmount',
+                      e.target.value,
+                    )
+                  }
+                />
 
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>Müşteri</th>
-                  <th>Plaka</th>
-                  <th>Tutar</th>
-                  <th>Durum</th>
-                  <th></th>
-                </tr>
-              </thead>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  placeholder="KDV %"
+                  value={item.vatRate}
+                  onChange={(e) =>
+                    updateItem(
+                      index,
+                      'vatRate',
+                      e.target.value,
+                    )
+                  }
+                  required
+                />
 
-              <tbody>
-                {quotes.map((q) => (
-                  <tr key={q.id}>
-                    <td>{q.quoteNumber}</td>
+                <button
+                  type="button"
+                  className="table-action danger-text"
+                  onClick={() =>
+                    removeItem(index)
+                  }
+                >
+                  Sil
+                </button>
+              </div>
+            ))}
+          </div>
 
-                    <td>
-                      {q.customer?.firstName}{' '}
-                      {q.customer?.lastName}
-                    </td>
+          <textarea
+            className="quote-notes"
+            placeholder="Teklif / proforma notu"
+            value={form.notes}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                notes: e.target.value,
+              })
+            }
+          />
 
-                    <td>{q.vehicle?.plate}</td>
+          <div className="quote-summary">
+            <div>
+              <span>Ara Toplam</span>
+              <strong>
+                {money(totals.subtotal)} ₺
+              </strong>
+            </div>
 
-                    <td>
-                      {Number(q.total || 0).toLocaleString('tr-TR')} ₺
-                    </td>
+            <div>
+              <span>İndirim</span>
+              <strong>
+                -{money(totals.discount)} ₺
+              </strong>
+            </div>
 
-                    <td>
-                      <span className="status-badge">
-                        {q.status}
-                      </span>
-                    </td>
+            <div>
+              <span>KDV</span>
+              <strong>
+                {money(totals.tax)} ₺
+              </strong>
+            </div>
 
-                    <td>
-                      {q.status !== 'APPROVED' && (
+            <div className="quote-grand-total">
+              <span>Genel Toplam</span>
+              <strong>
+                {money(totals.total)} ₺
+              </strong>
+            </div>
+          </div>
+
+          <button
+            className="primary-button"
+            disabled={busy}
+          >
+            {busy
+              ? 'Oluşturuluyor...'
+              : 'Teklif Oluştur'}
+          </button>
+        </form>
+      </div>
+
+      <div className="panel-card spaced-card">
+        <h3>Teklif Listesi</h3>
+
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Müşteri</th>
+                <th>Plaka</th>
+                <th>Ara Toplam</th>
+                <th>KDV</th>
+                <th>Genel Toplam</th>
+                <th>Durum</th>
+                <th>İşlem</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {quotes.map((quote) => (
+                <tr key={quote.id}>
+                  <td>
+                    {quote.quoteNumber}
+                  </td>
+
+                  <td>
+                    {quote.customer?.firstName}{' '}
+                    {quote.customer?.lastName}
+                  </td>
+
+                  <td>
+                    {quote.vehicle?.plate}
+                  </td>
+
+                  <td>
+                    {money(
+                      Number(
+                        quote.subtotal || 0,
+                      ) -
+                        Number(
+                          quote.discountTotal ||
+                            0,
+                        ),
+                    )}{' '}
+                    ₺
+                  </td>
+
+                  <td>
+                    {money(
+                      quote.taxTotal || 0,
+                    )}{' '}
+                    ₺
+                  </td>
+
+                  <td>
+                    <strong>
+                      {money(
+                        quote.total || 0,
+                      )}{' '}
+                      ₺
+                    </strong>
+                  </td>
+
+                  <td>
+                    <span className="status-badge">
+                      {statusLabel(
+                        quote.status,
+                      )}
+                    </span>
+                  </td>
+
+                  <td>
+                    <div className="action-row">
+                      <Link
+                        className="table-link"
+                        to={`/quotes/${quote.id}/proforma`}
+                        target="_blank"
+                      >
+                        Proforma
+                      </Link>
+
+                      {quote.status !==
+                        'APPROVED' && (
                         <button
                           className="small-button"
-                          onClick={() => approve(q.id)}
+                          onClick={() =>
+                            approve(
+                              quote.id,
+                            )
+                          }
                         >
                           Onayla
                         </button>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+
+              {!quotes.length && (
+                <tr>
+                  <td colSpan="8">
+                    Henüz teklif yok.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </>
