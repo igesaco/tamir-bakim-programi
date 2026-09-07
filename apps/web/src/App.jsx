@@ -12,9 +12,12 @@ import DashboardLayout from './layouts/DashboardLayout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
+import CustomerDetail from './pages/CustomerDetail';
 import Vehicles from './pages/Vehicles';
+import VehicleDetail from './pages/VehicleDetail';
 import Appointments from './pages/Appointments';
 import ServiceOrders from './pages/ServiceOrders';
+import ServiceOrderDetail from './pages/ServiceOrderDetail';
 import Quotes from './pages/Quotes';
 import Maintenance from './pages/Maintenance';
 import Inventory from './pages/Inventory';
@@ -55,8 +58,18 @@ export default function App() {
             />
 
             <Route
+              path="customers/:id"
+              element={<CustomerDetail />}
+            />
+
+            <Route
               path="vehicles"
               element={<Vehicles />}
+            />
+
+            <Route
+              path="vehicles/:id"
+              element={<VehicleDetail />}
             />
 
             <Route
@@ -67,6 +80,11 @@ export default function App() {
             <Route
               path="service-orders"
               element={<ServiceOrders />}
+            />
+
+            <Route
+              path="service-orders/:id"
+              element={<ServiceOrderDetail />}
             />
 
             <Route
@@ -117,9 +135,7 @@ export default function App() {
 
           <Route
             path="*"
-            element={
-              <Navigate to="/" replace />
-            }
+            element={<Navigate to="/" replace />}
           />
         </Routes>
       </AuthProvider>

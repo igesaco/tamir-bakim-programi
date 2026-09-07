@@ -1,4 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api/client';
 
 export default function Vehicles() {
@@ -17,7 +18,10 @@ export default function Vehicles() {
   });
 
   async function load() {
-    const [vehicleResponse, customerResponse] = await Promise.all([
+    const [
+      vehicleResponse,
+      customerResponse,
+    ] = await Promise.all([
       api.get('/vehicles'),
       api.get('/customers'),
     ]);
@@ -70,19 +74,31 @@ export default function Vehicles() {
         <div className="panel-card">
           <h3>Yeni Araç</h3>
 
-          <form className="form-grid" onSubmit={submit}>
+          <form
+            className="form-grid"
+            onSubmit={submit}
+          >
             <select
               value={form.customerId}
               onChange={(e) =>
-                setForm({ ...form, customerId: e.target.value })
+                setForm({
+                  ...form,
+                  customerId: e.target.value,
+                })
               }
               required
             >
-              <option value="">Müşteri seç</option>
+              <option value="">
+                Müşteri seç
+              </option>
 
               {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.firstName} {customer.lastName}
+                <option
+                  key={customer.id}
+                  value={customer.id}
+                >
+                  {customer.firstName}{' '}
+                  {customer.lastName}
                 </option>
               ))}
             </select>
@@ -91,7 +107,10 @@ export default function Vehicles() {
               placeholder="Plaka"
               value={form.plate}
               onChange={(e) =>
-                setForm({ ...form, plate: e.target.value })
+                setForm({
+                  ...form,
+                  plate: e.target.value,
+                })
               }
               required
             />
@@ -100,7 +119,10 @@ export default function Vehicles() {
               placeholder="Marka"
               value={form.brand}
               onChange={(e) =>
-                setForm({ ...form, brand: e.target.value })
+                setForm({
+                  ...form,
+                  brand: e.target.value,
+                })
               }
               required
             />
@@ -109,7 +131,10 @@ export default function Vehicles() {
               placeholder="Model"
               value={form.model}
               onChange={(e) =>
-                setForm({ ...form, model: e.target.value })
+                setForm({
+                  ...form,
+                  model: e.target.value,
+                })
               }
               required
             />
@@ -119,7 +144,10 @@ export default function Vehicles() {
               placeholder="Model yılı"
               value={form.modelYear}
               onChange={(e) =>
-                setForm({ ...form, modelYear: e.target.value })
+                setForm({
+                  ...form,
+                  modelYear: e.target.value,
+                })
               }
             />
 
@@ -127,7 +155,10 @@ export default function Vehicles() {
               placeholder="Yakıt"
               value={form.fuelType}
               onChange={(e) =>
-                setForm({ ...form, fuelType: e.target.value })
+                setForm({
+                  ...form,
+                  fuelType: e.target.value,
+                })
               }
             />
 
@@ -135,7 +166,10 @@ export default function Vehicles() {
               placeholder="Şanzıman"
               value={form.transmission}
               onChange={(e) =>
-                setForm({ ...form, transmission: e.target.value })
+                setForm({
+                  ...form,
+                  transmission: e.target.value,
+                })
               }
             />
 
@@ -144,7 +178,10 @@ export default function Vehicles() {
               placeholder="Kilometre"
               value={form.mileage}
               onChange={(e) =>
-                setForm({ ...form, mileage: e.target.value })
+                setForm({
+                  ...form,
+                  mileage: e.target.value,
+                })
               }
             />
 
@@ -166,6 +203,7 @@ export default function Vehicles() {
                   <th>Müşteri</th>
                   <th>KM</th>
                   <th>QR</th>
+                  <th>İşlem</th>
                 </tr>
               </thead>
 
@@ -173,11 +211,14 @@ export default function Vehicles() {
                 {vehicles.map((vehicle) => (
                   <tr key={vehicle.id}>
                     <td>
-                      <strong>{vehicle.plate}</strong>
+                      <strong>
+                        {vehicle.plate}
+                      </strong>
                     </td>
 
                     <td>
-                      {vehicle.brand} {vehicle.model}
+                      {vehicle.brand}{' '}
+                      {vehicle.model}
                     </td>
 
                     <td>
@@ -186,7 +227,9 @@ export default function Vehicles() {
                     </td>
 
                     <td>
-                      {Number(vehicle.mileage || 0).toLocaleString('tr-TR')}
+                      {Number(
+                        vehicle.mileage || 0,
+                      ).toLocaleString('tr-TR')}
                     </td>
 
                     <td>
@@ -199,8 +242,25 @@ export default function Vehicles() {
                         Aç
                       </a>
                     </td>
+
+                    <td>
+                      <Link
+                        className="table-link"
+                        to={`/vehicles/${vehicle.id}`}
+                      >
+                        Detay
+                      </Link>
+                    </td>
                   </tr>
                 ))}
+
+                {!vehicles.length && (
+                  <tr>
+                    <td colSpan="6">
+                      Araç bulunamadı.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

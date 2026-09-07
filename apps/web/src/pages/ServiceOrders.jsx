@@ -1,4 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api/client';
 
 export default function ServiceOrders() {
@@ -15,12 +16,15 @@ export default function ServiceOrders() {
   });
 
   async function load() {
-    const [orderRes, customerRes, vehicleRes] =
-      await Promise.all([
-        api.get('/service-orders'),
-        api.get('/customers'),
-        api.get('/vehicles'),
-      ]);
+    const [
+      orderRes,
+      customerRes,
+      vehicleRes,
+    ] = await Promise.all([
+      api.get('/service-orders'),
+      api.get('/customers'),
+      api.get('/vehicles'),
+    ]);
 
     setOrders(orderRes.data);
     setCustomers(customerRes.data);
@@ -69,7 +73,10 @@ export default function ServiceOrders() {
         <div className="panel-card">
           <h3>Yeni İş Emri</h3>
 
-          <form className="form-grid" onSubmit={submit}>
+          <form
+            className="form-grid"
+            onSubmit={submit}
+          >
             <select
               value={form.customerId}
               onChange={(e) =>
@@ -81,11 +88,17 @@ export default function ServiceOrders() {
               }
               required
             >
-              <option value="">Müşteri seç</option>
+              <option value="">
+                Müşteri seç
+              </option>
 
               {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.firstName} {customer.lastName}
+                <option
+                  key={customer.id}
+                  value={customer.id}
+                >
+                  {customer.firstName}{' '}
+                  {customer.lastName}
                 </option>
               ))}
             </select>
@@ -93,25 +106,38 @@ export default function ServiceOrders() {
             <select
               value={form.vehicleId}
               onChange={(e) => {
-                const selected = vehicles.find(
-                  (vehicle) => vehicle.id === e.target.value,
-                );
+                const selected =
+                  vehicles.find(
+                    (vehicle) =>
+                      vehicle.id ===
+                      e.target.value,
+                  );
 
                 setForm({
                   ...form,
                   vehicleId: e.target.value,
-                  mileage: selected?.mileage ?? '',
+                  mileage:
+                    selected?.mileage ?? '',
                 });
               }}
               required
             >
-              <option value="">Araç seç</option>
+              <option value="">
+                Araç seç
+              </option>
 
-              {filteredVehicles.map((vehicle) => (
-                <option key={vehicle.id} value={vehicle.id}>
-                  {vehicle.plate} - {vehicle.brand} {vehicle.model}
-                </option>
-              ))}
+              {filteredVehicles.map(
+                (vehicle) => (
+                  <option
+                    key={vehicle.id}
+                    value={vehicle.id}
+                  >
+                    {vehicle.plate} -{' '}
+                    {vehicle.brand}{' '}
+                    {vehicle.model}
+                  </option>
+                ),
+              )}
             </select>
 
             <input
@@ -119,7 +145,10 @@ export default function ServiceOrders() {
               placeholder="Kilometre"
               value={form.mileage}
               onChange={(e) =>
-                setForm({ ...form, mileage: e.target.value })
+                setForm({
+                  ...form,
+                  mileage: e.target.value,
+                })
               }
               required
             />
@@ -129,7 +158,10 @@ export default function ServiceOrders() {
               placeholder="Müşteri şikayeti / yapılacak işlem"
               value={form.complaint}
               onChange={(e) =>
-                setForm({ ...form, complaint: e.target.value })
+                setForm({
+                  ...form,
+                  complaint: e.target.value,
+                })
               }
             />
 
@@ -138,7 +170,10 @@ export default function ServiceOrders() {
               placeholder="Servis iç notu"
               value={form.internalNote}
               onChange={(e) =>
-                setForm({ ...form, internalNote: e.target.value })
+                setForm({
+                  ...form,
+                  internalNote: e.target.value,
+                })
               }
             />
 
@@ -160,16 +195,21 @@ export default function ServiceOrders() {
                   <th>Müşteri</th>
                   <th>Durum</th>
                   <th>KM</th>
+                  <th>İşlem</th>
                 </tr>
               </thead>
 
               <tbody>
                 {orders.map((order) => (
                   <tr key={order.id}>
-                    <td>{order.orderNumber}</td>
+                    <td>
+                      {order.orderNumber}
+                    </td>
 
                     <td>
-                      <strong>{order.vehicle?.plate}</strong>
+                      <strong>
+                        {order.vehicle?.plate}
+                      </strong>
                     </td>
 
                     <td>
@@ -184,10 +224,29 @@ export default function ServiceOrders() {
                     </td>
 
                     <td>
-                      {Number(order.mileage || 0).toLocaleString('tr-TR')}
+                      {Number(
+                        order.mileage || 0,
+                      ).toLocaleString('tr-TR')}
+                    </td>
+
+                    <td>
+                      <Link
+                        className="table-link"
+                        to={`/service-orders/${order.id}`}
+                      >
+                        Detay
+                      </Link>
                     </td>
                   </tr>
                 ))}
+
+                {!orders.length && (
+                  <tr>
+                    <td colSpan="6">
+                      İş emri bulunamadı.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

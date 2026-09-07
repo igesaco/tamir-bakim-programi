@@ -1,8 +1,10 @@
 ﻿import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api/client';
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
+
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -10,6 +12,7 @@ export default function Customers() {
     email: '',
     address: '',
   });
+
   const [busy, setBusy] = useState(false);
 
   async function load() {
@@ -55,12 +58,18 @@ export default function Customers() {
         <div className="panel-card">
           <h3>Yeni Müşteri</h3>
 
-          <form className="form-grid" onSubmit={submit}>
+          <form
+            className="form-grid"
+            onSubmit={submit}
+          >
             <input
               placeholder="Ad"
               value={form.firstName}
               onChange={(e) =>
-                setForm({ ...form, firstName: e.target.value })
+                setForm({
+                  ...form,
+                  firstName: e.target.value,
+                })
               }
               required
             />
@@ -69,7 +78,10 @@ export default function Customers() {
               placeholder="Soyad"
               value={form.lastName}
               onChange={(e) =>
-                setForm({ ...form, lastName: e.target.value })
+                setForm({
+                  ...form,
+                  lastName: e.target.value,
+                })
               }
             />
 
@@ -77,16 +89,22 @@ export default function Customers() {
               placeholder="Telefon"
               value={form.phone}
               onChange={(e) =>
-                setForm({ ...form, phone: e.target.value })
+                setForm({
+                  ...form,
+                  phone: e.target.value,
+                })
               }
             />
 
             <input
-              placeholder="E-posta"
               type="email"
+              placeholder="E-posta"
               value={form.email}
               onChange={(e) =>
-                setForm({ ...form, email: e.target.value })
+                setForm({
+                  ...form,
+                  email: e.target.value,
+                })
               }
             />
 
@@ -95,12 +113,20 @@ export default function Customers() {
               placeholder="Adres"
               value={form.address}
               onChange={(e) =>
-                setForm({ ...form, address: e.target.value })
+                setForm({
+                  ...form,
+                  address: e.target.value,
+                })
               }
             />
 
-            <button className="primary-button full" disabled={busy}>
-              {busy ? 'Kaydediliyor...' : 'Müşteri Ekle'}
+            <button
+              className="primary-button full"
+              disabled={busy}
+            >
+              {busy
+                ? 'Kaydediliyor...'
+                : 'Müşteri Ekle'}
             </button>
           </form>
         </div>
@@ -116,6 +142,7 @@ export default function Customers() {
                   <th>Telefon</th>
                   <th>E-posta</th>
                   <th>Araç</th>
+                  <th>İşlem</th>
                 </tr>
               </thead>
 
@@ -123,17 +150,38 @@ export default function Customers() {
                 {customers.map((customer) => (
                   <tr key={customer.id}>
                     <td>
-                      {customer.firstName} {customer.lastName}
+                      {customer.firstName}{' '}
+                      {customer.lastName}
                     </td>
-                    <td>{customer.phone || '-'}</td>
-                    <td>{customer.email || '-'}</td>
-                    <td>{customer.vehicles?.length || 0}</td>
+
+                    <td>
+                      {customer.phone || '-'}
+                    </td>
+
+                    <td>
+                      {customer.email || '-'}
+                    </td>
+
+                    <td>
+                      {customer.vehicles?.length || 0}
+                    </td>
+
+                    <td>
+                      <Link
+                        className="table-link"
+                        to={`/customers/${customer.id}`}
+                      >
+                        Detay
+                      </Link>
+                    </td>
                   </tr>
                 ))}
 
                 {!customers.length && (
                   <tr>
-                    <td colSpan="4">Kayıt bulunamadı.</td>
+                    <td colSpan="5">
+                      Kayıt bulunamadı.
+                    </td>
                   </tr>
                 )}
               </tbody>
