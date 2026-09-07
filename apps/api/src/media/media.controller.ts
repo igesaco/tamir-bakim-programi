@@ -13,12 +13,21 @@ import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UserRole } from '@prisma/client';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import {
+  extname,
+  resolve,
+} from 'path';
 
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UploadMediaDto } from './dto/upload-media.dto';
 import { MediaService } from './media.service';
+
+const mediaStorageDir =
+  resolve(
+    process.env.MEDIA_STORAGE_DIR ??
+      './uploads',
+  );
 
 @UseGuards(AuthGuard('jwt'))
 @Roles(
@@ -37,7 +46,8 @@ export class MediaController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: './uploads',
+        destination:
+          mediaStorageDir,
         filename: (
           _req,
           file,
@@ -47,7 +57,8 @@ export class MediaController {
             Date.now() +
             '-' +
             Math.round(
-              Math.random() * 1e9,
+              Math.random() *
+                1e9,
             );
 
           callback(
@@ -61,7 +72,9 @@ export class MediaController {
       }),
       limits: {
         fileSize:
-          15 * 1024 * 1024,
+          15 *
+          1024 *
+          1024,
       },
       fileFilter: (
         _req,
