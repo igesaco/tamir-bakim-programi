@@ -110,6 +110,46 @@ export default function CustomerDetail() {
         0,
       );
 
+  const totalBilled =
+    orders.reduce(
+      (orderSum, order) =>
+        orderSum +
+        (
+          order.items?.reduce(
+            (sum, item) => {
+              const gross =
+                Number(
+                  item.grossTotal ||
+                    0,
+                );
+
+              return (
+                sum +
+                (gross > 0
+                  ? gross
+                  : Number(
+                      item.totalPrice ||
+                        0,
+                    ) +
+                    Number(
+                      item.vatAmount ||
+                        0,
+                    ))
+              );
+            },
+            0,
+          ) || 0
+        ),
+      0,
+    );
+
+  const openBalance =
+    Math.max(
+      0,
+      totalBilled -
+        totalPaid,
+    );
+
   return (
     <>
       <div className="page-heading">
@@ -157,15 +197,27 @@ export default function CustomerDetail() {
         </div>
 
         {canViewFinance && (
-          <div className="stat-card">
-            <span>Toplam Tahsilat</span>
-            <strong>
-              {totalPaid.toLocaleString(
-                'tr-TR',
-              )}{' '}
-              ₺
-            </strong>
-          </div>
+          <>
+            <div className="stat-card">
+              <span>Toplam Tahsilat</span>
+              <strong>
+                {totalPaid.toLocaleString(
+                  'tr-TR',
+                )}{' '}
+                ₺
+              </strong>
+            </div>
+
+            <div className="stat-card">
+              <span>Açık Bakiye</span>
+              <strong>
+                {openBalance.toLocaleString(
+                  'tr-TR',
+                )}{' '}
+                ₺
+              </strong>
+            </div>
+          </>
         )}
       </div>
 
@@ -194,6 +246,14 @@ export default function CustomerDetail() {
               <span>Şube</span>
               <strong>
                 {customer.branch?.name ||
+                  '-'}
+              </strong>
+            </div>
+
+            <div>
+              <span>Vergi No</span>
+              <strong>
+                {customer.taxNumber ||
                   '-'}
               </strong>
             </div>
