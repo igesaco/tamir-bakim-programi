@@ -1,9 +1,14 @@
 import { Module } from '@nestjs/common';
-import { BillingService } from './billing.service';
+
+import { RolesGuard } from '../auth/roles.guard';
 import { BillingController } from './billing.controller';
+import { BillingService } from './billing.service';
 
 @Module({
-  providers: [BillingService],
-  controllers: [BillingController]
+  providers: [
+    BillingService,
+    RolesGuard,
+  ],
+  controllers: [BillingController],
 })
 export class BillingModule {}
