@@ -7,6 +7,7 @@
 
 import { AuthProvider } from './auth/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import RoleRoute from './components/RoleRoute';
 import DashboardLayout from './layouts/DashboardLayout';
 
 import Login from './pages/Login';
@@ -24,6 +25,7 @@ import ServiceOrders from './pages/ServiceOrders';
 import ServiceOrderDetail from './pages/ServiceOrderDetail';
 
 import Quotes from './pages/Quotes';
+import QuoteProforma from './pages/QuoteProforma';
 import Maintenance from './pages/Maintenance';
 import Inventory from './pages/Inventory';
 import Suppliers from './pages/Suppliers';
@@ -35,11 +37,38 @@ import Settings from './pages/Settings';
 
 import PublicVehicle from './pages/PublicVehicle';
 
+const SERVICE_ROLES = [
+  'OWNER',
+  'MANAGER',
+  'SERVICE_ADVISOR',
+];
+
+const SERVICE_ORDER_ROLES = [
+  ...SERVICE_ROLES,
+  'TECHNICIAN',
+];
+
+const MANAGEMENT_ROLES = [
+  'OWNER',
+  'MANAGER',
+];
+
 function ProtectedLayout() {
   return (
     <ProtectedRoute>
       <DashboardLayout />
     </ProtectedRoute>
+  );
+}
+
+function ForRoles({
+  roles,
+  children,
+}) {
+  return (
+    <RoleRoute roles={roles}>
+      {children}
+    </RoleRoute>
   );
 }
 
@@ -58,6 +87,19 @@ export default function App() {
             element={<PublicVehicle />}
           />
 
+          <Route
+            path="/quotes/:id/proforma"
+            element={
+              <ProtectedRoute>
+                <ForRoles
+                  roles={SERVICE_ROLES}
+                >
+                  <QuoteProforma />
+                </ForRoles>
+              </ProtectedRoute>
+            }
+          />
+
           <Route element={<ProtectedLayout />}>
             <Route
               index
@@ -66,89 +108,188 @@ export default function App() {
 
             <Route
               path="customers"
-              element={<Customers />}
+              element={
+                <ForRoles
+                  roles={SERVICE_ROLES}
+                >
+                  <Customers />
+                </ForRoles>
+              }
             />
 
             <Route
               path="customers/:id"
-              element={<CustomerDetail />}
+              element={
+                <ForRoles
+                  roles={SERVICE_ROLES}
+                >
+                  <CustomerDetail />
+                </ForRoles>
+              }
             />
 
             <Route
               path="vehicles"
-              element={<Vehicles />}
+              element={
+                <ForRoles
+                  roles={SERVICE_ROLES}
+                >
+                  <Vehicles />
+                </ForRoles>
+              }
             />
 
             <Route
               path="vehicles/:id"
-              element={<VehicleDetail />}
+              element={
+                <ForRoles
+                  roles={SERVICE_ROLES}
+                >
+                  <VehicleDetail />
+                </ForRoles>
+              }
             />
 
             <Route
               path="appointments"
-              element={<Appointments />}
+              element={
+                <ForRoles
+                  roles={SERVICE_ROLES}
+                >
+                  <Appointments />
+                </ForRoles>
+              }
             />
 
             <Route
               path="service-orders"
-              element={<ServiceOrders />}
+              element={
+                <ForRoles
+                  roles={SERVICE_ORDER_ROLES}
+                >
+                  <ServiceOrders />
+                </ForRoles>
+              }
             />
 
             <Route
               path="service-orders/:id"
-              element={<ServiceOrderDetail />}
+              element={
+                <ForRoles
+                  roles={SERVICE_ORDER_ROLES}
+                >
+                  <ServiceOrderDetail />
+                </ForRoles>
+              }
             />
 
             <Route
               path="quotes"
-              element={<Quotes />}
+              element={
+                <ForRoles
+                  roles={SERVICE_ROLES}
+                >
+                  <Quotes />
+                </ForRoles>
+              }
             />
 
             <Route
               path="maintenance"
-              element={<Maintenance />}
+              element={
+                <ForRoles
+                  roles={SERVICE_ROLES}
+                >
+                  <Maintenance />
+                </ForRoles>
+              }
             />
 
             <Route
               path="inventory"
-              element={<Inventory />}
+              element={
+                <ForRoles
+                  roles={MANAGEMENT_ROLES}
+                >
+                  <Inventory />
+                </ForRoles>
+              }
             />
 
             <Route
               path="suppliers"
-              element={<Suppliers />}
+              element={
+                <ForRoles
+                  roles={MANAGEMENT_ROLES}
+                >
+                  <Suppliers />
+                </ForRoles>
+              }
             />
 
             <Route
               path="users"
-              element={<Users />}
+              element={
+                <ForRoles
+                  roles={MANAGEMENT_ROLES}
+                >
+                  <Users />
+                </ForRoles>
+              }
             />
 
             <Route
               path="branches"
-              element={<Branches />}
+              element={
+                <ForRoles
+                  roles={MANAGEMENT_ROLES}
+                >
+                  <Branches />
+                </ForRoles>
+              }
             />
 
             <Route
               path="notifications"
-              element={<Notifications />}
+              element={
+                <ForRoles
+                  roles={SERVICE_ROLES}
+                >
+                  <Notifications />
+                </ForRoles>
+              }
             />
 
             <Route
               path="reports"
-              element={<Reports />}
+              element={
+                <ForRoles
+                  roles={MANAGEMENT_ROLES}
+                >
+                  <Reports />
+                </ForRoles>
+              }
             />
 
             <Route
               path="settings"
-              element={<Settings />}
+              element={
+                <ForRoles
+                  roles={MANAGEMENT_ROLES}
+                >
+                  <Settings />
+                </ForRoles>
+              }
             />
           </Route>
 
           <Route
             path="*"
             element={
-              <Navigate to="/" replace />
+              <Navigate
+                to="/"
+                replace
+              />
             }
           />
         </Routes>
