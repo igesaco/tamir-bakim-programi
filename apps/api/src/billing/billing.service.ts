@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   PaymentStatus,
@@ -119,6 +120,108 @@ export class BillingService {
       );
     }
 
+    if (dto.quoteId) {
+      const quote =
+        await this.prisma.quote.findFirst({
+          where: {
+            id: dto.quoteId,
+            organizationId,
+          },
+          select: {
+            total: true,
+          },
+        });
+
+      if (!quote) {
+        throw new BadRequestException(
+          'Teklif bulunamadı.',
+        );
+      }
+
+      const paid =
+        await this.prisma.payment.aggregate({
+          where: {
+            organizationId,
+            quoteId: dto.quoteId,
+            status:
+              PaymentStatus.PAID,
+          },
+          _sum: {
+            amount: true,
+          },
+        });
+
+      const remaining =
+        Number(quote.total) -
+        Number(
+          paid._sum.amount ?? 0,
+        );
+
+      if (
+        Number(dto.amount) >
+        remaining + 0.01
+      ) {
+        throw new BadRequestException(
+          `Tahsilat teklif kalan bakiyesini aşıyor. Kalan: ${Math.max(
+            0,
+            remaining,
+          ).toFixed(2)} TL`,
+        );
+      }
+    } else if (dto.serviceOrderId) {
+      const items =
+        await this.prisma.serviceOrderItem.aggregate({
+          where: {
+            serviceOrderId:
+              dto.serviceOrderId,
+          },
+          _sum: {
+            totalPrice: true,
+          },
+        });
+
+      const orderTotal =
+        Number(
+          items._sum.totalPrice ??
+            0,
+        );
+
+      if (orderTotal > 0) {
+        const paid =
+          await this.prisma.payment.aggregate({
+            where: {
+              organizationId,
+              serviceOrderId:
+                dto.serviceOrderId,
+              status:
+                PaymentStatus.PAID,
+            },
+            _sum: {
+              amount: true,
+            },
+          });
+
+        const remaining =
+          orderTotal -
+          Number(
+            paid._sum.amount ??
+              0,
+          );
+
+        if (
+          Number(dto.amount) >
+          remaining + 0.01
+        ) {
+          throw new BadRequestException(
+            `Tahsilat iş emri kalan bakiyesini aşıyor. Kalan: ${Math.max(
+              0,
+              remaining,
+            ).toFixed(2)} TL`,
+          );
+        }
+      }
+    }
+
     const status =
       dto.status ??
       PaymentStatus.PAID;
@@ -145,6 +248,57 @@ export class BillingService {
           PaymentStatus.PAID
             ? new Date()
             : null,
+      },
+      include: {
+        branch: true,
+        customer: true,
+        serviceOrder: true,
+        quote: true,
+      },
+    });
+  }
+
+  async updateStatus(
+    organizationId: string,
+    id: string,
+    status: PaymentStatus,
+  ) {
+    const payment =
+      await this.prisma.payment.findFirst({
+        where: {
+          id,
+          organizationId,
+        },
+      });
+
+    if (!payment) {
+      throw new NotFoundException(
+        'Tahsilat kaydı bulunamadı.',
+      );
+    }
+
+    if (
+      ![
+        PaymentStatus.PAID,
+        PaymentStatus.CANCELLED,
+        PaymentStatus.REFUNDED,
+      ].includes(status)
+    ) {
+      throw new BadRequestException(
+        'Tahsilat durumu yalnızca ödendi, iptal veya iade olarak değiştirilebilir.',
+      );
+    }
+
+    return this.prisma.payment.update({
+      where: { id },
+      data: {
+        status,
+        paidAt:
+          status ===
+          PaymentStatus.PAID
+            ? payment.paidAt ??
+              new Date()
+            : payment.paidAt,
       },
       include: {
         branch: true,
