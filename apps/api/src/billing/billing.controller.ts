@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -13,6 +15,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { BillingService } from './billing.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
+import { UpdatePaymentStatusDto } from './dto/update-payment-status.dto';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('billing')
@@ -36,6 +39,19 @@ export class BillingController {
       req.user.branchId,
       req.user.role,
       dto,
+    );
+  }
+
+  @Patch('payments/:id/status')
+  updateStatus(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdatePaymentStatusDto,
+  ) {
+    return this.billingService.updateStatus(
+      req.user.organizationId,
+      id,
+      dto.status,
     );
   }
 
