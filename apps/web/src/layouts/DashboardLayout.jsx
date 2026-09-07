@@ -1,68 +1,124 @@
 ﻿import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import {
   NavLink,
   Outlet,
 } from 'react-router-dom';
+
 import { useAuth } from '../auth/AuthContext';
 
 const menu = [
   {
     path: '/',
     label: 'Dashboard',
-    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
+    short: 'DB',
+    roles: [
+      'OWNER',
+      'MANAGER',
+      'SERVICE_ADVISOR',
+    ],
   },
   {
     path: '/customers',
     label: 'Müşteriler',
-    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
+    short: 'MŞ',
+    roles: [
+      'OWNER',
+      'MANAGER',
+      'SERVICE_ADVISOR',
+    ],
   },
   {
     path: '/service-orders',
     label: 'İş Emirleri',
-    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR', 'TECHNICIAN'],
+    short: 'İE',
+    roles: [
+      'OWNER',
+      'MANAGER',
+      'SERVICE_ADVISOR',
+      'TECHNICIAN',
+    ],
   },
   {
     path: '/inventory',
     label: 'Stok',
-    roles: ['OWNER', 'MANAGER'],
+    short: 'ST',
+    roles: [
+      'OWNER',
+      'MANAGER',
+    ],
   },
   {
     path: '/suppliers',
     label: 'Tedarikçiler',
-    roles: ['OWNER', 'MANAGER'],
+    short: 'TD',
+    roles: [
+      'OWNER',
+      'MANAGER',
+    ],
   },
   {
     path: '/users',
     label: 'Personel',
-    roles: ['OWNER', 'MANAGER'],
+    short: 'PN',
+    roles: [
+      'OWNER',
+      'MANAGER',
+    ],
   },
   {
     path: '/branches',
     label: 'Şubeler',
-    roles: ['OWNER', 'MANAGER'],
+    short: 'ŞB',
+    roles: [
+      'OWNER',
+      'MANAGER',
+    ],
   },
   {
     path: '/notifications',
     label: 'Bildirimler',
-    roles: ['OWNER', 'MANAGER', 'SERVICE_ADVISOR'],
+    short: 'BL',
+    roles: [
+      'OWNER',
+      'MANAGER',
+      'SERVICE_ADVISOR',
+    ],
   },
   {
     path: '/cashier',
     label: 'Kasa / Tahsilat',
-    roles: ['OWNER', 'MANAGER'],
+    short: '₺',
+    roles: [
+      'OWNER',
+      'MANAGER',
+    ],
   },
   {
     path: '/reports',
     label: 'Raporlar',
-    roles: ['OWNER', 'MANAGER'],
+    short: 'RP',
+    roles: [
+      'OWNER',
+      'MANAGER',
+    ],
   },
   {
     path: '/settings',
     label: 'Ayarlar',
-    roles: ['OWNER', 'MANAGER'],
+    short: 'AY',
+    roles: [
+      'OWNER',
+      'MANAGER',
+    ],
   },
   {
     path: '/account',
     label: 'Hesabım',
+    short: 'HS',
     roles: [
       'OWNER',
       'MANAGER',
@@ -75,50 +131,170 @@ const menu = [
 const roleLabels = {
   OWNER: 'Kurucu',
   MANAGER: 'Yönetici',
-  SERVICE_ADVISOR: 'Servis Danışmanı',
-  TECHNICIAN: 'Teknik Bakım Personeli',
+  SERVICE_ADVISOR:
+    'Servis Danışmanı',
+  TECHNICIAN:
+    'Teknik Bakım Personeli',
 };
 
-export default function DashboardLayout() {
-  const { user, logout } = useAuth();
+const uiModes = [
+  {
+    value: 'classic',
+    label: 'Klasik',
+    description:
+      'Mevcut sol menülü yönetim görünümü.',
+  },
+  {
+    value: 'desktop',
+    label: 'Masaüstü',
+    description:
+      'Windows masaüstü hissi, uygulama penceresi ve kısayol ikonları.',
+  },
+  {
+    value: 'focus',
+    label: 'Odak',
+    description:
+      'Yüzen üst bar, alt dock ve cam efektli odak görünümü.',
+  },
+];
 
-  const visibleMenu = menu.filter(
-    (item) => item.roles.includes(user?.role),
-  );
+export default function DashboardLayout() {
+  const {
+    user,
+    logout,
+  } = useAuth();
+
+  const storageKey =
+    `tb-ui-mode:${user?.id || 'default'}`;
+
+  const [uiMode, setUiMode] =
+    useState(() => {
+      const stored =
+        localStorage.getItem(
+          storageKey,
+        );
+
+      return [
+        'classic',
+        'desktop',
+        'focus',
+      ].includes(stored)
+        ? stored
+        : 'classic';
+    });
+
+  useEffect(() => {
+    const stored =
+      localStorage.getItem(
+        storageKey,
+      );
+
+    if (
+      stored &&
+      [
+        'classic',
+        'desktop',
+        'focus',
+      ].includes(stored)
+    ) {
+      setUiMode(stored);
+    } else {
+      setUiMode('classic');
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      storageKey,
+      uiMode,
+    );
+  }, [storageKey, uiMode]);
+
+  const visibleMenu =
+    useMemo(
+      () =>
+        menu.filter(
+          (item) =>
+            item.roles.includes(
+              user?.role,
+            ),
+        ),
+      [user?.role],
+    );
+
+  const currentMode =
+    uiModes.find(
+      (item) =>
+        item.value === uiMode,
+    ) ?? uiModes[0];
 
   return (
-    <div className="app-shell">
+    <div
+      className={
+        `app-shell ui-mode-${uiMode}`
+      }
+    >
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">TB</div>
-          <div>
-            <strong>Tamir Bakım</strong>
-            <span>Yönetim Paneli</span>
+          <div className="brand-mark">
+            TB
+          </div>
+
+          <div className="brand-copy">
+            <strong>
+              Tamir Bakım
+            </strong>
+
+            <span>
+              Yönetim Paneli
+            </span>
           </div>
         </div>
 
         <nav className="sidebar-nav">
-          {visibleMenu.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              end={item.path === '/'}
-              className={({ isActive }) =>
-                isActive ? 'nav-item active' : 'nav-item'
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
+          {visibleMenu.map(
+            (item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                end={
+                  item.path === '/'
+                }
+                title={
+                  item.label
+                }
+                className={({
+                  isActive,
+                }) =>
+                  isActive
+                    ? 'nav-item active'
+                    : 'nav-item'
+                }
+              >
+                <span className="nav-icon">
+                  {item.short}
+                </span>
+
+                <span className="nav-label">
+                  {item.label}
+                </span>
+              </NavLink>
+            ),
+          )}
         </nav>
 
         <div className="sidebar-user">
-          <div>
+          <div className="sidebar-user-copy">
             <strong>
-              {user?.firstName} {user?.lastName}
+              {user?.firstName}{' '}
+              {user?.lastName}
             </strong>
+
             <span>
-              {roleLabels[user?.role] || user?.role}
+              {roleLabels[
+                user?.role
+              ] ||
+                user?.role}
             </span>
           </div>
 
@@ -130,13 +306,64 @@ export default function DashboardLayout() {
 
       <main className="main-area">
         <header className="topbar">
-          <div>
+          <div className="topbar-identity">
             <h2>
-              {user?.organization?.name || 'Servis Yönetimi'}
+              {user?.organization
+                ?.name ||
+                'Servis Yönetimi'}
             </h2>
+
             <span>
-              {user?.branch?.name || 'Şube seçilmedi'}
+              {user?.branch?.name ||
+                'Şube seçilmedi'}
             </span>
+          </div>
+
+          <div className="ui-mode-control">
+            <div className="ui-mode-copy">
+              <strong>
+                Görünüm
+              </strong>
+
+              <span>
+                {
+                  currentMode.description
+                }
+              </span>
+            </div>
+
+            <div
+              className="ui-mode-buttons"
+              role="group"
+              aria-label="Görünüm modu"
+            >
+              {uiModes.map(
+                (mode) => (
+                  <button
+                    key={
+                      mode.value
+                    }
+                    type="button"
+                    title={
+                      mode.description
+                    }
+                    className={
+                      uiMode ===
+                      mode.value
+                        ? 'ui-mode-button active'
+                        : 'ui-mode-button'
+                    }
+                    onClick={() =>
+                      setUiMode(
+                        mode.value,
+                      )
+                    }
+                  >
+                    {mode.label}
+                  </button>
+                ),
+              )}
+            </div>
           </div>
         </header>
 
