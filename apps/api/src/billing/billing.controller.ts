@@ -7,7 +7,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { UserRole } from '@prisma/client';
 
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { BillingService } from './billing.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 
@@ -19,6 +22,8 @@ export class BillingController {
   ) {}
 
   @Post('payments')
+  @Roles(UserRole.OWNER, UserRole.MANAGER)
+  @UseGuards(RolesGuard)
   create(
     @Req() req: any,
     @Body() dto: CreatePaymentDto,
@@ -31,6 +36,8 @@ export class BillingController {
   }
 
   @Get('payments')
+  @Roles(UserRole.OWNER, UserRole.MANAGER)
+  @UseGuards(RolesGuard)
   findAll(@Req() req: any) {
     return this.billingService.findAll(
       req.user.organizationId,
