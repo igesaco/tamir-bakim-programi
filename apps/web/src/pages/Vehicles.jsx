@@ -1,10 +1,11 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 
 export default function Vehicles() {
   const [vehicles, setVehicles] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [search, setSearch] = useState('');
 
   const [form, setForm] = useState({
     customerId: '',
@@ -33,6 +34,34 @@ export default function Vehicles() {
   useEffect(() => {
     load();
   }, []);
+
+  const filteredVehicles = useMemo(() => {
+    const term = search
+      .trim()
+      .toLocaleLowerCase('tr-TR');
+
+    if (!term) {
+      return vehicles;
+    }
+
+    return vehicles.filter((vehicle) => {
+      const text = [
+        vehicle.plate,
+        vehicle.brand,
+        vehicle.model,
+        vehicle.modelYear,
+        vehicle.vin,
+        vehicle.customer?.firstName,
+        vehicle.customer?.lastName,
+        vehicle.customer?.phone,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('tr-TR');
+
+      return text.includes(term);
+    });
+  }, [vehicles, search]);
 
   async function submit(e) {
     e.preventDefault();
@@ -192,7 +221,18 @@ export default function Vehicles() {
         </div>
 
         <div className="panel-card">
-          <h3>Araç Listesi</h3>
+          <div className="card-title-row">
+            <h3>Araç Listesi</h3>
+
+            <input
+              className="search-input"
+              placeholder="Plaka, marka, model ara..."
+              value={search}
+              onChange={(e) =>
+                setSearch(e.target.value)
+              }
+            />
+          </div>
 
           <div className="table-wrap">
             <table>
@@ -208,53 +248,60 @@ export default function Vehicles() {
               </thead>
 
               <tbody>
-                {vehicles.map((vehicle) => (
-                  <tr key={vehicle.id}>
-                    <td>
-                      <strong>
-                        {vehicle.plate}
-                      </strong>
-                    </td>
+                {filteredVehicles.map(
+                  (vehicle) => (
+                    <tr key={vehicle.id}>
+                      <td>
+                        <strong>
+                          {vehicle.plate}
+                        </strong>
+                      </td>
 
-                    <td>
-                      {vehicle.brand}{' '}
-                      {vehicle.model}
-                    </td>
+                      <td>
+                        {vehicle.brand}{' '}
+                        {vehicle.model}
+                      </td>
 
-                    <td>
-                      {vehicle.customer?.firstName}{' '}
-                      {vehicle.customer?.lastName}
-                    </td>
+                      <td>
+                        {vehicle.customer
+                          ?.firstName}{' '}
+                        {vehicle.customer
+                          ?.lastName}
+                      </td>
 
-                    <td>
-                      {Number(
-                        vehicle.mileage || 0,
-                      ).toLocaleString('tr-TR')}
-                    </td>
+                      <td>
+                        {Number(
+                          vehicle.mileage ||
+                            0,
+                        ).toLocaleString(
+                          'tr-TR',
+                        )}
+                      </td>
 
-                    <td>
-                      <a
-                        className="table-link"
-                        href={`/qr/${vehicle.qrToken}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Aç
-                      </a>
-                    </td>
+                      <td>
+                        <a
+                          className="table-link"
+                          href={`/qr/${vehicle.qrToken}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Aç
+                        </a>
+                      </td>
 
-                    <td>
-                      <Link
-                        className="table-link"
-                        to={`/vehicles/${vehicle.id}`}
-                      >
-                        Detay
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                      <td>
+                        <Link
+                          className="table-link"
+                          to={`/vehicles/${vehicle.id}`}
+                        >
+                          Detay
+                        </Link>
+                      </td>
+                    </tr>
+                  ),
+                )}
 
-                {!vehicles.length && (
+                {!filteredVehicles.length && (
                   <tr>
                     <td colSpan="6">
                       Araç bulunamadı.

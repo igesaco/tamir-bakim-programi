@@ -1,11 +1,15 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import { statusLabel } from '../utils/status';
 
 export default function ServiceOrders() {
   const [orders, setOrders] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
+
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
 
   const [form, setForm] = useState({
     customerId: '',
@@ -35,11 +39,46 @@ export default function ServiceOrders() {
     load();
   }, []);
 
-  const filteredVehicles = vehicles.filter(
+  const customerVehicles = vehicles.filter(
     (vehicle) =>
       !form.customerId ||
       vehicle.customerId === form.customerId,
   );
+
+  const filteredOrders = useMemo(() => {
+    const term = search
+      .trim()
+      .toLocaleLowerCase('tr-TR');
+
+    return orders.filter((order) => {
+      if (
+        status &&
+        order.status !== status
+      ) {
+        return false;
+      }
+
+      if (!term) {
+        return true;
+      }
+
+      const text = [
+        order.orderNumber,
+        order.vehicle?.plate,
+        order.vehicle?.brand,
+        order.vehicle?.model,
+        order.customer?.firstName,
+        order.customer?.lastName,
+        order.customer?.phone,
+        order.complaint,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('tr-TR');
+
+      return text.includes(term);
+    });
+  }, [orders, search, status]);
 
   async function submit(e) {
     e.preventDefault();
@@ -82,7 +121,8 @@ export default function ServiceOrders() {
               onChange={(e) =>
                 setForm({
                   ...form,
-                  customerId: e.target.value,
+                  customerId:
+                    e.target.value,
                   vehicleId: '',
                 })
               }
@@ -115,9 +155,11 @@ export default function ServiceOrders() {
 
                 setForm({
                   ...form,
-                  vehicleId: e.target.value,
+                  vehicleId:
+                    e.target.value,
                   mileage:
-                    selected?.mileage ?? '',
+                    selected?.mileage ??
+                    '',
                 });
               }}
               required
@@ -126,7 +168,7 @@ export default function ServiceOrders() {
                 Araç seç
               </option>
 
-              {filteredVehicles.map(
+              {customerVehicles.map(
                 (vehicle) => (
                   <option
                     key={vehicle.id}
@@ -147,7 +189,8 @@ export default function ServiceOrders() {
               onChange={(e) =>
                 setForm({
                   ...form,
-                  mileage: e.target.value,
+                  mileage:
+                    e.target.value,
                 })
               }
               required
@@ -160,7 +203,8 @@ export default function ServiceOrders() {
               onChange={(e) =>
                 setForm({
                   ...form,
-                  complaint: e.target.value,
+                  complaint:
+                    e.target.value,
                 })
               }
             />
@@ -172,7 +216,8 @@ export default function ServiceOrders() {
               onChange={(e) =>
                 setForm({
                   ...form,
-                  internalNote: e.target.value,
+                  internalNote:
+                    e.target.value,
                 })
               }
             />
@@ -184,7 +229,65 @@ export default function ServiceOrders() {
         </div>
 
         <div className="panel-card">
-          <h3>İş Emirleri</h3>
+          <div className="card-title-row">
+            <h3>İş Emirleri</h3>
+
+            <div className="filter-row">
+              <input
+                className="search-input"
+                placeholder="Plaka, müşteri, iş emri..."
+                value={search}
+                onChange={(e) =>
+                  setSearch(e.target.value)
+                }
+              />
+
+              <select
+                className="filter-select"
+                value={status}
+                onChange={(e) =>
+                  setStatus(e.target.value)
+                }
+              >
+                <option value="">
+                  Tüm durumlar
+                </option>
+                <option value="ACCEPTED">
+                  Kabul Edildi
+                </option>
+                <option value="INSPECTION">
+                  Kontrol Ediliyor
+                </option>
+                <option value="QUOTE_WAITING">
+                  Teklif Bekliyor
+                </option>
+                <option value="APPROVED">
+                  Onaylandı
+                </option>
+                <option value="IN_PROGRESS">
+                  İşlemde
+                </option>
+                <option value="PART_WAITING">
+                  Parça Bekliyor
+                </option>
+                <option value="QUALITY_CONTROL">
+                  Kalite Kontrol
+                </option>
+                <option value="READY">
+                  Teslime Hazır
+                </option>
+                <option value="PAYMENT_WAITING">
+                  Ödeme Bekliyor
+                </option>
+                <option value="DELIVERED">
+                  Teslim Edildi
+                </option>
+                <option value="CANCELLED">
+                  İptal Edildi
+                </option>
+              </select>
+            </div>
+          </div>
 
           <div className="table-wrap">
             <table>
@@ -200,47 +303,55 @@ export default function ServiceOrders() {
               </thead>
 
               <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id}>
-                    <td>
-                      {order.orderNumber}
-                    </td>
+                {filteredOrders.map(
+                  (order) => (
+                    <tr key={order.id}>
+                      <td>
+                        {order.orderNumber}
+                      </td>
 
-                    <td>
-                      <strong>
-                        {order.vehicle?.plate}
-                      </strong>
-                    </td>
+                      <td>
+                        <strong>
+                          {order.vehicle?.plate}
+                        </strong>
+                      </td>
 
-                    <td>
-                      {order.customer?.firstName}{' '}
-                      {order.customer?.lastName}
-                    </td>
+                      <td>
+                        {order.customer
+                          ?.firstName}{' '}
+                        {order.customer
+                          ?.lastName}
+                      </td>
 
-                    <td>
-                      <span className="status-badge">
-                        {order.status}
-                      </span>
-                    </td>
+                      <td>
+                        <span className="status-badge">
+                          {statusLabel(
+                            order.status,
+                          )}
+                        </span>
+                      </td>
 
-                    <td>
-                      {Number(
-                        order.mileage || 0,
-                      ).toLocaleString('tr-TR')}
-                    </td>
+                      <td>
+                        {Number(
+                          order.mileage || 0,
+                        ).toLocaleString(
+                          'tr-TR',
+                        )}
+                      </td>
 
-                    <td>
-                      <Link
-                        className="table-link"
-                        to={`/service-orders/${order.id}`}
-                      >
-                        Detay
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                      <td>
+                        <Link
+                          className="table-link"
+                          to={`/service-orders/${order.id}`}
+                        >
+                          Detay
+                        </Link>
+                      </td>
+                    </tr>
+                  ),
+                )}
 
-                {!orders.length && (
+                {!filteredOrders.length && (
                   <tr>
                     <td colSpan="6">
                       İş emri bulunamadı.

@@ -765,3 +765,50 @@ td {
     text-align: left;
   }
 }
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.card-title-row h3 {
+  margin: 0;
+}
+
+.search-input,
+.filter-select {
+  padding: 10px 12px;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #0f1216;
+  color: #fff;
+  outline: none;
+}
+
+.search-input {
+  width: 240px;
+}
+
+.search-input:focus,
+.filter-select:focus {
+  border-color: #f59e0b;
+}
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 800px) {
+  .card-title-row,
+  .filter-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+}

@@ -1,9 +1,10 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
+  const [search, setSearch] = useState('');
 
   const [form, setForm] = useState({
     firstName: '',
@@ -23,6 +24,33 @@ export default function Customers() {
   useEffect(() => {
     load();
   }, []);
+
+  const filteredCustomers = useMemo(() => {
+    const term = search
+      .trim()
+      .toLocaleLowerCase('tr-TR');
+
+    if (!term) {
+      return customers;
+    }
+
+    return customers.filter((customer) => {
+      const text = [
+        customer.firstName,
+        customer.lastName,
+        customer.phone,
+        customer.email,
+        ...(customer.vehicles || []).map(
+          (vehicle) => vehicle.plate,
+        ),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('tr-TR');
+
+      return text.includes(term);
+    });
+  }, [customers, search]);
 
   async function submit(e) {
     e.preventDefault();
@@ -132,7 +160,18 @@ export default function Customers() {
         </div>
 
         <div className="panel-card">
-          <h3>Müşteri Listesi</h3>
+          <div className="card-title-row">
+            <h3>Müşteri Listesi</h3>
+
+            <input
+              className="search-input"
+              placeholder="Ad, telefon, plaka ara..."
+              value={search}
+              onChange={(e) =>
+                setSearch(e.target.value)
+              }
+            />
+          </div>
 
           <div className="table-wrap">
             <table>
@@ -147,37 +186,40 @@ export default function Customers() {
               </thead>
 
               <tbody>
-                {customers.map((customer) => (
-                  <tr key={customer.id}>
-                    <td>
-                      {customer.firstName}{' '}
-                      {customer.lastName}
-                    </td>
+                {filteredCustomers.map(
+                  (customer) => (
+                    <tr key={customer.id}>
+                      <td>
+                        {customer.firstName}{' '}
+                        {customer.lastName}
+                      </td>
 
-                    <td>
-                      {customer.phone || '-'}
-                    </td>
+                      <td>
+                        {customer.phone || '-'}
+                      </td>
 
-                    <td>
-                      {customer.email || '-'}
-                    </td>
+                      <td>
+                        {customer.email || '-'}
+                      </td>
 
-                    <td>
-                      {customer.vehicles?.length || 0}
-                    </td>
+                      <td>
+                        {customer.vehicles?.length ||
+                          0}
+                      </td>
 
-                    <td>
-                      <Link
-                        className="table-link"
-                        to={`/customers/${customer.id}`}
-                      >
-                        Detay
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                      <td>
+                        <Link
+                          className="table-link"
+                          to={`/customers/${customer.id}`}
+                        >
+                          Detay
+                        </Link>
+                      </td>
+                    </tr>
+                  ),
+                )}
 
-                {!customers.length && (
+                {!filteredCustomers.length && (
                   <tr>
                     <td colSpan="5">
                       Kayıt bulunamadı.
