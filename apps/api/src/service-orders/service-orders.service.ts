@@ -1,42 +1,193 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ServiceOrderStatus } from '@prisma/client';
+import {
+  ServiceOrderStatus,
+  UserRole,
+} from '@prisma/client';
+
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateServiceOrderDto } from './dto/create-service-order.dto';
 
+const TECHNICIAN_ALLOWED_STATUSES =
+  new Set<ServiceOrderStatus>([
+    ServiceOrderStatus.ACCEPTED,
+    ServiceOrderStatus.IN_PROGRESS,
+    ServiceOrderStatus.PART_WAITING,
+    ServiceOrderStatus.QUALITY_CONTROL,
+    ServiceOrderStatus.READY,
+  ]);
+
 @Injectable()
 export class ServiceOrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+  ) {}
 
-  async create(
+  private async resolveBranch(
     organizationId: string,
-    branchId: string | null,
-    dto: CreateServiceOrderDto,
+    actorBranchId: string | null,
+    actorRole: UserRole,
+    requestedBranchId?: string,
   ) {
-    if (!branchId) {
-      throw new BadRequestException('�ube se�imi gerekli.');
+    let branchId = actorBranchId;
+
+    if (
+      (
+        actorRole === UserRole.OWNER ||
+        actorRole === UserRole.MANAGER
+      ) &&
+      requestedBranchId
+    ) {
+      branchId = requestedBranchId;
     }
 
-    const vehicle = await this.prisma.vehicle.findFirst({
+    if (
+      actorRole === UserRole.SERVICE_ADVISOR &&
+      requestedBranchId &&
+      requestedBranchId !== actorBranchId
+    ) {
+      throw new ForbiddenException(
+        'Servis danışmanı yalnızca kendi şubesinde işlem yapabilir.',
+      );
+    }
+
+    if (!branchId) {
+      throw new BadRequestException(
+        'İşlem için şube seçimi gerekli.',
+      );
+    }
+
+    const branch = await this.prisma.branch.findFirst({
       where: {
-        id: dto.vehicleId,
+        id: branchId,
         organizationId,
-        customerId: dto.customerId,
+        active: true,
       },
     });
 
+    if (!branch) {
+      throw new BadRequestException(
+        'Geçerli ve aktif bir şube seçiniz.',
+      );
+    }
+
+    return branchId;
+  }
+
+  private async validateTechnician(
+    organizationId: string,
+    branchId: string,
+    technicianId: string,
+  ) {
+    const technician =
+      await this.prisma.user.findFirst({
+        where: {
+          id: technicianId,
+          organizationId,
+          role: UserRole.TECHNICIAN,
+          active: true,
+          branchId,
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          branchId: true,
+        },
+      });
+
+    if (!technician) {
+      throw new BadRequestException(
+        'Seçilen teknisyen aktif değil veya iş emriyle aynı şubede değil.',
+      );
+    }
+
+    return technician;
+  }
+
+  private buildAccessWhere(
+    organizationId: string,
+    role: UserRole,
+    userId: string,
+    branchId: string | null,
+  ) {
+    const where: Record<string, any> = {
+      organizationId,
+    };
+
+    if (role === UserRole.TECHNICIAN) {
+      where.assignedTechnicianId = userId;
+
+      if (branchId) {
+        where.branchId = branchId;
+      }
+
+      return where;
+    }
+
+    if (role === UserRole.SERVICE_ADVISOR) {
+      if (!branchId) {
+        throw new BadRequestException(
+          'Servis danışmanı için şube ataması gerekli.',
+        );
+      }
+
+      where.branchId = branchId;
+    }
+
+    return where;
+  }
+
+  async create(
+    organizationId: string,
+    actorBranchId: string | null,
+    actorRole: UserRole,
+    dto: CreateServiceOrderDto,
+  ) {
+    const branchId = await this.resolveBranch(
+      organizationId,
+      actorBranchId,
+      actorRole,
+      dto.branchId,
+    );
+
+    const vehicle =
+      await this.prisma.vehicle.findFirst({
+        where: {
+          id: dto.vehicleId,
+          organizationId,
+          customerId: dto.customerId,
+        },
+      });
+
     if (!vehicle) {
-      throw new BadRequestException('M��teri veya ara� bilgisi ge�ersiz.');
+      throw new BadRequestException(
+        'Müşteri veya araç bilgisi geçersiz.',
+      );
+    }
+
+    if (dto.assignedTechnicianId) {
+      await this.validateTechnician(
+        organizationId,
+        branchId,
+        dto.assignedTechnicianId,
+      );
     }
 
     const orderNumber =
       'SO-' +
-      new Date().toISOString().replace(/\D/g, '').slice(0, 14) +
+      new Date()
+        .toISOString()
+        .replace(/\D/g, '')
+        .slice(0, 14) +
       '-' +
-      Math.floor(1000 + Math.random() * 9000);
+      Math.floor(
+        1000 + Math.random() * 9000,
+      );
 
     return this.prisma.serviceOrder.create({
       data: {
@@ -44,7 +195,8 @@ export class ServiceOrdersService {
         branchId,
         customerId: dto.customerId,
         vehicleId: dto.vehicleId,
-        assignedTechnicianId: dto.assignedTechnicianId,
+        assignedTechnicianId:
+          dto.assignedTechnicianId,
         orderNumber,
         mileage: dto.mileage,
         complaint: dto.complaint,
@@ -59,9 +211,19 @@ export class ServiceOrdersService {
     });
   }
 
-  findAll(organizationId: string) {
+  findAll(
+    organizationId: string,
+    role: UserRole,
+    userId: string,
+    branchId: string | null,
+  ) {
     return this.prisma.serviceOrder.findMany({
-      where: { organizationId },
+      where: this.buildAccessWhere(
+        organizationId,
+        role,
+        userId,
+        branchId,
+      ),
       include: {
         customer: true,
         vehicle: true,
@@ -75,54 +237,141 @@ export class ServiceOrdersService {
     });
   }
 
-  async findOne(organizationId: string, id: string) {
-    const order = await this.prisma.serviceOrder.findFirst({
-      where: {
-        id,
+  async findOne(
+    organizationId: string,
+    id: string,
+    role: UserRole,
+    userId: string,
+    branchId: string | null,
+  ) {
+    const order =
+      await this.prisma.serviceOrder.findFirst({
+        where: {
+          id,
+          ...this.buildAccessWhere(
+            organizationId,
+            role,
+            userId,
+            branchId,
+          ),
+        },
+        include: {
+          customer: true,
+          vehicle: true,
+          assignedTechnician: true,
+          inspections: {
+            include: {
+              items: true,
+              media: true,
+            },
+          },
+          items: true,
+          quotes: {
+            include: {
+              items: true,
+            },
+          },
+          media: true,
+          payments: true,
+        },
+      });
+
+    if (!order) {
+      throw new NotFoundException(
+        'İş emri bulunamadı veya bu iş emrine erişim yetkiniz yok.',
+      );
+    }
+
+    return order;
+  }
+
+  async assignTechnician(
+    organizationId: string,
+    id: string,
+    technicianId: string | null,
+    actorRole: UserRole,
+    actorBranchId: string | null,
+  ) {
+    const order =
+      await this.prisma.serviceOrder.findFirst({
+        where: {
+          id,
+          organizationId,
+          ...(actorRole ===
+            UserRole.SERVICE_ADVISOR
+            ? {
+                branchId:
+                  actorBranchId ??
+                  '__branch_not_assigned__',
+              }
+            : {}),
+        },
+      });
+
+    if (!order) {
+      throw new NotFoundException(
+        'İş emri bulunamadı veya bu iş emrine erişim yetkiniz yok.',
+      );
+    }
+
+    if (technicianId) {
+      await this.validateTechnician(
         organizationId,
+        order.branchId,
+        technicianId,
+      );
+    }
+
+    return this.prisma.serviceOrder.update({
+      where: { id },
+      data: {
+        assignedTechnicianId:
+          technicianId,
       },
       include: {
         customer: true,
         vehicle: true,
         assignedTechnician: true,
-        inspections: {
-          include: {
-            items: true,
-            media: true,
-          },
-        },
-        items: true,
-        quotes: {
-          include: {
-            items: true,
-          },
-        },
-        media: true,
-        payments: true,
       },
     });
-
-    if (!order) {
-      throw new NotFoundException('�� emri bulunamad�.');
-    }
-
-    return order;
   }
 
   async updateStatus(
     organizationId: string,
     id: string,
     status: ServiceOrderStatus,
+    actorRole: UserRole,
+    actorId: string,
+    actorBranchId: string | null,
   ) {
-    const order = await this.prisma.serviceOrder.findFirst({
-      where: {
-        id,
-        organizationId,
-      },
-    });
+    const order =
+      await this.prisma.serviceOrder.findFirst({
+        where: {
+          id,
+          ...this.buildAccessWhere(
+            organizationId,
+            actorRole,
+            actorId,
+            actorBranchId,
+          ),
+        },
+      });
 
     if (!order) {
-      throw new NotFoundException('�� emri bulunamad�.');
+      throw new NotFoundException(
+        'İş emri bulunamadı veya bu iş emrine erişim yetkiniz yok.',
+      );
+    }
+
+    if (
+      actorRole === UserRole.TECHNICIAN &&
+      !TECHNICIAN_ALLOWED_STATUSES.has(
+        status,
+      )
+    ) {
+      throw new ForbiddenException(
+        'Teknisyen bu servis durumunu kullanamaz.',
+      );
     }
 
     return this.prisma.serviceOrder.update({
@@ -130,9 +379,13 @@ export class ServiceOrdersService {
       data: {
         status,
         deliveredAt:
-          status === ServiceOrderStatus.DELIVERED
+          status ===
+          ServiceOrderStatus.DELIVERED
             ? new Date()
             : undefined,
+      },
+      include: {
+        assignedTechnician: true,
       },
     });
   }
