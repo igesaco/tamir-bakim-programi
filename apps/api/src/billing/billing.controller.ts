@@ -17,13 +17,13 @@ import { BillingService } from './billing.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentStatusDto } from './dto/update-payment-status.dto';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('billing')
 @Roles(
   UserRole.OWNER,
   UserRole.MANAGER,
 )
-@UseGuards(RolesGuard)
+
 export class BillingController {
   constructor(
     private readonly billingService: BillingService,
