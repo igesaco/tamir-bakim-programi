@@ -63,6 +63,29 @@ export class MediaController {
         fileSize:
           15 * 1024 * 1024,
       },
+      fileFilter: (
+        _req,
+        file,
+        callback,
+      ) => {
+        const allowed =
+          file.mimetype.startsWith(
+            'image/',
+          ) ||
+          file.mimetype ===
+            'application/pdf';
+
+        if (!allowed) {
+          return callback(
+            new Error(
+              'Yalnızca görsel veya PDF dosyası yüklenebilir.',
+            ),
+            false,
+          );
+        }
+
+        callback(null, true);
+      },
     }),
   )
   upload(
@@ -74,6 +97,7 @@ export class MediaController {
     return this.mediaService.create(
       req.user.organizationId,
       req.user.branchId,
+      req.user.role,
       req.user.sub,
       dto,
       file,
@@ -84,6 +108,8 @@ export class MediaController {
   findAll(@Req() req: any) {
     return this.mediaService.findAll(
       req.user.organizationId,
+      req.user.role,
+      req.user.branchId,
     );
   }
 
@@ -95,6 +121,8 @@ export class MediaController {
     return this.mediaService.findOne(
       req.user.organizationId,
       id,
+      req.user.role,
+      req.user.branchId,
     );
   }
 }
