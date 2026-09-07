@@ -17,9 +17,9 @@ import { BranchesService } from './branches.service';
 import { CreateBranchDto } from './dto/create-branch.dto';
 
 @Controller('branches')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(UserRole.OWNER, UserRole.MANAGER)
-@UseGuards(RolesGuard)
+
 export class BranchesController {
   constructor(
     private readonly branchesService: BranchesService,
