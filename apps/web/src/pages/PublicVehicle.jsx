@@ -1,21 +1,31 @@
-﻿import { useEffect, useState } from 'react';
+﻿import {
+  useEffect,
+  useState,
+} from 'react';
 import { useParams } from 'react-router-dom';
+
 import api from '../api/client';
 
 export default function PublicVehicle() {
   const { token } = useParams();
 
-  const [data, setData] = useState(null);
-  const [error, setError] = useState('');
+  const [data, setData] =
+    useState(null);
+  const [error, setError] =
+    useState('');
 
   useEffect(() => {
     api
-      .get(`/vehicles/qr/${token}`)
+      .get(
+        `/vehicles/qr/${token}`,
+      )
       .then((response) => {
         setData(response.data);
       })
       .catch(() => {
-        setError('Araç bakım kartı bulunamadı.');
+        setError(
+          'Araç bakım kartı bulunamadı.',
+        );
       });
   }, [token]);
 
@@ -40,12 +50,20 @@ export default function PublicVehicle() {
     );
   }
 
-  const vehicle = data.vehicle || data;
+  const vehicle =
+    data.vehicle || data;
 
   const lastMaintenance =
     data.lastMaintenanceRecord ||
     data.lastMaintenance ||
-    vehicle.lastMaintenanceRecord;
+    vehicle
+      .maintenanceRecords?.[0] ||
+    null;
+
+  const history =
+    data.maintenanceHistory ||
+    vehicle.maintenanceRecords ||
+    [];
 
   const plans =
     data.maintenancePlans ||
@@ -81,7 +99,9 @@ export default function PublicVehicle() {
             <strong>
               {Number(
                 vehicle.mileage || 0,
-              ).toLocaleString('tr-TR')}
+              ).toLocaleString(
+                'tr-TR',
+              )}
             </strong>
           </div>
         </div>
@@ -90,31 +110,37 @@ export default function PublicVehicle() {
           <div className="public-info-card">
             <span>Model Yılı</span>
             <strong>
-              {vehicle.modelYear || '-'}
+              {vehicle.modelYear ||
+                '-'}
             </strong>
           </div>
 
           <div className="public-info-card">
             <span>Yakıt</span>
             <strong>
-              {vehicle.fuelType || '-'}
+              {vehicle.fuelType ||
+                '-'}
             </strong>
           </div>
 
           <div className="public-info-card">
             <span>Şanzıman</span>
             <strong>
-              {vehicle.transmission || '-'}
+              {vehicle.transmission ||
+                '-'}
             </strong>
           </div>
 
           <div className="public-info-card">
             <span>Son Bakım</span>
             <strong>
-              {lastMaintenance?.performedAt
+              {lastMaintenance
+                ?.performedAt
                 ? new Date(
                     lastMaintenance.performedAt,
-                  ).toLocaleDateString('tr-TR')
+                  ).toLocaleDateString(
+                    'tr-TR',
+                  )
                 : '-'}
             </strong>
           </div>
@@ -128,13 +154,11 @@ export default function PublicVehicle() {
               <div>
                 <span>Tarih</span>
                 <strong>
-                  {lastMaintenance.performedAt
-                    ? new Date(
-                        lastMaintenance.performedAt,
-                      ).toLocaleDateString(
-                        'tr-TR',
-                      )
-                    : '-'}
+                  {new Date(
+                    lastMaintenance.performedAt,
+                  ).toLocaleDateString(
+                    'tr-TR',
+                  )}
                 </strong>
               </div>
 
@@ -142,19 +166,24 @@ export default function PublicVehicle() {
                 <span>Kilometre</span>
                 <strong>
                   {Number(
-                    lastMaintenance.mileage || 0,
-                  ).toLocaleString('tr-TR')}
+                    lastMaintenance.mileage ||
+                      0,
+                  ).toLocaleString(
+                    'tr-TR',
+                  )}
                 </strong>
               </div>
 
               <div>
-                <span>Tutar</span>
+                <span>İşlemler</span>
                 <strong>
-                  {Number(
-                    lastMaintenance.totalAmount ||
-                      0,
-                  ).toLocaleString('tr-TR')}{' '}
-                  ₺
+                  {lastMaintenance.items
+                    ?.map(
+                      (item) =>
+                        item.name,
+                    )
+                    .join(', ') ||
+                    '-'}
                 </strong>
               </div>
             </div>
@@ -166,42 +195,97 @@ export default function PublicVehicle() {
         </div>
 
         <div className="public-section">
+          <h2>Bakım Geçmişi</h2>
+
+          {history.length > 0 ? (
+            <div className="public-plan-list">
+              {history.map(
+                (record) => (
+                  <div
+                    className="public-plan"
+                    key={record.id}
+                  >
+                    <div>
+                      <strong>
+                        {record.items
+                          ?.map(
+                            (item) =>
+                              item.name,
+                          )
+                          .join(
+                            ', ',
+                          ) ||
+                          'Bakım Kaydı'}
+                      </strong>
+
+                      <span>
+                        {new Date(
+                          record.performedAt,
+                        ).toLocaleDateString(
+                          'tr-TR',
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="public-plan-km">
+                      {Number(
+                        record.mileage ||
+                          0,
+                      ).toLocaleString(
+                        'tr-TR',
+                      )}{' '}
+                      KM
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+          ) : (
+            <div className="public-empty">
+              Bakım geçmişi bulunmuyor.
+            </div>
+          )}
+        </div>
+
+        <div className="public-section">
           <h2>Yaklaşan Bakımlar</h2>
 
           {plans.length > 0 ? (
             <div className="public-plan-list">
-              {plans.map((plan) => (
-                <div
-                  className="public-plan"
-                  key={plan.id}
-                >
-                  <div>
-                    <strong>
-                      {plan.title}
-                    </strong>
+              {plans.map(
+                (plan) => (
+                  <div
+                    className="public-plan"
+                    key={plan.id}
+                  >
+                    <div>
+                      <strong>
+                        {plan.title}
+                      </strong>
 
-                    <span>
-                      {plan.nextDueDate
-                        ? new Date(
-                            plan.nextDueDate,
-                          ).toLocaleDateString(
+                      <span>
+                        {plan.nextDueDate
+                          ? new Date(
+                              plan.nextDueDate,
+                            ).toLocaleDateString(
+                              'tr-TR',
+                            )
+                          : 'Tarih belirtilmedi'}
+                      </span>
+                    </div>
+
+                    <div className="public-plan-km">
+                      {plan.nextDueKm
+                        ? `${Number(
+                            plan.nextDueKm,
+                          ).toLocaleString(
                             'tr-TR',
-                          )
-                        : 'Tarih belirtilmedi'}
-                    </span>
+                          )} KM`
+                        : '-'}
+                    </div>
                   </div>
-
-                  <div className="public-plan-km">
-                    {plan.nextDueKm
-                      ? `${Number(
-                          plan.nextDueKm,
-                        ).toLocaleString(
-                          'tr-TR',
-                        )} KM`
-                      : '-'}
-                  </div>
-                </div>
-              ))}
+                ),
+              )}
             </div>
           ) : (
             <div className="public-empty">
@@ -211,8 +295,11 @@ export default function PublicVehicle() {
         </div>
 
         <div className="public-footer">
-          Araç bakım bilgileri servis kayıtlarından
-          otomatik oluşturulmuştur.
+          Araç bakım bilgileri servis
+          kayıtlarından otomatik
+          oluşturulmuştur. Finansal
+          bilgiler bu açık kartta
+          gösterilmez.
         </div>
       </div>
     </div>
