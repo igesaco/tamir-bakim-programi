@@ -1350,3 +1350,56 @@ td {
     grid-column: 2;
   }
 }
+
+
+/* === SERVICE ORDER ITEMS V2 === */
+.service-item-form {
+  display: grid;
+  grid-template-columns:
+    120px minmax(180px, 1.6fr)
+    110px 130px 120px minmax(180px, 1fr)
+    120px;
+  gap: 8px;
+  align-items: center;
+}
+
+.service-item-form input,
+.service-item-form select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #30363d;
+  border-radius: 9px;
+  background: #0f1216;
+  color: #fff;
+  outline: none;
+}
+
+.service-item-form input:focus,
+.service-item-form select:focus {
+  border-color: #f59e0b;
+}
+
+.service-item-description {
+  min-width: 180px;
+}
+
+.status-badge {
+  cursor: default;
+}
+
+button.status-badge {
+  cursor: pointer;
+}
+
+@media (max-width: 1250px) {
+  .service-item-form {
+    grid-template-columns:
+      repeat(3, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .service-item-form {
+    grid-template-columns: 1fr;
+  }
+}
