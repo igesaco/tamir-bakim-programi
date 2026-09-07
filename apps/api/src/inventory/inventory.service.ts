@@ -14,45 +14,98 @@ import { StockMovementDto } from './dto/stock-movement.dto';
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+  ) {}
+
+  private async validateBranch(
+    organizationId: string,
+    branchId: string | null,
+  ) {
+    if (!branchId) {
+      throw new BadRequestException(
+        'Åžube seÃ§imi gerekli.',
+      );
+    }
+
+    const branch =
+      await this.prisma.branch.findFirst({
+        where: {
+          id: branchId,
+          organizationId,
+          active: true,
+        },
+      });
+
+    if (!branch) {
+      throw new BadRequestException(
+        'GeÃ§erli ve aktif bir ÅŸube seÃ§iniz.',
+      );
+    }
+
+    return branchId;
+  }
 
   async createPart(
     organizationId: string,
     dto: CreatePartDto,
   ) {
     if (dto.supplierId) {
-      const supplier = await this.prisma.supplier.findFirst({
-        where: {
-          id: dto.supplierId,
-          organizationId,
-        },
-      });
+      const supplier =
+        await this.prisma.supplier.findFirst({
+          where: {
+            id: dto.supplierId,
+            organizationId,
+          },
+        });
 
       if (!supplier) {
         throw new BadRequestException(
-          'Tedarikçi bulunamadý.',
+          'TedarikÃ§i bulunamadÄ±.',
         );
       }
     }
 
-    return this.prisma.part.create({
-      data: {
-        organizationId,
-        supplierId: dto.supplierId,
-        name: dto.name,
-        sku: dto.sku,
-        oemCode: dto.oemCode,
-        barcode: dto.barcode,
-        brand: dto.brand,
-        unit: dto.unit ?? 'ADET',
-        purchasePrice: dto.purchasePrice,
-        salePrice: dto.salePrice,
-        minimumStock: dto.minimumStock ?? 0,
-      },
-      include: {
-        supplier: true,
-      },
-    });
+    try {
+      return await this.prisma.part.create({
+        data: {
+          organizationId,
+          supplierId:
+            dto.supplierId,
+          name:
+            dto.name.trim(),
+          sku:
+            dto.sku?.trim(),
+          oemCode:
+            dto.oemCode?.trim(),
+          barcode:
+            dto.barcode?.trim(),
+          brand:
+            dto.brand?.trim(),
+          unit:
+            dto.unit?.trim() ??
+            'ADET',
+          purchasePrice:
+            dto.purchasePrice,
+          salePrice:
+            dto.salePrice,
+          minimumStock:
+            dto.minimumStock ??
+            0,
+        },
+        include: {
+          supplier: true,
+        },
+      });
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
+        throw new BadRequestException(
+          'Bu SKU veya barkod baÅŸka bir parÃ§ada kullanÄ±lÄ±yor.',
+        );
+      }
+
+      throw error;
+    }
   }
 
   findParts(organizationId: string) {
@@ -71,20 +124,21 @@ export class InventoryService {
     });
   }
 
-  findStock(
+  async findStock(
     organizationId: string,
     branchId: string | null,
   ) {
-    if (!branchId) {
-      throw new BadRequestException(
-        'Þube seçimi gerekli.',
+    const validBranchId =
+      await this.validateBranch(
+        organizationId,
+        branchId,
       );
-    }
 
     return this.prisma.inventory.findMany({
       where: {
         organizationId,
-        branchId,
+        branchId:
+          validBranchId,
       },
       include: {
         part: {
@@ -105,31 +159,43 @@ export class InventoryService {
     organizationId: string,
     branchId: string | null,
   ) {
-    if (!branchId) {
-      throw new BadRequestException(
-        'Þube seçimi gerekli.',
-      );
-    }
-
-    const inventories = await this.prisma.inventory.findMany({
-      where: {
+    const validBranchId =
+      await this.validateBranch(
         organizationId,
         branchId,
-      },
-      include: {
-        part: true,
-      },
-    });
-
-    return inventories.filter((item) => {
-      const quantity = Number(item.quantity);
-      const limit = Math.max(
-        Number(item.minQuantity),
-        Number(item.part.minimumStock),
       );
 
-      return quantity <= limit;
-    });
+    const inventories =
+      await this.prisma.inventory.findMany({
+        where: {
+          organizationId,
+          branchId:
+            validBranchId,
+        },
+        include: {
+          part: true,
+        },
+      });
+
+    return inventories.filter(
+      (item) => {
+        const quantity =
+          Number(
+            item.quantity,
+          );
+        const limit =
+          Math.max(
+            Number(
+              item.minQuantity,
+            ),
+            Number(
+              item.part.minimumStock,
+            ),
+          );
+
+        return quantity <= limit;
+      },
+    );
   }
 
   async stockIn(
@@ -138,64 +204,84 @@ export class InventoryService {
     userId: string,
     dto: StockMovementDto,
   ) {
-    if (!branchId) {
-      throw new BadRequestException(
-        'Þube seçimi gerekli.',
+    const validBranchId =
+      await this.validateBranch(
+        organizationId,
+        branchId,
+      );
+
+    const part =
+      await this.prisma.part.findFirst({
+        where: {
+          id: dto.partId,
+          organizationId,
+          active: true,
+        },
+      });
+
+    if (!part) {
+      throw new NotFoundException(
+        'ParÃ§a bulunamadÄ±.',
       );
     }
 
-    const part = await this.prisma.part.findFirst({
-      where: {
-        id: dto.partId,
-        organizationId,
-        active: true,
+    return this.prisma.$transaction(
+      async (tx) => {
+        const inventory =
+          await tx.inventory.upsert({
+            where: {
+              branchId_partId: {
+                branchId:
+                  validBranchId,
+                partId:
+                  dto.partId,
+              },
+            },
+            create: {
+              organizationId,
+              branchId:
+                validBranchId,
+              partId:
+                dto.partId,
+              quantity:
+                dto.quantity,
+              minQuantity:
+                part.minimumStock,
+            },
+            update: {
+              quantity: {
+                increment:
+                  dto.quantity,
+              },
+            },
+            include: {
+              part: true,
+            },
+          });
+
+        await tx.inventoryMovement.create({
+          data: {
+            organizationId,
+            branchId:
+              validBranchId,
+            partId:
+              dto.partId,
+            createdById:
+              userId,
+            type:
+              InventoryMovementType.IN,
+            quantity:
+              dto.quantity,
+            unitCost:
+              dto.unitCost,
+            note:
+              dto.note,
+          },
+        });
+
+        return inventory;
       },
-    });
-
-    if (!part) {
-      throw new NotFoundException('Parça bulunamadý.');
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      const inventory = await tx.inventory.upsert({
-        where: {
-          branchId_partId: {
-            branchId,
-            partId: dto.partId,
-          },
-        },
-        create: {
-          organizationId,
-          branchId,
-          partId: dto.partId,
-          quantity: dto.quantity,
-          minQuantity: part.minimumStock,
-        },
-        update: {
-          quantity: {
-            increment: dto.quantity,
-          },
-        },
-        include: {
-          part: true,
-        },
-      });
-
-      await tx.inventoryMovement.create({
-        data: {
-          organizationId,
-          branchId,
-          partId: dto.partId,
-          createdById: userId,
-          type: InventoryMovementType.IN,
-          quantity: dto.quantity,
-          unitCost: dto.unitCost,
-          note: dto.note,
-        },
-      });
-
-      return inventory;
-    });
+    );
   }
 
   async stockOut(
@@ -204,63 +290,20 @@ export class InventoryService {
     userId: string,
     dto: StockMovementDto,
   ) {
-    if (!branchId) {
-      throw new BadRequestException(
-        'Þube seçimi gerekli.',
+    const validBranchId =
+      await this.validateBranch(
+        organizationId,
+        branchId,
       );
-    }
 
-    const inventory = await this.prisma.inventory.findUnique({
-      where: {
-        branchId_partId: {
-          branchId,
-          partId: dto.partId,
-        },
-      },
-      include: {
-        part: true,
-      },
-    });
-
-    if (!inventory) {
-      throw new NotFoundException(
-        'Bu parça stokta bulunamadý.',
-      );
-    }
-
-    if (Number(inventory.quantity) < dto.quantity) {
-      throw new BadRequestException(
-        'Yeterli stok bulunmuyor.',
-      );
-    }
-
-    if (dto.serviceOrderId) {
-      const order = await this.prisma.serviceOrder.findFirst({
-        where: {
-          id: dto.serviceOrderId,
-          organizationId,
-          branchId,
-        },
-      });
-
-      if (!order) {
-        throw new BadRequestException(
-          'Ýþ emri bulunamadý.',
-        );
-      }
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      const updatedInventory = await tx.inventory.update({
+    const inventory =
+      await this.prisma.inventory.findUnique({
         where: {
           branchId_partId: {
-            branchId,
-            partId: dto.partId,
-          },
-        },
-        data: {
-          quantity: {
-            decrement: dto.quantity,
+            branchId:
+              validBranchId,
+            partId:
+              dto.partId,
           },
         },
         include: {
@@ -268,56 +311,143 @@ export class InventoryService {
         },
       });
 
-      await tx.inventoryMovement.create({
-        data: {
-          organizationId,
-          branchId,
-          partId: dto.partId,
-          serviceOrderId: dto.serviceOrderId,
-          createdById: userId,
-          type: InventoryMovementType.OUT,
-          quantity: dto.quantity,
-          unitCost: dto.unitCost,
-          note: dto.note,
-        },
-      });
+    if (
+      !inventory ||
+      inventory.organizationId !==
+        organizationId ||
+      inventory.part
+        .organizationId !==
+        organizationId
+    ) {
+      throw new NotFoundException(
+        'Bu parÃ§a stokta bulunamadÄ±.',
+      );
+    }
 
-      if (dto.serviceOrderId) {
-        const total =
-          dto.quantity * Number(inventory.part.salePrice);
+    if (
+      Number(
+        inventory.quantity,
+      ) < dto.quantity
+    ) {
+      throw new BadRequestException(
+        'Yeterli stok bulunmuyor.',
+      );
+    }
 
-        await tx.serviceOrderItem.create({
-          data: {
-            serviceOrderId: dto.serviceOrderId,
-            partId: dto.partId,
-            type: ServiceItemType.PART,
-            name: inventory.part.name,
-            description: dto.note,
-            quantity: dto.quantity,
-            unitPrice: inventory.part.salePrice,
-            totalPrice: total,
+    if (dto.serviceOrderId) {
+      const order =
+        await this.prisma.serviceOrder.findFirst({
+          where: {
+            id: dto.serviceOrderId,
+            organizationId,
+            branchId:
+              validBranchId,
           },
         });
-      }
 
-      return updatedInventory;
-    });
+      if (!order) {
+        throw new BadRequestException(
+          'Ä°ÅŸ emri bulunamadÄ±.',
+        );
+      }
+    }
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const updatedInventory =
+          await tx.inventory.update({
+            where: {
+              branchId_partId: {
+                branchId:
+                  validBranchId,
+                partId:
+                  dto.partId,
+              },
+            },
+            data: {
+              quantity: {
+                decrement:
+                  dto.quantity,
+              },
+            },
+            include: {
+              part: true,
+            },
+          });
+
+        await tx.inventoryMovement.create({
+          data: {
+            organizationId,
+            branchId:
+              validBranchId,
+            partId:
+              dto.partId,
+            serviceOrderId:
+              dto.serviceOrderId,
+            createdById:
+              userId,
+            type:
+              InventoryMovementType.OUT,
+            quantity:
+              dto.quantity,
+            unitCost:
+              dto.unitCost,
+            note:
+              dto.note,
+          },
+        });
+
+        if (dto.serviceOrderId) {
+          const total =
+            dto.quantity *
+            Number(
+              inventory.part
+                .salePrice,
+            );
+
+          await tx.serviceOrderItem.create({
+            data: {
+              serviceOrderId:
+                dto.serviceOrderId,
+              partId:
+                dto.partId,
+              type:
+                ServiceItemType.PART,
+              name:
+                inventory.part.name,
+              description:
+                dto.note,
+              quantity:
+                dto.quantity,
+              unitPrice:
+                inventory.part
+                  .salePrice,
+              totalPrice:
+                total,
+            },
+          });
+        }
+
+        return updatedInventory;
+      },
+    );
   }
 
-  findMovements(
+  async findMovements(
     organizationId: string,
     branchId: string | null,
   ) {
-    if (!branchId) {
-      throw new BadRequestException(
-        'Þube seçimi gerekli.',
+    const validBranchId =
+      await this.validateBranch(
+        organizationId,
+        branchId,
       );
-    }
 
     return this.prisma.inventoryMovement.findMany({
       where: {
         organizationId,
-        branchId,
+        branchId:
+          validBranchId,
       },
       include: {
         part: true,
