@@ -1,9 +1,14 @@
 import { Module } from '@nestjs/common';
-import { InventoryService } from './inventory.service';
+
+import { RolesGuard } from '../auth/roles.guard';
 import { InventoryController } from './inventory.controller';
+import { InventoryService } from './inventory.service';
 
 @Module({
-  providers: [InventoryService],
-  controllers: [InventoryController]
+  providers: [
+    InventoryService,
+    RolesGuard,
+  ],
+  controllers: [InventoryController],
 })
 export class InventoryModule {}
