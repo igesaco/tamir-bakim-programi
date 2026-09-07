@@ -1,8 +1,17 @@
-import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class StockMovementDto {
   @IsString()
   partId: string;
+
+  @IsOptional()
+  @IsString()
+  branchId?: string;
 
   @IsNumber()
   @Min(0.01)
