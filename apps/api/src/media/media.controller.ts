@@ -30,13 +30,13 @@ const mediaStorageDir =
       './uploads',
   );
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(
   UserRole.OWNER,
   UserRole.MANAGER,
   UserRole.SERVICE_ADVISOR,
 )
-@UseGuards(RolesGuard)
+
 @Controller('media')
 export class MediaController {
   constructor(
