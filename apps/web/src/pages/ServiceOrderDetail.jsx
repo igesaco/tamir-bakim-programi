@@ -34,7 +34,20 @@ export default function ServiceOrderDetail() {
 
   const [order, setOrder] = useState(null);
   const [technicians, setTechnicians] = useState([]);
+  const [availableParts, setAvailableParts] = useState([]);
   const [assignmentBusy, setAssignmentBusy] = useState(false);
+  const [itemBusy, setItemBusy] = useState(false);
+  const [itemError, setItemError] = useState('');
+
+  const [itemForm, setItemForm] = useState({
+    type: 'LABOR',
+    partId: '',
+    name: '',
+    description: '',
+    quantity: 1,
+    unitPrice: '',
+    discountAmount: 0,
+  });
 
   const canAssign = [
     'OWNER',
@@ -53,6 +66,17 @@ export default function ServiceOrderDetail() {
     );
 
     setOrder(response.data);
+
+    if (user?.role !== 'TECHNICIAN') {
+      const partsResponse =
+        await api.get(
+          `/service-orders/${id}/available-parts`,
+        );
+
+      setAvailableParts(
+        partsResponse.data,
+      );
+    }
   }
 
   useEffect(() => {
@@ -91,6 +115,113 @@ export default function ServiceOrderDetail() {
     } finally {
       setAssignmentBusy(false);
     }
+  }
+
+  function selectPart(partId) {
+    const part = availableParts.find(
+      (item) =>
+        item.partId === partId,
+    );
+
+    setItemForm({
+      ...itemForm,
+      partId,
+      name: part?.name || '',
+      unitPrice:
+        part?.salePrice ?? '',
+    });
+  }
+
+  async function addItem(e) {
+    e.preventDefault();
+
+    setItemBusy(true);
+    setItemError('');
+
+    try {
+      await api.post(
+        `/service-orders/${id}/items`,
+        {
+          type: itemForm.type,
+          partId:
+            itemForm.partId ||
+            undefined,
+          name:
+            itemForm.name.trim(),
+          description:
+            itemForm.description.trim() ||
+            undefined,
+          quantity:
+            Number(
+              itemForm.quantity,
+            ),
+          unitPrice:
+            itemForm.unitPrice === ''
+              ? undefined
+              : Number(
+                  itemForm.unitPrice,
+                ),
+          discountAmount:
+            Number(
+              itemForm.discountAmount ||
+                0,
+            ),
+        },
+      );
+
+      setItemForm({
+        type: 'LABOR',
+        partId: '',
+        name: '',
+        description: '',
+        quantity: 1,
+        unitPrice: '',
+        discountAmount: 0,
+      });
+
+      await load();
+    } catch (err) {
+      const message =
+        err?.response?.data?.message;
+
+      setItemError(
+        Array.isArray(message)
+          ? message.join(', ')
+          : message ||
+              'İşlem eklenemedi.',
+      );
+    } finally {
+      setItemBusy(false);
+    }
+  }
+
+  async function toggleItem(item) {
+    await api.patch(
+      `/service-orders/${id}/items/${item.id}/complete`,
+      {
+        completed:
+          !item.completed,
+      },
+    );
+
+    await load();
+  }
+
+  async function removeItem(item) {
+    const approved =
+      window.confirm(
+        `${item.name} kalemini silmek istediğinize emin misiniz?`,
+      );
+
+    if (!approved) {
+      return;
+    }
+
+    await api.delete(
+      `/service-orders/${id}/items/${item.id}`,
+    );
+
+    await load();
   }
 
   if (!order) {
@@ -301,9 +432,171 @@ export default function ServiceOrderDetail() {
       {user?.role !== 'TECHNICIAN' && (
         <>
           <div className="panel-card spaced-card">
-            <h3>Yapılan İşlemler / Parçalar</h3>
+            <div className="card-title-row">
+              <div>
+                <h3>Yapılan İşlemler / Parçalar</h3>
+                <p className="sub-text">
+                  Stoktan seçilen parçalar eklendiği anda ilgili şube stokundan otomatik düşer.
+                </p>
+              </div>
+            </div>
 
-            <div className="table-wrap">
+            <form
+              className="service-item-form"
+              onSubmit={addItem}
+            >
+              <select
+                value={itemForm.type}
+                onChange={(e) =>
+                  setItemForm({
+                    ...itemForm,
+                    type: e.target.value,
+                    partId: '',
+                    name: '',
+                    unitPrice: '',
+                  })
+                }
+              >
+                <option value="LABOR">
+                  İşçilik
+                </option>
+                <option value="PART">
+                  Parça
+                </option>
+                <option value="OTHER">
+                  Diğer
+                </option>
+              </select>
+
+              {itemForm.type ===
+                'PART' && (
+                <select
+                  value={itemForm.partId}
+                  onChange={(e) =>
+                    selectPart(
+                      e.target.value,
+                    )
+                  }
+                >
+                  <option value="">
+                    Stoktan parça seç veya manuel yaz
+                  </option>
+
+                  {availableParts.map(
+                    (part) => (
+                      <option
+                        key={part.partId}
+                        value={part.partId}
+                      >
+                        {part.name}
+                        {part.sku
+                          ? ` · ${part.sku}`
+                          : ''}
+                        {' · Stok: '}
+                        {Number(
+                          part.quantity,
+                        )}
+                      </option>
+                    ),
+                  )}
+                </select>
+              )}
+
+              <input
+                placeholder="İşlem / parça adı"
+                value={itemForm.name}
+                onChange={(e) =>
+                  setItemForm({
+                    ...itemForm,
+                    name: e.target.value,
+                  })
+                }
+                required
+              />
+
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                placeholder="Miktar"
+                value={itemForm.quantity}
+                onChange={(e) =>
+                  setItemForm({
+                    ...itemForm,
+                    quantity:
+                      e.target.value,
+                  })
+                }
+                required
+              />
+
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Birim fiyat ₺"
+                value={itemForm.unitPrice}
+                onChange={(e) =>
+                  setItemForm({
+                    ...itemForm,
+                    unitPrice:
+                      e.target.value,
+                  })
+                }
+                required={
+                  !itemForm.partId
+                }
+              />
+
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="İndirim ₺"
+                value={
+                  itemForm.discountAmount
+                }
+                onChange={(e) =>
+                  setItemForm({
+                    ...itemForm,
+                    discountAmount:
+                      e.target.value,
+                  })
+                }
+              />
+
+              <input
+                className="service-item-description"
+                placeholder="Açıklama / not"
+                value={
+                  itemForm.description
+                }
+                onChange={(e) =>
+                  setItemForm({
+                    ...itemForm,
+                    description:
+                      e.target.value,
+                  })
+                }
+              />
+
+              <button
+                className="primary-button"
+                disabled={itemBusy}
+              >
+                {itemBusy
+                  ? 'Ekleniyor...'
+                  : 'İşlem Ekle'}
+              </button>
+            </form>
+
+            {itemError && (
+              <div className="page-message error-message spaced-card">
+                {itemError}
+              </div>
+            )}
+
+            <div className="table-wrap spaced-card">
               <table>
                 <thead>
                   <tr>
@@ -311,32 +604,95 @@ export default function ServiceOrderDetail() {
                     <th>İşlem</th>
                     <th>Miktar</th>
                     <th>Birim</th>
+                    <th>İndirim</th>
                     <th>Toplam</th>
+                    <th>Durum</th>
+                    <th></th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {order.items?.map((item) => (
                     <tr key={item.id}>
-                      <td>{statusLabel(item.type)}</td>
-                      <td>{item.name}</td>
+                      <td>
+                        {statusLabel(item.type)}
+                      </td>
+
+                      <td>
+                        <strong>
+                          {item.name}
+                        </strong>
+
+                        {item.description && (
+                          <div className="sub-text">
+                            {item.description}
+                          </div>
+                        )}
+                      </td>
+
                       <td>{item.quantity}</td>
+
                       <td>
                         {Number(
                           item.unitPrice || 0,
-                        ).toLocaleString('tr-TR')} ₺
+                        ).toLocaleString(
+                          'tr-TR',
+                        )}{' '}
+                        ₺
                       </td>
+
+                      <td>
+                        {Number(
+                          item.discountAmount ||
+                            0,
+                        ).toLocaleString(
+                          'tr-TR',
+                        )}{' '}
+                        ₺
+                      </td>
+
                       <td>
                         {Number(
                           item.totalPrice || 0,
-                        ).toLocaleString('tr-TR')} ₺
+                        ).toLocaleString(
+                          'tr-TR',
+                        )}{' '}
+                        ₺
+                      </td>
+
+                      <td>
+                        <button
+                          className={
+                            item.completed
+                              ? 'status-badge success'
+                              : 'status-badge'
+                          }
+                          onClick={() =>
+                            toggleItem(item)
+                          }
+                        >
+                          {item.completed
+                            ? 'Tamamlandı'
+                            : 'Bekliyor'}
+                        </button>
+                      </td>
+
+                      <td>
+                        <button
+                          className="table-action danger-text"
+                          onClick={() =>
+                            removeItem(item)
+                          }
+                        >
+                          Sil
+                        </button>
                       </td>
                     </tr>
                   ))}
 
                   {!order.items?.length && (
                     <tr>
-                      <td colSpan="5">
+                      <td colSpan="8">
                         Henüz işlem eklenmemiş.
                       </td>
                     </tr>
