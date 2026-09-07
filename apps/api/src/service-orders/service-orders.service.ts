@@ -217,13 +217,57 @@ export class ServiceOrdersService {
     userId: string,
     branchId: string | null,
   ) {
+    const where = this.buildAccessWhere(
+      organizationId,
+      role,
+      userId,
+      branchId,
+    );
+
+    if (role === UserRole.TECHNICIAN) {
+      return this.prisma.serviceOrder.findMany({
+        where,
+        select: {
+          id: true,
+          orderNumber: true,
+          mileage: true,
+          complaint: true,
+          internalNote: true,
+          estimatedDeliveryAt: true,
+          status: true,
+          createdAt: true,
+          branchId: true,
+          customer: {
+            select: {
+              firstName: true,
+              lastName: true,
+              phone: true,
+            },
+          },
+          vehicle: {
+            select: {
+              plate: true,
+              brand: true,
+              model: true,
+              modelYear: true,
+            },
+          },
+          assignedTechnician: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    }
+
     return this.prisma.serviceOrder.findMany({
-      where: this.buildAccessWhere(
-        organizationId,
-        role,
-        userId,
-        branchId,
-      ),
+      where,
       include: {
         customer: true,
         vehicle: true,
@@ -244,17 +288,69 @@ export class ServiceOrdersService {
     userId: string,
     branchId: string | null,
   ) {
+    const where = {
+      id,
+      ...this.buildAccessWhere(
+        organizationId,
+        role,
+        userId,
+        branchId,
+      ),
+    };
+
+    if (role === UserRole.TECHNICIAN) {
+      const technicianOrder =
+        await this.prisma.serviceOrder.findFirst({
+          where,
+          select: {
+            id: true,
+            orderNumber: true,
+            mileage: true,
+            complaint: true,
+            internalNote: true,
+            estimatedDeliveryAt: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+            branchId: true,
+            assignedTechnicianId: true,
+            customer: {
+              select: {
+                firstName: true,
+                lastName: true,
+                phone: true,
+              },
+            },
+            vehicle: {
+              select: {
+                plate: true,
+                brand: true,
+                model: true,
+                modelYear: true,
+              },
+            },
+            assignedTechnician: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        });
+
+      if (!technicianOrder) {
+        throw new NotFoundException(
+          'İş emri bulunamadı veya bu iş emrine erişim yetkiniz yok.',
+        );
+      }
+
+      return technicianOrder;
+    }
+
     const order =
       await this.prisma.serviceOrder.findFirst({
-        where: {
-          id,
-          ...this.buildAccessWhere(
-            organizationId,
-            role,
-            userId,
-            branchId,
-          ),
-        },
+        where,
         include: {
           customer: true,
           vehicle: true,
