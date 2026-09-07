@@ -1599,3 +1599,63 @@ button.status-badge {
       repeat(2, minmax(110px, 1fr));
   }
 }
+
+
+/* === DELIVERY REPORT V2 === */
+.delivery-sheet {
+  min-height: 1120px;
+}
+
+.delivery-note-box,
+.delivery-declaration {
+  margin: 24px 0;
+  padding: 16px;
+  border: 1px solid #e1e5e8;
+  background: #f7f8f9;
+}
+
+.delivery-note-box strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+}
+
+.delivery-note-box p,
+.delivery-declaration {
+  color: #444b52;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.delivery-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  margin-top: 70px;
+}
+
+.delivery-signatures > div {
+  min-height: 90px;
+  padding-top: 12px;
+  border-top: 1px solid #32373c;
+}
+
+.delivery-signatures strong,
+.delivery-signatures span {
+  display: block;
+}
+
+.delivery-signatures span {
+  margin-top: 7px;
+  color: #777e86;
+  font-size: 11px;
+}
+
+@media (max-width: 620px) {
+  .delivery-signatures {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
