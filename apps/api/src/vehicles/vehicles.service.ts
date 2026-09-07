@@ -3,6 +3,7 @@
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
@@ -14,9 +15,28 @@ export class VehiclesService {
     private readonly prisma: PrismaService,
   ) {}
 
+  private accessWhere(
+    organizationId: string,
+    role: UserRole,
+    branchId: string | null,
+  ) {
+    return {
+      organizationId,
+      ...(role ===
+      UserRole.SERVICE_ADVISOR
+        ? {
+            branchId:
+              branchId ??
+              '__branch_not_assigned__',
+          }
+        : {}),
+    };
+  }
+
   async create(
     organizationId: string,
-    branchId: string | null,
+    actorBranchId: string | null,
+    role: UserRole,
     dto: CreateVehicleDto,
   ) {
     const customer =
@@ -24,12 +44,34 @@ export class VehiclesService {
         where: {
           id: dto.customerId,
           organizationId,
+          ...(role ===
+          UserRole.SERVICE_ADVISOR
+            ? {
+                branchId:
+                  actorBranchId ??
+                  '__branch_not_assigned__',
+              }
+            : {}),
         },
       });
 
     if (!customer) {
       throw new BadRequestException(
-        'Araç eklenecek müşteri bulunamadı.',
+        'Araç eklenecek müşteri bulunamadı veya erişim yetkiniz yok.',
+      );
+    }
+
+    const branchId =
+      customer.branchId ??
+      actorBranchId;
+
+    if (
+      role ===
+        UserRole.SERVICE_ADVISOR &&
+      !branchId
+    ) {
+      throw new BadRequestException(
+        'Servis danışmanı için şube ataması gerekli.',
       );
     }
 
@@ -39,15 +81,12 @@ export class VehiclesService {
           organizationId,
           branchId,
           customerId: dto.customerId,
-
           plate: dto.plate
             .trim()
             .toUpperCase(),
-
           vin: dto.vin
             ?.trim()
             .toUpperCase(),
-
           brand: dto.brand,
           model: dto.model,
           modelYear: dto.modelYear,
@@ -74,11 +113,15 @@ export class VehiclesService {
 
   findAll(
     organizationId: string,
+    role: UserRole,
+    branchId: string | null,
   ) {
     return this.prisma.vehicle.findMany({
-      where: {
+      where: this.accessWhere(
         organizationId,
-      },
+        role,
+        branchId,
+      ),
       include: {
         customer: true,
       },
@@ -91,16 +134,21 @@ export class VehiclesService {
   async findOne(
     organizationId: string,
     id: string,
+    role: UserRole,
+    branchId: string | null,
   ) {
     const vehicle =
       await this.prisma.vehicle.findFirst({
         where: {
           id,
-          organizationId,
+          ...this.accessWhere(
+            organizationId,
+            role,
+            branchId,
+          ),
         },
         include: {
           customer: true,
-
           maintenanceRecords: {
             include: {
               items: true,
@@ -109,15 +157,28 @@ export class VehiclesService {
               performedAt: 'desc',
             },
           },
-
           maintenancePlans: true,
           media: true,
+          serviceOrders: {
+            select: {
+              id: true,
+              orderNumber: true,
+              status: true,
+              mileage: true,
+              createdAt: true,
+              deliveredAt: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 20,
+          },
         },
       });
 
     if (!vehicle) {
       throw new NotFoundException(
-        'Araç bulunamadı.',
+        'Araç bulunamadı veya erişim yetkiniz yok.',
       );
     }
 
@@ -127,12 +188,22 @@ export class VehiclesService {
   async update(
     organizationId: string,
     id: string,
+    role: UserRole,
+    actorBranchId: string | null,
     dto: UpdateVehicleDto,
   ) {
-    await this.findOne(
-      organizationId,
-      id,
-    );
+    const current =
+      await this.findOne(
+        organizationId,
+        id,
+        role,
+        actorBranchId,
+      );
+
+    let branchId:
+      | string
+      | null
+      | undefined = undefined;
 
     if (dto.customerId) {
       const customer =
@@ -140,38 +211,46 @@ export class VehiclesService {
           where: {
             id: dto.customerId,
             organizationId,
+            ...(role ===
+            UserRole.SERVICE_ADVISOR
+              ? {
+                  branchId:
+                    actorBranchId ??
+                    '__branch_not_assigned__',
+                }
+              : {}),
           },
         });
 
       if (!customer) {
         throw new BadRequestException(
-          'Seçilen müşteri bulunamadı.',
+          'Seçilen müşteri bulunamadı veya erişim yetkiniz yok.',
         );
       }
+
+      branchId =
+        customer.branchId ??
+        current.branchId;
     }
 
     try {
       return await this.prisma.vehicle.update({
-        where: {
-          id,
-        },
+        where: { id },
         data: {
           customerId:
             dto.customerId,
-
+          branchId,
           plate: dto.plate
             ? dto.plate
                 .trim()
                 .toUpperCase()
             : undefined,
-
           vin:
             dto.vin !== undefined
               ? dto.vin
                   .trim()
                   .toUpperCase()
               : undefined,
-
           brand: dto.brand,
           model: dto.model,
           modelYear: dto.modelYear,
@@ -201,10 +280,14 @@ export class VehiclesService {
   async remove(
     organizationId: string,
     id: string,
+    role: UserRole,
+    branchId: string | null,
   ) {
     await this.findOne(
       organizationId,
       id,
+      role,
+      branchId,
     );
 
     const [
@@ -217,45 +300,25 @@ export class VehiclesService {
       quoteCount,
     ] = await Promise.all([
       this.prisma.appointment.count({
-        where: {
-          vehicleId: id,
-        },
+        where: { vehicleId: id },
       }),
-
       this.prisma.serviceOrder.count({
-        where: {
-          vehicleId: id,
-        },
+        where: { vehicleId: id },
       }),
-
       this.prisma.inspection.count({
-        where: {
-          vehicleId: id,
-        },
+        where: { vehicleId: id },
       }),
-
       this.prisma.maintenanceRecord.count({
-        where: {
-          vehicleId: id,
-        },
+        where: { vehicleId: id },
       }),
-
       this.prisma.maintenancePlan.count({
-        where: {
-          vehicleId: id,
-        },
+        where: { vehicleId: id },
       }),
-
       this.prisma.media.count({
-        where: {
-          vehicleId: id,
-        },
+        where: { vehicleId: id },
       }),
-
       this.prisma.quote.count({
-        where: {
-          vehicleId: id,
-        },
+        where: { vehicleId: id },
       }),
     ]);
 
@@ -275,9 +338,7 @@ export class VehiclesService {
     }
 
     await this.prisma.vehicle.delete({
-      where: {
-        id,
-      },
+      where: { id },
     });
 
     return {
@@ -305,19 +366,23 @@ export class VehiclesService {
           transmission: true,
           mileage: true,
           qrToken: true,
-
           maintenanceRecords: {
             select: {
               performedAt: true,
               mileage: true,
               totalAmount: true,
+              items: {
+                select: {
+                  name: true,
+                  description: true,
+                },
+              },
             },
             orderBy: {
               performedAt: 'desc',
             },
-            take: 1,
+            take: 5,
           },
-
           maintenancePlans: {
             where: {
               status: 'ACTIVE',
