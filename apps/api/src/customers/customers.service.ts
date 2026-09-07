@@ -161,12 +161,6 @@ export class CustomersService {
         include: {
           branch: true,
           vehicles: true,
-          payments: {
-            orderBy: {
-              createdAt: 'desc',
-            },
-            take: 20,
-          },
         },
       });
 
