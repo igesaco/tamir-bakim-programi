@@ -1,43 +1,60 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { Link } from 'react-router-dom';
 
 import api from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
 function getApiMessage(error) {
-  const message = error?.response?.data?.message;
+  const message =
+    error?.response?.data?.message;
 
   if (Array.isArray(message)) {
     return message.join(', ');
   }
 
-  return message || 'İşlem sırasında bir hata oluştu.';
+  return (
+    message ||
+    'İşlem sırasında bir hata oluştu.'
+  );
 }
 
 export default function Customers() {
   const { user } = useAuth();
 
-  const [customers, setCustomers] = useState([]);
-  const [branches, setBranches] = useState([]);
-  const [search, setSearch] = useState('');
+  const [customers, setCustomers] =
+    useState([]);
+  const [branches, setBranches] =
+    useState([]);
+  const [search, setSearch] =
+    useState('');
 
-  const canChooseBranch =
-    user?.role === 'OWNER' ||
-    user?.role === 'MANAGER';
+  const canChooseBranch = [
+    'OWNER',
+    'MANAGER',
+  ].includes(user?.role);
 
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
     phone: '',
     email: '',
+    taxNumber: '',
     address: '',
     branchId: user?.branchId || '',
   });
 
-  const [editing, setEditing] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [editing, setEditing] =
+    useState(null);
+  const [busy, setBusy] =
+    useState(false);
+  const [message, setMessage] =
+    useState('');
+  const [error, setError] =
+    useState('');
 
   async function load() {
     const requests = [
@@ -57,41 +74,54 @@ export default function Customers() {
       responses[0].data,
     );
 
-    setBranches(
-      responses[1]?.data || [],
-    );
+    if (canChooseBranch) {
+      setBranches(
+        responses[1]?.data || [],
+      );
+    }
   }
 
   useEffect(() => {
     load();
   }, [canChooseBranch]);
 
-  const filteredCustomers = useMemo(() => {
-    const term = search
-      .trim()
-      .toLocaleLowerCase('tr-TR');
-
-    if (!term) {
-      return customers;
-    }
-
-    return customers.filter((customer) => {
-      const text = [
-        customer.firstName,
-        customer.lastName,
-        customer.phone,
-        customer.email,
-        ...(customer.vehicles || []).map(
-          (vehicle) => vehicle.plate,
-        ),
-      ]
-        .filter(Boolean)
-        .join(' ')
+  const filteredCustomers =
+    useMemo(() => {
+      const term = search
+        .trim()
         .toLocaleLowerCase('tr-TR');
 
-      return text.includes(term);
-    });
-  }, [customers, search]);
+      if (!term) {
+        return customers;
+      }
+
+      return customers.filter(
+        (customer) => {
+          const text = [
+            customer.firstName,
+            customer.lastName,
+            customer.phone,
+            customer.email,
+            customer.taxNumber,
+            customer.branch?.name,
+            ...(
+              customer.vehicles ||
+              []
+            ).map(
+              (vehicle) =>
+                vehicle.plate,
+            ),
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLocaleLowerCase(
+              'tr-TR',
+            );
+
+          return text.includes(term);
+        },
+      );
+    }, [customers, search]);
 
   async function submit(e) {
     e.preventDefault();
@@ -101,32 +131,54 @@ export default function Customers() {
     setMessage('');
 
     try {
-      await api.post('/customers', {
-        firstName: form.firstName,
-        lastName: form.lastName || undefined,
-        phone: form.phone || undefined,
-        email: form.email || undefined,
-        address: form.address || undefined,
-        branchId:
-          canChooseBranch
-            ? form.branchId || undefined
-            : undefined,
-      });
+      await api.post(
+        '/customers',
+        {
+          firstName:
+            form.firstName,
+          lastName:
+            form.lastName ||
+            undefined,
+          phone:
+            form.phone ||
+            undefined,
+          email:
+            form.email ||
+            undefined,
+          taxNumber:
+            form.taxNumber ||
+            undefined,
+          address:
+            form.address ||
+            undefined,
+          branchId:
+            canChooseBranch
+              ? form.branchId ||
+                undefined
+              : undefined,
+        },
+      );
 
       setForm({
         firstName: '',
         lastName: '',
         phone: '',
         email: '',
+        taxNumber: '',
         address: '',
         branchId:
           user?.branchId || '',
       });
 
-      setMessage('Müşteri başarıyla eklendi.');
+      setMessage(
+        'Müşteri başarıyla eklendi.',
+      );
+
       await load();
     } catch (err) {
-      setError(getApiMessage(err));
+      setError(
+        getApiMessage(err),
+      );
     } finally {
       setBusy(false);
     }
@@ -138,12 +190,21 @@ export default function Customers() {
 
     setEditing({
       id: customer.id,
-      firstName: customer.firstName || '',
-      lastName: customer.lastName || '',
-      phone: customer.phone || '',
-      email: customer.email || '',
-      address: customer.address || '',
-      notes: customer.notes || '',
+      firstName:
+        customer.firstName ||
+        '',
+      lastName:
+        customer.lastName || '',
+      phone:
+        customer.phone || '',
+      email:
+        customer.email || '',
+      taxNumber:
+        customer.taxNumber || '',
+      address:
+        customer.address || '',
+      notes:
+        customer.notes || '',
       branchId:
         customer.branchId || '',
     });
@@ -160,33 +221,55 @@ export default function Customers() {
       await api.patch(
         `/customers/${editing.id}`,
         {
-          firstName: editing.firstName,
-          lastName: editing.lastName || undefined,
-          phone: editing.phone || undefined,
-          email: editing.email || undefined,
-          address: editing.address || undefined,
-          notes: editing.notes || undefined,
+          firstName:
+            editing.firstName,
+          lastName:
+            editing.lastName ||
+            undefined,
+          phone:
+            editing.phone ||
+            undefined,
+          email:
+            editing.email ||
+            undefined,
+          taxNumber:
+            editing.taxNumber ||
+            undefined,
+          address:
+            editing.address ||
+            undefined,
+          notes:
+            editing.notes ||
+            undefined,
           branchId:
             canChooseBranch
-              ? editing.branchId || undefined
+              ? editing.branchId ||
+                undefined
               : undefined,
         },
       );
 
       setEditing(null);
-      setMessage('Müşteri bilgileri güncellendi.');
+
+      setMessage(
+        'Müşteri bilgileri güncellendi.',
+      );
+
       await load();
     } catch (err) {
-      setError(getApiMessage(err));
+      setError(
+        getApiMessage(err),
+      );
     } finally {
       setBusy(false);
     }
   }
 
   async function remove(customer) {
-    const approved = window.confirm(
-      `${customer.firstName} ${customer.lastName || ''} isimli müşteriyi silmek istediğinize emin misiniz?`,
-    );
+    const approved =
+      window.confirm(
+        `${customer.firstName} ${customer.lastName || ''} isimli müşteriyi silmek istediğinize emin misiniz?`,
+      );
 
     if (!approved) {
       return;
@@ -196,12 +279,19 @@ export default function Customers() {
     setMessage('');
 
     try {
-      await api.delete(`/customers/${customer.id}`);
+      await api.delete(
+        `/customers/${customer.id}`,
+      );
 
-      setMessage('Müşteri silindi.');
+      setMessage(
+        'Müşteri silindi.',
+      );
+
       await load();
     } catch (err) {
-      setError(getApiMessage(err));
+      setError(
+        getApiMessage(err),
+      );
     }
   }
 
@@ -210,7 +300,9 @@ export default function Customers() {
       <div className="page-heading">
         <div>
           <h1>Müşteriler</h1>
-          <p>Müşteri ve araç sahiplerini yönetin.</p>
+          <p>
+            Müşteri ve araç sahiplerini yönetin.
+          </p>
         </div>
       </div>
 
@@ -234,56 +326,12 @@ export default function Customers() {
             className="form-grid"
             onSubmit={submit}
           >
-            <input
-              placeholder="Ad"
-              value={form.firstName}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  firstName: e.target.value,
-                })
-              }
-              required
-            />
-
-            <input
-              placeholder="Soyad"
-              value={form.lastName}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  lastName: e.target.value,
-                })
-              }
-            />
-
-            <input
-              placeholder="Telefon"
-              value={form.phone}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  phone: e.target.value,
-                })
-              }
-            />
-
-            <input
-              type="email"
-              placeholder="E-posta"
-              value={form.email}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  email: e.target.value,
-                })
-              }
-            />
-
             {canChooseBranch && (
               <select
                 className="full"
-                value={form.branchId}
+                value={
+                  form.branchId
+                }
                 onChange={(e) =>
                   setForm({
                     ...form,
@@ -304,8 +352,12 @@ export default function Customers() {
                   )
                   .map((branch) => (
                     <option
-                      key={branch.id}
-                      value={branch.id}
+                      key={
+                        branch.id
+                      }
+                      value={
+                        branch.id
+                      }
                     >
                       {branch.name}
                     </option>
@@ -314,13 +366,76 @@ export default function Customers() {
             )}
 
             <input
+              placeholder="Ad"
+              value={form.firstName}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  firstName:
+                    e.target.value,
+                })
+              }
+              required
+            />
+
+            <input
+              placeholder="Soyad"
+              value={form.lastName}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  lastName:
+                    e.target.value,
+                })
+              }
+            />
+
+            <input
+              placeholder="Telefon"
+              value={form.phone}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  phone:
+                    e.target.value,
+                })
+              }
+            />
+
+            <input
+              type="email"
+              placeholder="E-posta"
+              value={form.email}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  email:
+                    e.target.value,
+                })
+              }
+            />
+
+            <input
+              placeholder="Vergi numarası"
+              value={form.taxNumber}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  taxNumber:
+                    e.target.value,
+                })
+              }
+            />
+
+            <input
               className="full"
               placeholder="Adres"
               value={form.address}
               onChange={(e) =>
                 setForm({
                   ...form,
-                  address: e.target.value,
+                  address:
+                    e.target.value,
                 })
               }
             />
@@ -338,14 +453,18 @@ export default function Customers() {
 
         <div className="panel-card">
           <div className="card-title-row">
-            <h3>Müşteri Listesi</h3>
+            <h3>
+              Müşteri Listesi
+            </h3>
 
             <input
               className="search-input"
-              placeholder="Ad, telefon, plaka ara..."
+              placeholder="Ad, telefon, plaka, şube ara..."
               value={search}
               onChange={(e) =>
-                setSearch(e.target.value)
+                setSearch(
+                  e.target.value,
+                )
               }
             />
           </div>
@@ -366,26 +485,41 @@ export default function Customers() {
               <tbody>
                 {filteredCustomers.map(
                   (customer) => (
-                    <tr key={customer.id}>
+                    <tr
+                      key={
+                        customer.id
+                      }
+                    >
                       <td>
-                        {customer.firstName}{' '}
-                        {customer.lastName}
+                        {
+                          customer.firstName
+                        }{' '}
+                        {
+                          customer.lastName
+                        }
                       </td>
 
                       <td>
-                        {customer.phone || '-'}
+                        {customer.phone ||
+                          '-'}
                       </td>
 
                       <td>
-                        {customer.email || '-'}
+                        {customer.email ||
+                          '-'}
                       </td>
 
                       <td>
-                        {customer.branch?.name || '-'}
+                        {customer.branch
+                          ?.name ||
+                          '-'}
                       </td>
 
                       <td>
-                        {customer.vehicles?.length || 0}
+                        {customer
+                          .vehicles
+                          ?.length ||
+                          0}
                       </td>
 
                       <td>
@@ -400,7 +534,9 @@ export default function Customers() {
                           <button
                             className="table-action"
                             onClick={() =>
-                              openEdit(customer)
+                              openEdit(
+                                customer,
+                              )
                             }
                           >
                             Düzenle
@@ -409,7 +545,9 @@ export default function Customers() {
                           <button
                             className="table-action danger-text"
                             onClick={() =>
-                              remove(customer)
+                              remove(
+                                customer,
+                              )
                             }
                           >
                             Sil
@@ -436,7 +574,9 @@ export default function Customers() {
       {editing && (
         <div
           className="modal-backdrop"
-          onMouseDown={() => setEditing(null)}
+          onMouseDown={() =>
+            setEditing(null)
+          }
         >
           <div
             className="modal-card"
@@ -446,7 +586,9 @@ export default function Customers() {
           >
             <div className="modal-header">
               <div>
-                <h2>Müşteri Düzenle</h2>
+                <h2>
+                  Müşteri Düzenle
+                </h2>
                 <p>
                   Müşteri bilgilerini güncelleyin.
                 </p>
@@ -454,7 +596,9 @@ export default function Customers() {
 
               <button
                 className="modal-close"
-                onClick={() => setEditing(null)}
+                onClick={() =>
+                  setEditing(null)
+                }
               >
                 ×
               </button>
@@ -464,56 +608,12 @@ export default function Customers() {
               className="form-grid"
               onSubmit={saveEdit}
             >
-              <input
-                placeholder="Ad"
-                value={editing.firstName}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    firstName: e.target.value,
-                  })
-                }
-                required
-              />
-
-              <input
-                placeholder="Soyad"
-                value={editing.lastName}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    lastName: e.target.value,
-                  })
-                }
-              />
-
-              <input
-                placeholder="Telefon"
-                value={editing.phone}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    phone: e.target.value,
-                  })
-                }
-              />
-
-              <input
-                type="email"
-                placeholder="E-posta"
-                value={editing.email}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    email: e.target.value,
-                  })
-                }
-              />
-
               {canChooseBranch && (
                 <select
                   className="full"
-                  value={editing.branchId}
+                  value={
+                    editing.branchId
+                  }
                   onChange={(e) =>
                     setEditing({
                       ...editing,
@@ -532,25 +632,108 @@ export default function Customers() {
                       (branch) =>
                         branch.active,
                     )
-                    .map((branch) => (
-                      <option
-                        key={branch.id}
-                        value={branch.id}
-                      >
-                        {branch.name}
-                      </option>
-                    ))}
+                    .map(
+                      (branch) => (
+                        <option
+                          key={
+                            branch.id
+                          }
+                          value={
+                            branch.id
+                          }
+                        >
+                          {
+                            branch.name
+                          }
+                        </option>
+                      ),
+                    )}
                 </select>
               )}
 
               <input
-                className="full"
-                placeholder="Adres"
-                value={editing.address}
+                placeholder="Ad"
+                value={
+                  editing.firstName
+                }
                 onChange={(e) =>
                   setEditing({
                     ...editing,
-                    address: e.target.value,
+                    firstName:
+                      e.target.value,
+                  })
+                }
+                required
+              />
+
+              <input
+                placeholder="Soyad"
+                value={
+                  editing.lastName
+                }
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    lastName:
+                      e.target.value,
+                  })
+                }
+              />
+
+              <input
+                placeholder="Telefon"
+                value={
+                  editing.phone
+                }
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    phone:
+                      e.target.value,
+                  })
+                }
+              />
+
+              <input
+                type="email"
+                placeholder="E-posta"
+                value={
+                  editing.email
+                }
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    email:
+                      e.target.value,
+                  })
+                }
+              />
+
+              <input
+                placeholder="Vergi numarası"
+                value={
+                  editing.taxNumber
+                }
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    taxNumber:
+                      e.target.value,
+                  })
+                }
+              />
+
+              <input
+                className="full"
+                placeholder="Adres"
+                value={
+                  editing.address
+                }
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    address:
+                      e.target.value,
                   })
                 }
               />
@@ -558,11 +741,14 @@ export default function Customers() {
               <textarea
                 className="full"
                 placeholder="Notlar"
-                value={editing.notes}
+                value={
+                  editing.notes
+                }
                 onChange={(e) =>
                   setEditing({
                     ...editing,
-                    notes: e.target.value,
+                    notes:
+                      e.target.value,
                   })
                 }
               />
