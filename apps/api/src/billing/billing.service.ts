@@ -299,10 +299,8 @@ export class BillingService {
     }
 
     if (
-      ![
-        PaymentStatus.CANCELLED,
-        PaymentStatus.REFUNDED,
-      ].includes(status)
+      status !== PaymentStatus.CANCELLED &&
+      status !== PaymentStatus.REFUNDED
     ) {
       throw new BadRequestException(
         'Tahsilat durumu yalnızca iptal veya iade olarak değiştirilebilir.',
