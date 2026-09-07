@@ -175,10 +175,7 @@ export class MediaService {
           userId,
         type: dto.type,
         storageKey:
-          file.path.replace(
-            /\\/g,
-            '/',
-          ),
+          `uploads/${file.filename}`,
         fileName:
           file.originalname,
         mimeType:
