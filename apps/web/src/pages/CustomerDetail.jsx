@@ -432,7 +432,7 @@ export default function CustomerDetail() {
             vehicleForm.color ||
             undefined,
           vin:
-            vehicleForm.vin ||
+            vehicleForm.vin.trim() ||
             undefined,
         },
       );
@@ -1119,20 +1119,31 @@ export default function CustomerDetail() {
                 }
               />
 
-              <input
-                className="full"
-                placeholder="Şasi / VIN"
-                value={
-                  vehicleForm.vin
-                }
-                onChange={(e) =>
-                  setVehicleForm({
-                    ...vehicleForm,
-                    vin:
-                      e.target.value,
-                  })
-                }
-              />
+              <div className="full">
+                <input
+                  className="full"
+                  placeholder="Şasi / VIN (opsiyonel)"
+                  maxLength="50"
+                  autoCapitalize="characters"
+                  spellCheck="false"
+                  value={
+                    vehicleForm.vin
+                  }
+                  onChange={(e) =>
+                    setVehicleForm({
+                      ...vehicleForm,
+                      vin:
+                        e.target.value
+                          .replace(/\s+/g, '')
+                          .toUpperCase(),
+                    })
+                  }
+                />
+
+                <div className="sub-text">
+                  VIN/şasi numarasını boşluksuz girin. Sistem otomatik olarak büyük harfe çevirir.
+                </div>
+              </div>
 
               <button
                 className="primary-button full"
