@@ -1,53 +1,114 @@
-﻿import { useEffect, useState } from 'react';
+﻿import {
+  useEffect,
+  useState,
+} from 'react';
 import { useParams } from 'react-router-dom';
+
 import api from '../api/client';
+import { useAuth } from '../auth/AuthContext';
+import { statusLabel } from '../utils/status';
 
 export default function CustomerDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
 
-  const [customer, setCustomer] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [quotes, setQuotes] = useState([]);
-  const [payments, setPayments] = useState([]);
+  const [customer, setCustomer] =
+    useState(null);
+  const [orders, setOrders] =
+    useState([]);
+  const [quotes, setQuotes] =
+    useState([]);
+  const [payments, setPayments] =
+    useState([]);
+  const [error, setError] =
+    useState('');
+
+  const canViewFinance =
+    user?.role === 'OWNER' ||
+    user?.role === 'MANAGER';
 
   useEffect(() => {
-    Promise.all([
+    const requests = [
       api.get(`/customers/${id}`),
       api.get('/service-orders'),
       api.get('/quotes'),
-      api.get('/billing/payments'),
-    ]).then(([c, o, q, p]) => {
-      setCustomer(c.data);
+    ];
 
-      setOrders(
-        o.data.filter(
-          (item) => item.customerId === id,
-        ),
+    if (canViewFinance) {
+      requests.push(
+        api.get('/billing/payments'),
       );
+    }
 
-      setQuotes(
-        q.data.filter(
-          (item) => item.customerId === id,
-        ),
-      );
+    Promise.all(requests)
+      .then((responses) => {
+        const [c, o, q, p] =
+          responses;
 
-      setPayments(
-        p.data.filter(
-          (item) => item.customerId === id,
-        ),
-      );
-    });
-  }, [id]);
+        setCustomer(c.data);
 
-  if (!customer) {
-    return <div>Müşteri yükleniyor...</div>;
+        setOrders(
+          o.data.filter(
+            (item) =>
+              item.customerId === id,
+          ),
+        );
+
+        setQuotes(
+          q.data.filter(
+            (item) =>
+              item.customerId === id,
+          ),
+        );
+
+        setPayments(
+          p
+            ? p.data.filter(
+                (item) =>
+                  item.customerId ===
+                  id,
+              )
+            : [],
+        );
+      })
+      .catch((err) => {
+        setError(
+          err?.response?.data?.message ||
+            'Müşteri bilgileri yüklenemedi.',
+        );
+      });
+  }, [id, canViewFinance]);
+
+  if (error) {
+    return (
+      <div className="page-message error-message">
+        {error}
+      </div>
+    );
   }
 
-  const totalPaid = payments.reduce(
-    (sum, item) =>
-      sum + Number(item.amount || 0),
-    0,
-  );
+  if (!customer) {
+    return (
+      <div>
+        Müşteri yükleniyor...
+      </div>
+    );
+  }
+
+  const totalPaid =
+    payments
+      .filter(
+        (item) =>
+          item.status === 'PAID',
+      )
+      .reduce(
+        (sum, item) =>
+          sum +
+          Number(
+            item.amount || 0,
+          ),
+        0,
+      );
 
   return (
     <>
@@ -58,7 +119,10 @@ export default function CustomerDetail() {
             {customer.lastName}
           </h1>
 
-          <p>Müşteri detayları ve servis geçmişi.</p>
+          <p>
+            Müşteri detayları ve servis
+            geçmişi.
+          </p>
         </div>
 
         <a
@@ -73,31 +137,43 @@ export default function CustomerDetail() {
         <div className="stat-card">
           <span>Araç</span>
           <strong>
-            {customer.vehicles?.length || 0}
+            {customer.vehicles?.length ||
+              0}
           </strong>
         </div>
 
         <div className="stat-card">
           <span>İş Emri</span>
-          <strong>{orders.length}</strong>
+          <strong>
+            {orders.length}
+          </strong>
         </div>
 
         <div className="stat-card">
           <span>Teklif</span>
-          <strong>{quotes.length}</strong>
-        </div>
-
-        <div className="stat-card">
-          <span>Toplam Tahsilat</span>
           <strong>
-            {totalPaid.toLocaleString('tr-TR')} ₺
+            {quotes.length}
           </strong>
         </div>
+
+        {canViewFinance && (
+          <div className="stat-card">
+            <span>Toplam Tahsilat</span>
+            <strong>
+              {totalPaid.toLocaleString(
+                'tr-TR',
+              )}{' '}
+              ₺
+            </strong>
+          </div>
+        )}
       </div>
 
       <div className="dashboard-grid spaced-card">
         <div className="panel-card">
-          <h3>İletişim Bilgileri</h3>
+          <h3>
+            İletişim Bilgileri
+          </h3>
 
           <div className="detail-info">
             <div>
@@ -115,9 +191,18 @@ export default function CustomerDetail() {
             </div>
 
             <div>
+              <span>Şube</span>
+              <strong>
+                {customer.branch?.name ||
+                  '-'}
+              </strong>
+            </div>
+
+            <div>
               <span>Adres</span>
               <strong>
-                {customer.address || '-'}
+                {customer.address ||
+                  '-'}
               </strong>
             </div>
 
@@ -147,21 +232,32 @@ export default function CustomerDetail() {
               <tbody>
                 {customer.vehicles?.map(
                   (vehicle) => (
-                    <tr key={vehicle.id}>
+                    <tr
+                      key={
+                        vehicle.id
+                      }
+                    >
                       <td>
                         <strong>
-                          {vehicle.plate}
+                          {
+                            vehicle.plate
+                          }
                         </strong>
                       </td>
 
                       <td>
-                        {vehicle.brand}{' '}
-                        {vehicle.model}
+                        {
+                          vehicle.brand
+                        }{' '}
+                        {
+                          vehicle.model
+                        }
                       </td>
 
                       <td>
                         {Number(
-                          vehicle.mileage || 0,
+                          vehicle.mileage ||
+                            0,
                         ).toLocaleString(
                           'tr-TR',
                         )}
@@ -177,6 +273,15 @@ export default function CustomerDetail() {
                       </td>
                     </tr>
                   ),
+                )}
+
+                {!customer.vehicles
+                  ?.length && (
+                  <tr>
+                    <td colSpan="4">
+                      Araç kaydı yok.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -200,34 +305,130 @@ export default function CustomerDetail() {
             </thead>
 
             <tbody>
-              {orders.map((order) => (
-                <tr key={order.id}>
-                  <td>{order.orderNumber}</td>
-                  <td>
-                    {order.vehicle?.plate}
-                  </td>
-                  <td>
-                    <span className="status-badge">
-                      {order.status}
-                    </span>
-                  </td>
-                  <td>
-                    {new Date(
-                      order.createdAt,
-                    ).toLocaleDateString(
-                      'tr-TR',
-                    )}
-                  </td>
-                  <td>
-                    <a
-                      className="table-link"
-                      href={`/service-orders/${order.id}`}
-                    >
-                      Detay
-                    </a>
+              {orders.map(
+                (order) => (
+                  <tr key={order.id}>
+                    <td>
+                      {
+                        order.orderNumber
+                      }
+                    </td>
+
+                    <td>
+                      {
+                        order.vehicle
+                          ?.plate
+                      }
+                    </td>
+
+                    <td>
+                      <span className="status-badge">
+                        {statusLabel(
+                          order.status,
+                        )}
+                      </span>
+                    </td>
+
+                    <td>
+                      {new Date(
+                        order.createdAt,
+                      ).toLocaleDateString(
+                        'tr-TR',
+                      )}
+                    </td>
+
+                    <td>
+                      <a
+                        className="table-link"
+                        href={`/service-orders/${order.id}`}
+                      >
+                        Detay
+                      </a>
+                    </td>
+                  </tr>
+                ),
+              )}
+
+              {!orders.length && (
+                <tr>
+                  <td colSpan="5">
+                    İş emri kaydı yok.
                   </td>
                 </tr>
-              ))}
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="panel-card spaced-card">
+        <h3>Teklifler / Proforma</h3>
+
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Araç</th>
+                <th>Durum</th>
+                <th>Toplam</th>
+                <th></th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {quotes.map(
+                (quote) => (
+                  <tr key={quote.id}>
+                    <td>
+                      {
+                        quote.quoteNumber
+                      }
+                    </td>
+
+                    <td>
+                      {
+                        quote.vehicle
+                          ?.plate
+                      }
+                    </td>
+
+                    <td>
+                      {statusLabel(
+                        quote.status,
+                      )}
+                    </td>
+
+                    <td>
+                      {Number(
+                        quote.total || 0,
+                      ).toLocaleString(
+                        'tr-TR',
+                      )}{' '}
+                      ₺
+                    </td>
+
+                    <td>
+                      <a
+                        className="table-link"
+                        href={`/quotes/${quote.id}/proforma`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Proforma
+                      </a>
+                    </td>
+                  </tr>
+                ),
+              )}
+
+              {!quotes.length && (
+                <tr>
+                  <td colSpan="5">
+                    Teklif kaydı yok.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
