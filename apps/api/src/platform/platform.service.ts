@@ -601,6 +601,89 @@ export class PlatformService
     };
   }
 
+  async setTenantUserActive(
+    organizationId: string,
+    userId: string,
+    active: boolean,
+  ) {
+    const target =
+      await this.prisma.user.findFirst({
+        where: {
+          id: userId,
+          organizationId,
+        },
+      });
+
+    if (!target) {
+      throw new BadRequestException(
+        'Panel kullanıcısı bulunamadı.',
+      );
+    }
+
+    return this.prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        active,
+        tokenVersion: {
+          increment: 1,
+        },
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        role: true,
+        active: true,
+      },
+    });
+  }
+
+  async resetTenantUserPassword(
+    organizationId: string,
+    userId: string,
+    password: string,
+  ) {
+    const target =
+      await this.prisma.user.findFirst({
+        where: {
+          id: userId,
+          organizationId,
+        },
+      });
+
+    if (!target) {
+      throw new BadRequestException(
+        'Panel kullanıcısı bulunamadı.',
+      );
+    }
+
+    const passwordHash =
+      await bcrypt.hash(
+        password,
+        12,
+      );
+
+    await this.prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        passwordHash,
+        tokenVersion: {
+          increment: 1,
+        },
+      },
+    });
+
+    return {
+      success: true,
+    };
+  }
+
   async impersonateOrganization(
     platformUserId: string,
     organizationId: string,
