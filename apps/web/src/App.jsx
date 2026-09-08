@@ -44,6 +44,7 @@ import Account from './pages/Account';
 
 import PublicVehicle from './pages/PublicVehicle';
 import CustomerPortal from './pages/CustomerPortal';
+import CustomerAppRedirect from './pages/CustomerAppRedirect';
 
 const SERVICE_ROLES = [
   'OWNER',
@@ -123,6 +124,11 @@ export default function App() {
           <Route
             path="/musteri"
             element={<CustomerPortal />}
+          />
+
+          <Route
+            path="/uygulama"
+            element={<CustomerAppRedirect />}
           />
 
           <Route
