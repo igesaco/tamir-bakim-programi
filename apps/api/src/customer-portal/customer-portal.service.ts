@@ -20,6 +20,7 @@ import {
 import { EntitlementsService } from '../entitlements/entitlements.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StartPortalAccessDto } from './dto/start-portal-access.dto';
+import { StartPortalQrAccessDto } from './dto/start-portal-qr-access.dto';
 import { VerifyPortalAccessDto } from './dto/verify-portal-access.dto';
 
 @Injectable()
@@ -241,6 +242,141 @@ export class CustomerPortalService {
           this.maskPhone(
             vehicle.customer.phone,
           ),
+        ...delivery,
+      };
+    } catch (error) {
+      await this.prisma.customerPortalChallenge.delete({
+        where: {
+          id: challenge.id,
+        },
+      });
+
+      throw error;
+    }
+  }
+
+  async startFromQr(
+    dto: StartPortalQrAccessDto,
+  ) {
+    const fingerprint =
+      nationalIdFingerprint(
+        dto.nationalId,
+      );
+
+    const vehicle =
+      await this.prisma.vehicle.findFirst({
+        where: {
+          qrToken:
+            dto.qrToken.trim(),
+          qrActive: true,
+          customer: {
+            nationalIdHash:
+              fingerprint.hash,
+            portalEnabled: true,
+          },
+          organization: {
+            active: true,
+          },
+        },
+        include: {
+          customer: true,
+        },
+      });
+
+    if (
+      !vehicle ||
+      !vehicle.customer.phone
+    ) {
+      throw new BadRequestException(
+        'Bilgiler doğrulanamadı veya bakım kartı erişimi hazır değil.',
+      );
+    }
+
+    const features =
+      await this.entitlementsService.getEffectiveFeatures(
+        vehicle.organizationId,
+      );
+
+    if (
+      !features.includes(
+        FeatureKey.CUSTOMER_PORTAL,
+      )
+    ) {
+      throw new ForbiddenException(
+        'Müşteri portalı bu işletmenin paketinde aktif değil.',
+      );
+    }
+
+    const recentCount =
+      await this.prisma.customerPortalChallenge.count({
+        where: {
+          customerId:
+            vehicle.customerId,
+          vehicleId:
+            vehicle.id,
+          createdAt: {
+            gte: new Date(
+              Date.now() -
+                15 * 60 * 1000,
+            ),
+          },
+        },
+      });
+
+    if (recentCount >= 5) {
+      throw new BadRequestException(
+        'Çok fazla doğrulama isteği yapıldı. Lütfen daha sonra tekrar deneyin.',
+      );
+    }
+
+    const code =
+      String(
+        randomInt(
+          100000,
+          1000000,
+        ),
+      );
+
+    const codeHash =
+      await bcrypt.hash(
+        code,
+        10,
+      );
+
+    const challenge =
+      await this.prisma.customerPortalChallenge.create({
+        data: {
+          customerId:
+            vehicle.customerId,
+          vehicleId:
+            vehicle.id,
+          codeHash,
+          expiresAt:
+            new Date(
+              Date.now() +
+                5 * 60 * 1000,
+            ),
+        },
+      });
+
+    try {
+      const delivery =
+        await this.sendOtp(
+          vehicle.customer.phone,
+          code,
+        );
+
+      return {
+        challengeId:
+          challenge.id,
+        expiresInSeconds:
+          300,
+        maskedPhone:
+          this.maskPhone(
+            vehicle.customer.phone,
+          ),
+        source:
+          'MAINTENANCE_CARD_QR',
         ...delivery,
       };
     } catch (error) {
