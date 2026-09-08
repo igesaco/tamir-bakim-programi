@@ -428,6 +428,54 @@ export default function DashboardLayout() {
   const navigate =
     useNavigate();
 
+  const organization =
+    user?.organization || {};
+
+  const tenantPrimary =
+    organization.primaryColor ||
+    '#F59E0B';
+
+  const tenantSecondary =
+    organization.secondaryColor ||
+    '#E9EDF2';
+
+  const tenantSidebar =
+    organization.sidebarColor ||
+    '#111419';
+
+  const tenantDefaultMode =
+    ['classic', 'desktop', 'focus'].includes(
+      organization.defaultPanelMode,
+    )
+      ? organization.defaultPanelMode
+      : 'classic';
+
+  const tenantPanelTitle =
+    organization.panelTitle ||
+    'Yönetim Paneli';
+
+  const tenantInitials =
+    organization.name
+      ?.trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) =>
+        part.charAt(0),
+      )
+      .join('')
+      .toLocaleUpperCase(
+        'tr-TR',
+      ) || 'TB';
+
+  const brandingStyle = {
+    '--tenant-primary':
+      tenantPrimary,
+    '--tenant-secondary':
+      tenantSecondary,
+    '--tenant-sidebar':
+      tenantSidebar,
+  };
+
   const modeStorageKey =
     `tb-ui-mode:${user?.id || 'default'}`;
 
@@ -453,7 +501,7 @@ export default function DashboardLayout() {
         'focus',
       ].includes(stored)
         ? stored
-        : 'classic';
+        : tenantDefaultMode;
     });
 
   const [theme, setTheme] =
@@ -530,9 +578,14 @@ export default function DashboardLayout() {
     ) {
       setUiMode(stored);
     } else {
-      setUiMode('classic');
+      setUiMode(
+        tenantDefaultMode,
+      );
     }
-  }, [modeStorageKey]);
+  }, [
+    modeStorageKey,
+    tenantDefaultMode,
+  ]);
 
   useEffect(() => {
     const stored =
@@ -814,6 +867,7 @@ export default function DashboardLayout() {
         className={
           `app-shell ui-mode-desktop theme-${theme}`
         }
+        style={brandingStyle}
       >
         <div
           className={
@@ -821,18 +875,30 @@ export default function DashboardLayout() {
           }
         >
           <div className="desktop-brand-badge">
-            <div className="brand-mark">
-              TB
+            <div
+              className={
+                organization.logoUrl
+                  ? 'brand-mark brand-mark-image'
+                  : 'brand-mark'
+              }
+            >
+              {organization.logoUrl ? (
+                <img
+                  src={organization.logoUrl}
+                  alt={organization.name || 'İşletme logosu'}
+                />
+              ) : (
+                tenantInitials
+              )}
             </div>
 
             <div>
               <strong>
-                Tamir Bakım
+                {organization.name ||
+                  'Tamir Bakım'}
               </strong>
               <span>
-                {user?.organization
-                  ?.name ||
-                  'Servis Yönetimi'}
+                {tenantPanelTitle}
               </span>
             </div>
           </div>
@@ -1157,20 +1223,35 @@ export default function DashboardLayout() {
       className={
         `app-shell ui-mode-${uiMode} theme-${theme}`
       }
+      style={brandingStyle}
     >
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">
-            TB
+          <div
+            className={
+              organization.logoUrl
+                ? 'brand-mark brand-mark-image'
+                : 'brand-mark'
+            }
+          >
+            {organization.logoUrl ? (
+              <img
+                src={organization.logoUrl}
+                alt={organization.name || 'İşletme logosu'}
+              />
+            ) : (
+              tenantInitials
+            )}
           </div>
 
           <div className="brand-copy">
             <strong>
-              Tamir Bakım
+              {organization.name ||
+                'Tamir Bakım'}
             </strong>
 
             <span>
-              Yönetim Paneli
+              {tenantPanelTitle}
             </span>
           </div>
         </div>
