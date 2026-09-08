@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
   Req,
   UseGuards,
@@ -43,6 +44,37 @@ export class CustomerPortalController {
   ) {
     return this.customerPortalService.verify(
       dto,
+    );
+  }
+
+  @Get('vehicles')
+  @UseGuards(
+    AuthGuard(
+      'customer-portal-jwt',
+    ),
+  )
+  vehicles(@Req() req: any) {
+    return this.customerPortalService.getCustomerVehicles(
+      req.user.customerId,
+      req.user.organizationId,
+    );
+  }
+
+  @Get('vehicles/:vehicleId')
+  @UseGuards(
+    AuthGuard(
+      'customer-portal-jwt',
+    ),
+  )
+  vehicle(
+    @Req() req: any,
+    @Param('vehicleId')
+    vehicleId: string,
+  ) {
+    return this.customerPortalService.getPortalData(
+      req.user.customerId,
+      vehicleId,
+      req.user.organizationId,
     );
   }
 
