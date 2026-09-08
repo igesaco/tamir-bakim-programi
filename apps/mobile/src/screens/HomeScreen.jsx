@@ -191,6 +191,32 @@ export default function HomeScreen({
         }),
     },
     {
+      key: 'inspections',
+      title: 'Araç Kabul',
+      value: null,
+      screen: 'inspections',
+      enabled:
+        canUse(user, {
+          feature:
+            'INSPECTIONS',
+          permission:
+            'INSPECTION_VIEW',
+        }),
+    },
+    {
+      key: 'notifications',
+      title: 'Bildirimler',
+      value: null,
+      screen: 'notifications',
+      enabled:
+        canUse(user, {
+          feature:
+            'NOTIFICATIONS',
+          permission:
+            'NOTIFICATION_VIEW',
+        }),
+    },
+    {
       key: 'payments',
       title: 'Tahsilatlar',
       value: stats.payments,
