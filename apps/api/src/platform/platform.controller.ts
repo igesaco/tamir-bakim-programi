@@ -32,6 +32,7 @@ import { UpdateOrganizationBrandingDto } from './dto/update-organization-brandin
 import { UpdateOrganizationCommercialDto } from './dto/update-organization-commercial.dto';
 import { ResetUserPasswordDto } from '../users/dto/reset-user-password.dto';
 import { UpdateUserActiveDto } from '../users/dto/update-user-active.dto';
+import { UpdateTenantOwnerDto } from './dto/update-tenant-owner.dto';
 
 class PlatformLoginDto {
   @IsEmail()
@@ -239,6 +240,23 @@ export class PlatformController {
     return this.platformService.resetRolePermissions(
       id,
       role,
+    );
+  }
+
+  @Patch('organizations/:id/users/:userId/profile')
+  @UseGuards(
+    AuthGuard('jwt'),
+    PlatformGuard,
+  )
+  updateTenantOwnerProfile(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @Body() dto: UpdateTenantOwnerDto,
+  ) {
+    return this.platformService.updateTenantOwnerProfile(
+      id,
+      userId,
+      dto,
     );
   }
 
