@@ -278,6 +278,40 @@ export class MaintenanceService {
       vehicle.branchId ??
       actorBranchId;
 
+    const createdAt =
+      new Date();
+
+    const nextDueKm =
+      dto.nextDueKm ??
+      (
+        dto.intervalKm
+          ? vehicle.mileage +
+            dto.intervalKm
+          : undefined
+      );
+
+    let nextDueDate =
+      dto.nextDueDate
+        ? new Date(
+            dto.nextDueDate,
+          )
+        : null;
+
+    if (
+      !nextDueDate &&
+      dto.intervalMonths
+    ) {
+      nextDueDate =
+        new Date(
+          createdAt,
+        );
+
+      nextDueDate.setMonth(
+        nextDueDate.getMonth() +
+          dto.intervalMonths,
+      );
+    }
+
     return this.prisma.maintenancePlan.create({
       data: {
         organizationId,
@@ -297,15 +331,9 @@ export class MaintenanceService {
         lastKm:
           vehicle.mileage,
         lastDate:
-          new Date(),
-        nextDueKm:
-          dto.nextDueKm,
-        nextDueDate:
-          dto.nextDueDate
-            ? new Date(
-                dto.nextDueDate,
-              )
-            : null,
+          createdAt,
+        nextDueKm,
+        nextDueDate,
         estimatedPriceMin:
           dto.estimatedPriceMin,
         estimatedPriceMax:
