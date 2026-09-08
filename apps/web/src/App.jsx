@@ -6,11 +6,14 @@
 } from 'react-router-dom';
 
 import { AuthProvider } from './auth/AuthContext';
+import PlatformRoute from './components/PlatformRoute';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
 import DashboardLayout from './layouts/DashboardLayout';
 
 import Login from './pages/Login';
+import PlatformLogin from './pages/PlatformLogin';
+import PlatformAdmin from './pages/PlatformAdmin';
 import Dashboard from './pages/Dashboard';
 
 import Customers from './pages/Customers';
@@ -40,6 +43,7 @@ import Settings from './pages/Settings';
 import Account from './pages/Account';
 
 import PublicVehicle from './pages/PublicVehicle';
+import CustomerPortal from './pages/CustomerPortal';
 
 const SERVICE_ROLES = [
   'OWNER',
@@ -84,6 +88,25 @@ export default function App() {
           <Route
             path="/login"
             element={<Login />}
+          />
+
+          <Route
+            path="/platform-login"
+            element={<PlatformLogin />}
+          />
+
+          <Route
+            path="/platform"
+            element={
+              <PlatformRoute>
+                <PlatformAdmin />
+              </PlatformRoute>
+            }
+          />
+
+          <Route
+            path="/musteri"
+            element={<CustomerPortal />}
           />
 
           <Route
