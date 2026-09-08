@@ -82,12 +82,14 @@ function ProtectedLayout() {
 function ForRoles({
   roles,
   feature,
+  permission,
   children,
 }) {
   return (
     <RoleRoute
       roles={roles}
       feature={feature}
+      permission={permission}
     >
       {children}
     </RoleRoute>
@@ -135,6 +137,7 @@ export default function App() {
                 <ForRoles
                   roles={SERVICE_ROLES}
                   feature="VEHICLES_QR"
+                  permission="VEHICLE_QR"
                 >
                   <VehicleQrPrint />
                 </ForRoles>
@@ -149,6 +152,7 @@ export default function App() {
                 <ForRoles
                   roles={SERVICE_ROLES}
                   feature="SERVICE_ORDERS"
+                  permission="SERVICE_ORDER_VIEW"
                 >
                   <DeliveryReport />
                 </ForRoles>
@@ -163,6 +167,7 @@ export default function App() {
                 <ForRoles
                   roles={SERVICE_ROLES}
                   feature="QUOTES"
+                  permission="QUOTE_VIEW"
                 >
                   <QuoteProforma />
                 </ForRoles>
@@ -189,6 +194,7 @@ export default function App() {
                 <ForRoles
                   roles={SERVICE_ROLES}
                   feature="CUSTOMERS"
+                  permission="CUSTOMER_VIEW"
                 >
                   <Customers />
                 </ForRoles>
@@ -201,6 +207,7 @@ export default function App() {
                 <ForRoles
                   roles={SERVICE_ROLES}
                   feature="CUSTOMERS"
+                  permission="CUSTOMER_VIEW"
                 >
                   <CustomerDetail />
                 </ForRoles>
@@ -213,6 +220,7 @@ export default function App() {
                 <ForRoles
                   roles={SERVICE_ROLES}
                   feature="VEHICLES_QR"
+                  permission="VEHICLE_VIEW"
                 >
                   <Vehicles />
                 </ForRoles>
@@ -225,6 +233,7 @@ export default function App() {
                 <ForRoles
                   roles={SERVICE_ROLES}
                   feature="VEHICLES_QR"
+                  permission="VEHICLE_VIEW"
                 >
                   <VehicleDetail />
                 </ForRoles>
@@ -237,6 +246,7 @@ export default function App() {
                 <ForRoles
                   roles={SERVICE_ROLES}
                   feature="APPOINTMENTS"
+                  permission="APPOINTMENT_VIEW"
                 >
                   <Appointments />
                 </ForRoles>
@@ -249,6 +259,7 @@ export default function App() {
                 <ForRoles
                   roles={SERVICE_ORDER_ROLES}
                   feature="SERVICE_ORDERS"
+                  permission="SERVICE_ORDER_VIEW"
                 >
                   <ServiceOrders />
                 </ForRoles>
@@ -261,6 +272,7 @@ export default function App() {
                 <ForRoles
                   roles={SERVICE_ORDER_ROLES}
                   feature="SERVICE_ORDERS"
+                  permission="SERVICE_ORDER_VIEW"
                 >
                   <ServiceOrderDetail />
                 </ForRoles>
@@ -273,6 +285,7 @@ export default function App() {
                 <ForRoles
                   roles={SERVICE_ROLES}
                   feature="QUOTES"
+                  permission="QUOTE_VIEW"
                 >
                   <Quotes />
                 </ForRoles>
@@ -285,6 +298,7 @@ export default function App() {
                 <ForRoles
                   roles={SERVICE_ROLES}
                   feature="MAINTENANCE"
+                  permission="MAINTENANCE_VIEW"
                 >
                   <Maintenance />
                 </ForRoles>
@@ -297,6 +311,7 @@ export default function App() {
                 <ForRoles
                   roles={INVENTORY_ROLES}
                   feature="INVENTORY"
+                  permission="INVENTORY_VIEW"
                 >
                   <Inventory />
                 </ForRoles>
@@ -309,6 +324,7 @@ export default function App() {
                 <ForRoles
                   roles={INVENTORY_ROLES}
                   feature="SUPPLIERS"
+                  permission="SUPPLIER_VIEW"
                 >
                   <Suppliers />
                 </ForRoles>
@@ -321,6 +337,7 @@ export default function App() {
                 <ForRoles
                   roles={MANAGEMENT_ROLES}
                   feature="STAFF"
+                  permission="STAFF_VIEW"
                 >
                   <Users />
                 </ForRoles>
@@ -333,6 +350,7 @@ export default function App() {
                 <ForRoles
                   roles={MANAGEMENT_ROLES}
                   feature="BRANCHES"
+                  permission="BRANCH_VIEW"
                 >
                   <Branches />
                 </ForRoles>
@@ -345,6 +363,7 @@ export default function App() {
                 <ForRoles
                   roles={SERVICE_ROLES}
                   feature="NOTIFICATIONS"
+                  permission="NOTIFICATION_VIEW"
                 >
                   <Notifications />
                 </ForRoles>
@@ -357,6 +376,7 @@ export default function App() {
                 <ForRoles
                   roles={FINANCE_ROLES}
                   feature="CASHIER"
+                  permission="CASHIER_VIEW"
                 >
                   <Cashier />
                 </ForRoles>
@@ -369,6 +389,7 @@ export default function App() {
                 <ForRoles
                   roles={FINANCE_ROLES}
                   feature="REPORTS"
+                  permission="REPORTS_VIEW"
                 >
                   <Reports />
                 </ForRoles>
@@ -386,6 +407,7 @@ export default function App() {
                 <ForRoles
                   roles={MANAGEMENT_ROLES}
                   feature="SETTINGS"
+                  permission="SETTINGS_VIEW"
                 >
                   <Settings />
                 </ForRoles>
