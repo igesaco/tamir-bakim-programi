@@ -1141,3 +1141,240 @@
     grid-column: auto;
   }
 }
+
+
+/* =========================================================
+   PLATFORM — NEW AGENCY CUSTOMER
+   ========================================================= */
+.platform-new-customer-button {
+  width: 100%;
+  min-height: 42px;
+  margin: 10px 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #684912;
+  border-radius: 10px;
+  background:
+    linear-gradient(
+      145deg,
+      #2c2110,
+      #1b160d
+    );
+  color: #f5b33c;
+  font-size: 9px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.platform-new-customer-button:hover {
+  border-color: #f59e0b;
+  background:
+    linear-gradient(
+      145deg,
+      #382812,
+      #21180d
+    );
+}
+
+.platform-new-customer-button span {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: #f59e0b;
+  color: #161008;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.platform-modal-backdrop {
+  position: fixed;
+  z-index: 5000;
+  inset: 0;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background:
+    rgba(4, 7, 10, .78);
+  backdrop-filter: blur(8px);
+}
+
+.platform-create-customer-modal {
+  width: min(880px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  border: 1px solid #303942;
+  border-radius: 20px;
+  background:
+    linear-gradient(
+      180deg,
+      #151b21,
+      #0d1217
+    );
+  box-shadow:
+    0 34px 120px
+    rgba(0, 0, 0, .58);
+}
+
+.platform-create-customer-head {
+  position: sticky;
+  z-index: 3;
+  top: 0;
+  padding: 22px 24px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid #2b343d;
+  background:
+    rgba(18, 24, 30, .96);
+  backdrop-filter: blur(10px);
+}
+
+.platform-create-customer-head h2 {
+  margin: 6px 0;
+  font-size: 20px;
+}
+
+.platform-create-customer-head p {
+  margin: 0;
+  color: #808b95;
+  font-size: 10px;
+}
+
+.platform-create-customer-head > button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #343e47;
+  border-radius: 9px;
+  background: #151b21;
+  color: #9aa4ad;
+  font-size: 20px;
+}
+
+.platform-create-customer-form {
+  padding: 22px 24px 26px;
+  display: grid;
+  gap: 14px;
+}
+
+.platform-create-customer-section {
+  padding: 16px;
+  border: 1px solid #29323b;
+  border-radius: 13px;
+  background: #10161b;
+}
+
+.platform-create-customer-section > span {
+  display: block;
+  margin-bottom: 12px;
+  color: #f2aa28;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+}
+
+.platform-create-customer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+.platform-create-customer-grid
+  input,
+.platform-create-customer-grid
+  select,
+.platform-create-customer-grid
+  textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #303943;
+  border-radius: 9px;
+  outline: none;
+  background: #0c1116;
+  color: #e9edf1;
+  font-size: 10px;
+}
+
+.platform-create-customer-grid
+  textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.platform-create-customer-grid
+  input:focus,
+.platform-create-customer-grid
+  select:focus,
+.platform-create-customer-grid
+  textarea:focus {
+  border-color: #f59e0b;
+}
+
+.platform-create-customer-grid
+  .full {
+  grid-column: 1 / -1;
+}
+
+.platform-create-customer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.platform-create-customer-actions
+  > button {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 9px;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.platform-create-customer-actions
+  > button:not(.primary-button) {
+  border: 1px solid #343e47;
+  background: #151b21;
+  color: #9ca6af;
+}
+
+@media (max-width: 680px) {
+  .platform-modal-backdrop {
+    padding: 8px;
+  }
+
+  .platform-create-customer-modal {
+    max-height: calc(100vh - 16px);
+    border-radius: 14px;
+  }
+
+  .platform-create-customer-head,
+  .platform-create-customer-form {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .platform-create-customer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-create-customer-grid
+    .full {
+    grid-column: auto;
+  }
+
+  .platform-create-customer-actions {
+    flex-direction: column-reverse;
+  }
+
+  .platform-create-customer-actions
+    > button {
+    width: 100%;
+  }
+}
