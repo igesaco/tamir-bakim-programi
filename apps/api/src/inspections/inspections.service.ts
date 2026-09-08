@@ -117,7 +117,8 @@ export class InspectionsService {
       }
     }
 
-    const requiredPermissions = [
+    const requiredPermissions:
+      PermissionKey[] = [
       PermissionKey.CUSTOMER_VIEW,
       PermissionKey.VEHICLE_VIEW,
       PermissionKey.SERVICE_ORDER_CREATE,
