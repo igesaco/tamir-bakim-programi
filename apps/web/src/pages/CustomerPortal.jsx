@@ -23,6 +23,12 @@ function money(value) {
 }
 
 
+const maintenanceStatusLabels = {
+  OVERDUE: 'Gecikmiş',
+  DUE_SOON: 'Yaklaşıyor',
+  UPCOMING: 'Planlandı',
+};
+
 const serviceStatusLabels = {
   APPOINTMENT: 'Randevu',
   ARRIVED: 'Araç Geldi',
@@ -716,6 +722,7 @@ export default function CustomerPortal() {
                   <thead>
                     <tr>
                       <th>Bakım</th>
+                      <th>Durum</th>
                       <th>Sonraki KM</th>
                       <th>Tarih</th>
                       <th>Periyot</th>
@@ -730,6 +737,25 @@ export default function CustomerPortal() {
                             <strong>
                               {plan.title}
                             </strong>
+                          </td>
+
+                          <td>
+                            <span
+                              className={
+                                plan.alertStatus ===
+                                'OVERDUE'
+                                  ? 'status-badge danger'
+                                  : plan.alertStatus ===
+                                      'UPCOMING'
+                                    ? 'status-badge success'
+                                    : 'status-badge'
+                              }
+                            >
+                              {maintenanceStatusLabels[
+                                plan.alertStatus
+                              ] ||
+                                'Planlandı'}
+                            </span>
                           </td>
 
                           <td>
@@ -775,7 +801,7 @@ export default function CustomerPortal() {
                     {!(data.maintenancePlans || [])
                       .length && (
                       <tr>
-                        <td colSpan="4">
+                        <td colSpan="5">
                           Aktif bakım planı
                           bulunmuyor.
                         </td>
