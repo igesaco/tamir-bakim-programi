@@ -25,6 +25,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { AssignTechnicianDto } from './dto/assign-technician.dto';
 import { CreateServiceOrderDto } from './dto/create-service-order.dto';
 import { CreateServiceOrderItemDto } from './dto/create-service-order-item.dto';
+import { CreateServiceOrderWorkLogDto } from './dto/create-service-order-work-log.dto';
 import { ServiceOrdersService } from './service-orders.service';
 
 @UseGuards(AuthGuard('jwt'))
@@ -160,6 +161,52 @@ export class ServiceOrdersController {
       req.user.sub,
       req.user.role,
       req.user.branchId,
+    );
+  }
+
+@Permission(PermissionKey.SERVICE_ORDER_WORKLOG)
+  @Get(':id/work-logs')
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+    UserRole.TECHNICIAN,
+  )
+  @UseGuards(RolesGuard)
+  workLogs(
+    @Req() req: any,
+    @Param('id') id: string,
+  ) {
+    return this.serviceOrdersService.findWorkLogs(
+      req.user.organizationId,
+      id,
+      req.user.role,
+      req.user.sub,
+      req.user.branchId,
+    );
+  }
+
+@Permission(PermissionKey.SERVICE_ORDER_WORKLOG)
+  @Post(':id/work-logs')
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+    UserRole.TECHNICIAN,
+  )
+  @UseGuards(RolesGuard)
+  addWorkLog(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: CreateServiceOrderWorkLogDto,
+  ) {
+    return this.serviceOrdersService.addWorkLog(
+      req.user.organizationId,
+      id,
+      req.user.role,
+      req.user.sub,
+      req.user.branchId,
+      dto,
     );
   }
 
