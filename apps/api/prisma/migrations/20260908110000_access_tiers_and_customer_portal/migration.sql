@@ -99,6 +99,7 @@ VALUES
     'VEHICLES_QR'::"FeatureKey",
     'SERVICE_ORDERS'::"FeatureKey",
     'APPOINTMENTS'::"FeatureKey",
+    'STAFF'::"FeatureKey",
     'NOTIFICATIONS'::"FeatureKey",
     'INSPECTIONS'::"FeatureKey",
     'MEDIA'::"FeatureKey"
@@ -217,3 +218,8 @@ FOREIGN KEY ("vehicleId")
 REFERENCES "Vehicle"("id")
 ON DELETE CASCADE
 ON UPDATE CASCADE;
+
+
+ALTER TABLE "AuditLog"
+ADD COLUMN "actorType" TEXT,
+ADD COLUMN "platformUserId" TEXT;
