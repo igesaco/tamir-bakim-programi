@@ -151,6 +151,21 @@ const roleLabels = {
     'Teknik Bakım Personeli',
 };
 
+const desktopWallpapers = [
+  {
+    value: 'soft',
+    label: 'Sade',
+  },
+  {
+    value: 'technical',
+    label: 'Teknik',
+  },
+  {
+    value: 'graphite',
+    label: 'Füme',
+  },
+];
+
 const uiModes = [
   {
     value: 'classic',
@@ -391,6 +406,9 @@ export default function DashboardLayout() {
   const tabsStorageKey =
     `tb-desktop-tabs:${user?.id || 'default'}`;
 
+  const wallpaperStorageKey =
+    `tb-desktop-wallpaper:${user?.id || 'default'}`;
+
   const [uiMode, setUiMode] =
     useState(() => {
       const stored =
@@ -417,6 +435,21 @@ export default function DashboardLayout() {
       return stored === 'light'
         ? 'light'
         : 'dark';
+    });
+
+  const [desktopWallpaper, setDesktopWallpaper] =
+    useState(() => {
+      const stored =
+        localStorage.getItem(
+          wallpaperStorageKey,
+        );
+
+      return desktopWallpapers.some(
+        (item) =>
+          item.value === stored,
+      )
+        ? stored
+        : 'soft';
     });
 
   const [openTabs, setOpenTabs] =
@@ -584,6 +617,16 @@ export default function DashboardLayout() {
     openTabs,
   ]);
 
+  useEffect(() => {
+    localStorage.setItem(
+      wallpaperStorageKey,
+      desktopWallpaper,
+    );
+  }, [
+    wallpaperStorageKey,
+    desktopWallpaper,
+  ]);
+
   function openDesktopApp(
     path,
   ) {
@@ -725,7 +768,11 @@ export default function DashboardLayout() {
           `app-shell ui-mode-desktop theme-${theme}`
         }
       >
-        <div className="desktop-wallpaper">
+        <div
+          className={
+            `desktop-wallpaper wallpaper-${desktopWallpaper}`
+          }
+        >
           <div className="desktop-brand-badge">
             <div className="brand-mark">
               TB
@@ -1013,6 +1060,34 @@ export default function DashboardLayout() {
             </div>
 
             <div className="desktop-taskbar-right">
+              <div
+                className="desktop-wallpaper-switch"
+                role="group"
+                aria-label="Masaüstü arka planı"
+              >
+                {desktopWallpapers.map(
+                  (item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      className={
+                        desktopWallpaper ===
+                        item.value
+                          ? 'desktop-wallpaper-button active'
+                          : 'desktop-wallpaper-button'
+                      }
+                      onClick={() =>
+                        setDesktopWallpaper(
+                          item.value,
+                        )
+                      }
+                    >
+                      {item.label}
+                    </button>
+                  ),
+                )}
+              </div>
+
               {themeControl}
               {modeControl}
 
