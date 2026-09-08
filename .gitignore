@@ -11,4 +11,3 @@ uploads/
 *.tsbuildinfo
 
 apps/mobile/.expo/
-apps/mobile/package-lock.json
