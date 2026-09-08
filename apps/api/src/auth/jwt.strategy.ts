@@ -12,6 +12,7 @@ import {
 } from 'passport-jwt';
 
 import { EntitlementsService } from '../entitlements/entitlements.service';
+import { PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 
@@ -23,6 +24,7 @@ export class JwtStrategy extends PassportStrategy(
     private readonly usersService: UsersService,
     private readonly prisma: PrismaService,
     private readonly entitlementsService: EntitlementsService,
+    private readonly permissionsService: PermissionsService,
   ) {
     super({
       jwtFromRequest:
@@ -122,6 +124,11 @@ export class JwtStrategy extends PassportStrategy(
           FeatureKey,
         );
 
+      const permissions =
+        Object.values(
+          PermissionKey,
+        );
+
       return {
         sub: user.id,
         email: user.email,
@@ -131,6 +138,7 @@ export class JwtStrategy extends PassportStrategy(
         branchId:
           user.branchId,
         features,
+        permissions,
         actorType:
           'TENANT_IMPERSONATION',
         platformUserId:
@@ -155,6 +163,12 @@ export class JwtStrategy extends PassportStrategy(
         user.organizationId,
       );
 
+    const permissions =
+      await this.permissionsService.getEffectivePermissions(
+        user.organizationId,
+        user.role,
+      );
+
     return {
       sub: user.id,
       email: user.email,
@@ -164,6 +178,7 @@ export class JwtStrategy extends PassportStrategy(
       branchId:
         user.branchId,
       features,
+      permissions,
       actorType: 'TENANT',
     };
   }
