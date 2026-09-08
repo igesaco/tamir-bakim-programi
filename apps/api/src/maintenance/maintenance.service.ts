@@ -514,26 +514,126 @@ export class MaintenanceService {
         where: {
           id,
           organizationId,
+          status:
+            MaintenancePlanStatus.ACTIVE,
           ...this.branchWhere(
             role,
             branchId,
           ),
         },
+        include: {
+          vehicle: {
+            select: {
+              id: true,
+              mileage: true,
+              branchId: true,
+            },
+          },
+        },
       });
 
     if (!plan) {
       throw new NotFoundException(
-        'Bakım planı bulunamadı veya erişim yetkiniz yok.',
+        'Aktif bakım planı bulunamadı veya erişim yetkiniz yok.',
       );
     }
 
-    return this.prisma.maintenancePlan.update({
-      where: { id },
-      data: {
-        status:
-          MaintenancePlanStatus.COMPLETED,
+    const completedAt =
+      new Date();
+
+    const completedKm =
+      plan.vehicle.mileage;
+
+    const nextDueKm =
+      plan.intervalKm
+        ? completedKm +
+          plan.intervalKm
+        : null;
+
+    let nextDueDate:
+      | Date
+      | null = null;
+
+    if (plan.intervalMonths) {
+      nextDueDate =
+        new Date(
+          completedAt,
+        );
+
+      nextDueDate.setMonth(
+        nextDueDate.getMonth() +
+          plan.intervalMonths,
+      );
+    }
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const completedPlan =
+          await tx.maintenancePlan.update({
+            where: {
+              id: plan.id,
+            },
+            data: {
+              status:
+                MaintenancePlanStatus.COMPLETED,
+              lastKm:
+                completedKm,
+              lastDate:
+                completedAt,
+            },
+          });
+
+        let nextPlan = null;
+
+        if (
+          plan.intervalKm ||
+          plan.intervalMonths
+        ) {
+          nextPlan =
+            await tx.maintenancePlan.create({
+              data: {
+                organizationId:
+                  plan.organizationId,
+                branchId:
+                  plan.branchId ??
+                  plan.vehicle.branchId,
+                vehicleId:
+                  plan.vehicleId,
+                title:
+                  plan.title,
+                category:
+                  plan.category,
+                description:
+                  plan.description,
+                intervalKm:
+                  plan.intervalKm,
+                intervalMonths:
+                  plan.intervalMonths,
+                lastKm:
+                  completedKm,
+                lastDate:
+                  completedAt,
+                nextDueKm,
+                nextDueDate,
+                estimatedPriceMin:
+                  plan.estimatedPriceMin,
+                estimatedPriceMax:
+                  plan.estimatedPriceMax,
+                status:
+                  MaintenancePlanStatus.ACTIVE,
+              },
+              include: {
+                vehicle: true,
+              },
+            });
+        }
+
+        return {
+          completedPlan,
+          nextPlan,
+        };
       },
-    });
+    );
   }
 
   private async ensureDefaultPackages(
