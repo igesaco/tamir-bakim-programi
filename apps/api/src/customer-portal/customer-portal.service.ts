@@ -33,6 +33,31 @@ export class CustomerPortalService {
     private readonly entitlementsService: EntitlementsService,
   ) {}
 
+  private normalizePhone(
+    phone: string,
+  ) {
+    let digits =
+      phone.replace(/\D/g, '');
+
+    if (
+      digits.length === 12 &&
+      digits.startsWith('90')
+    ) {
+      digits =
+        digits.slice(2);
+    }
+
+    if (
+      digits.length === 11 &&
+      digits.startsWith('0')
+    ) {
+      digits =
+        digits.slice(1);
+    }
+
+    return digits;
+  }
+
   private maskPhone(
     phone: string,
   ) {
@@ -260,11 +285,6 @@ export class CustomerPortalService {
   async startFromQr(
     dto: StartPortalQrAccessDto,
   ) {
-    const fingerprint =
-      nationalIdFingerprint(
-        dto.nationalId,
-      );
-
     const vehicle =
       await this.prisma.vehicle.findFirst({
         where: {
@@ -272,8 +292,6 @@ export class CustomerPortalService {
             dto.qrToken.trim(),
           qrActive: true,
           customer: {
-            nationalIdHash:
-              fingerprint.hash,
             portalEnabled: true,
           },
           organization: {
@@ -285,12 +303,27 @@ export class CustomerPortalService {
         },
       });
 
+    const enteredPhone =
+      this.normalizePhone(
+        dto.phone,
+      );
+
+    const registeredPhone =
+      vehicle?.customer.phone
+        ? this.normalizePhone(
+            vehicle.customer.phone,
+          )
+        : '';
+
     if (
       !vehicle ||
-      !vehicle.customer.phone
+      !registeredPhone ||
+      enteredPhone.length < 10 ||
+      enteredPhone !==
+        registeredPhone
     ) {
       throw new BadRequestException(
-        'Bilgiler doğrulanamadı veya bakım kartı erişimi hazır değil.',
+        'Telefon numarası bakım kartındaki müşteri kaydıyla eşleşmedi.',
       );
     }
 
@@ -364,7 +397,7 @@ export class CustomerPortalService {
     try {
       const delivery =
         await this.sendOtp(
-          vehicle.customer.phone,
+          vehicle.customer.phone!,
           code,
         );
 
@@ -375,7 +408,7 @@ export class CustomerPortalService {
           300,
         maskedPhone:
           this.maskPhone(
-            vehicle.customer.phone,
+            vehicle.customer.phone!,
           ),
         source:
           'MAINTENANCE_CARD_QR',
@@ -479,6 +512,64 @@ export class CustomerPortalService {
       expiresInSeconds:
         1800,
     };
+  }
+
+  async getCustomerVehicles(
+    customerId: string,
+    organizationId: string,
+  ) {
+    await this.prisma.customer.findFirstOrThrow({
+      where: {
+        id: customerId,
+        organizationId,
+        portalEnabled: true,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return this.prisma.vehicle.findMany({
+      where: {
+        customerId,
+        organizationId,
+      },
+      select: {
+        id: true,
+        plate: true,
+        brand: true,
+        model: true,
+        modelYear: true,
+        fuelType: true,
+        transmission: true,
+        mileage: true,
+        qrActive: true,
+        maintenancePlans: {
+          where: {
+            status:
+              MaintenancePlanStatus.ACTIVE,
+          },
+          select: {
+            id: true,
+            title: true,
+            nextDueKm: true,
+            nextDueDate: true,
+          },
+          orderBy: [
+            {
+              nextDueDate: 'asc',
+            },
+            {
+              nextDueKm: 'asc',
+            },
+          ],
+          take: 3,
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
   }
 
   async getPortalData(
