@@ -22,6 +22,31 @@ function money(value) {
   );
 }
 
+
+const serviceStatusLabels = {
+  APPOINTMENT: 'Randevu',
+  ARRIVED: 'Araç Geldi',
+  ACCEPTED: 'Bakıma Alındı',
+  INSPECTION: 'Kontrol Ediliyor',
+  QUOTE_WAITING: 'Teklif Bekleniyor',
+  APPROVED: 'Onaylandı',
+  IN_PROGRESS: 'Bakım Devam Ediyor',
+  PART_WAITING: 'Parça Bekleniyor',
+  QUALITY_CONTROL: 'Kalite Kontrol',
+  READY: 'Teslimata Hazır',
+  PAYMENT_WAITING: 'Ödeme Bekleniyor',
+  DELIVERED: 'Teslim Edildi',
+  CANCELLED: 'İptal',
+};
+
+function serviceStatus(value) {
+  return (
+    serviceStatusLabels[value] ||
+    value ||
+    '-'
+  );
+}
+
 async function portalRequest(
   path,
   {
@@ -601,6 +626,226 @@ export default function CustomerPortal() {
                     </dd>
                   </div>
                 </dl>
+              </div>
+            </div>
+
+            {data.currentServiceOrder && (
+              <div className="customer-portal-card spaced-card">
+                <h3>
+                  Servis Durumu
+                </h3>
+
+                <div className="customer-portal-grid">
+                  <div>
+                    <span className="sub-text">
+                      İş Emri
+                    </span>
+                    <strong>
+                      {
+                        data.currentServiceOrder
+                          .orderNumber
+                      }
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span className="sub-text">
+                      Güncel Durum
+                    </span>
+                    <strong>
+                      {serviceStatus(
+                        data.currentServiceOrder
+                          .status,
+                      )}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span className="sub-text">
+                      Servis KM
+                    </span>
+                    <strong>
+                      {Number(
+                        data.currentServiceOrder
+                          .mileage ||
+                          0,
+                      ).toLocaleString(
+                        'tr-TR',
+                      )}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span className="sub-text">
+                      Tahmini Teslim
+                    </span>
+                    <strong>
+                      {data.currentServiceOrder
+                        .estimatedDeliveryAt
+                        ? new Date(
+                            data.currentServiceOrder
+                              .estimatedDeliveryAt,
+                          ).toLocaleString(
+                            'tr-TR',
+                          )
+                        : '-'}
+                    </strong>
+                  </div>
+                </div>
+
+                {data.currentServiceOrder
+                  .complaint && (
+                  <p className="sub-text">
+                    Servis kaydı:{' '}
+                    {
+                      data.currentServiceOrder
+                        .complaint
+                    }
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="customer-portal-card spaced-card">
+              <h3>
+                Yaklaşan Bakımlar
+              </h3>
+
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Bakım</th>
+                      <th>Sonraki KM</th>
+                      <th>Tarih</th>
+                      <th>Periyot</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {(data.maintenancePlans || [])
+                      .map((plan) => (
+                        <tr key={plan.id}>
+                          <td>
+                            <strong>
+                              {plan.title}
+                            </strong>
+                          </td>
+
+                          <td>
+                            {plan.nextDueKm
+                              ? Number(
+                                  plan.nextDueKm,
+                                ).toLocaleString(
+                                  'tr-TR',
+                                )
+                              : '-'}
+                          </td>
+
+                          <td>
+                            {plan.nextDueDate
+                              ? new Date(
+                                  plan.nextDueDate,
+                                ).toLocaleDateString(
+                                  'tr-TR',
+                                )
+                              : '-'}
+                          </td>
+
+                          <td>
+                            {[
+                              plan.intervalKm
+                                ? `${Number(
+                                    plan.intervalKm,
+                                  ).toLocaleString(
+                                    'tr-TR',
+                                  )} KM`
+                                : '',
+                              plan.intervalMonths
+                                ? `${plan.intervalMonths} ay`
+                                : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' / ') ||
+                              '-'}
+                          </td>
+                        </tr>
+                      ))}
+
+                    {!(data.maintenancePlans || [])
+                      .length && (
+                      <tr>
+                        <td colSpan="4">
+                          Aktif bakım planı
+                          bulunmuyor.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="customer-portal-card spaced-card">
+              <h3>
+                Bakım Geçmişi
+              </h3>
+
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Tarih</th>
+                      <th>KM</th>
+                      <th>Yapılan İşlemler</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {(data.maintenanceHistory || [])
+                      .map((record) => (
+                        <tr key={record.id}>
+                          <td>
+                            {new Date(
+                              record.performedAt,
+                            ).toLocaleDateString(
+                              'tr-TR',
+                            )}
+                          </td>
+
+                          <td>
+                            {Number(
+                              record.mileage ||
+                                0,
+                            ).toLocaleString(
+                              'tr-TR',
+                            )}
+                          </td>
+
+                          <td>
+                            {record.items
+                              ?.map(
+                                (item) =>
+                                  item.name,
+                              )
+                              .join(', ') ||
+                              record.notes ||
+                              'Bakım kaydı'}
+                          </td>
+                        </tr>
+                      ))}
+
+                    {!(data.maintenanceHistory || [])
+                      .length && (
+                      <tr>
+                        <td colSpan="3">
+                          Henüz bakım kaydı
+                          bulunmuyor.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
 
