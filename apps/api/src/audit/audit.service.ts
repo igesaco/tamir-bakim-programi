@@ -15,6 +15,8 @@ export class AuditService {
     oldData?: any;
     newData?: any;
     ipAddress?: string;
+    actorType?: string | null;
+    platformUserId?: string | null;
   }) {
     return this.prisma.auditLog.create({
       data: {
@@ -27,6 +29,10 @@ export class AuditService {
         oldData: data.oldData,
         newData: data.newData,
         ipAddress: data.ipAddress,
+        actorType:
+          data.actorType,
+        platformUserId:
+          data.platformUserId,
       },
     });
   }
