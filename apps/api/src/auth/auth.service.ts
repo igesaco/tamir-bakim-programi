@@ -68,6 +68,8 @@ export class AuthService {
               data: {
                 name:
                   dto.organizationName.trim(),
+                packageId:
+                  'package_starter',
               },
             });
 
