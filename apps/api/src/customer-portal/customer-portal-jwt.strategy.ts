@@ -35,8 +35,12 @@ export class CustomerPortalJwtStrategy extends PassportStrategy(
 
   async validate(payload: any) {
     if (
-      payload.actorType !==
-      'CUSTOMER_PORTAL'
+      ![
+        'CUSTOMER_PORTAL',
+        'CUSTOMER_APP',
+      ].includes(
+        payload.actorType,
+      )
     ) {
       throw new UnauthorizedException(
         'Müşteri portal oturumu geçerli değil.',
@@ -88,7 +92,7 @@ export class CustomerPortalJwtStrategy extends PassportStrategy(
 
     return {
       actorType:
-        'CUSTOMER_PORTAL',
+        payload.actorType,
       customerId:
         customer.id,
       organizationId:
