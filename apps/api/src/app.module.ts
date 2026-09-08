@@ -27,6 +27,7 @@ import { MediaModule } from './media/media.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { PlatformModule } from './platform/platform.module';
+import { PermissionsModule } from './permissions/permissions.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { QuotesModule } from './quotes/quotes.module';
 import { ReportsModule } from './reports/reports.module';
@@ -58,6 +59,7 @@ mkdirSync(
 
     PrismaModule,
     EntitlementsModule,
+    PermissionsModule,
     PlatformModule,
     OrganizationsModule,
     BranchesModule,
