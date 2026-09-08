@@ -76,11 +76,25 @@ export class CustomerPortalService {
     phone: string,
     code: string,
   ) {
+    const testPhone =
+      process.env.CUSTOMER_PORTAL_TEST_PHONE
+        ? this.normalizePhone(
+            process.env.CUSTOMER_PORTAL_TEST_PHONE,
+          )
+        : '';
+
+    const isTestPhone =
+      process.env.CUSTOMER_PORTAL_TEST_MODE ===
+        'true' &&
+      testPhone &&
+      this.normalizePhone(
+        phone,
+      ) === testPhone;
+
     if (
       process.env.NODE_ENV !==
         'production' ||
-      process.env.CUSTOMER_PORTAL_OTP_MODE ===
-        'development'
+      isTestPhone
     ) {
       return {
         developmentCode:
