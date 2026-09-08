@@ -70,6 +70,24 @@ export class MediaService {
       branchId = order.branchId;
 
       if (
+        actorRole ===
+          UserRole.TECHNICIAN &&
+        (
+          order.assignedTechnicianId !==
+            userId ||
+          (
+            actorBranchId &&
+            order.branchId !==
+              actorBranchId
+          )
+        )
+      ) {
+        throw new ForbiddenException(
+          'Teknik personel yalnızca kendisine atanmış iş emrine dosya ekleyebilir.',
+        );
+      }
+
+      if (
         dto.vehicleId &&
         dto.vehicleId !==
           order.vehicleId
