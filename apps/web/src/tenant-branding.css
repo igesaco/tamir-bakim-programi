@@ -1021,3 +1021,58 @@
     min-width: 100%;
   }
 }
+
+
+.platform-owner-actions {
+  margin-top: 9px;
+}
+
+.platform-owner-toggle {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid #5e3939;
+  border-radius: 8px;
+  background: #241717;
+  color: #d89292;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.platform-owner-toggle.active {
+  border-color: #315f46;
+  background: #14241a;
+  color: #8ed3a9;
+}
+
+.platform-owner-password {
+  margin-top: 7px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+.platform-owner-password input {
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid #303943;
+  border-radius: 8px;
+  background: #0d1217;
+  color: #e8edf1;
+  font-size: 8px;
+}
+
+.platform-owner-password button {
+  padding: 8px 9px;
+  border: 1px solid #60471f;
+  border-radius: 8px;
+  background: #211a0f;
+  color: #e9ad4e;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+@media (max-width: 520px) {
+  .platform-owner-password {
+    grid-template-columns: 1fr;
+  }
+}
