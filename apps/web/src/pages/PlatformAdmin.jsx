@@ -1248,6 +1248,595 @@ export default function PlatformAdmin() {
               </div>
 
               {activeSection ===
+                'customer' && (
+                <section className="platform-card">
+                  <div className="platform-card-head">
+                    <div>
+                      <span className="platform-kicker">
+                        MÜŞTERİ KARTI
+                      </span>
+
+                      <h3>
+                        İşletme ve Hesap Bilgileri
+                      </h3>
+
+                      <p>
+                        Sanayici müşterinizin iletişim, sözleşme,
+                        panel hesabı ve ajans notlarını buradan yönetin.
+                      </p>
+                    </div>
+
+                    <span
+                      className={
+                        selected.active
+                          ? 'platform-customer-status active'
+                          : 'platform-customer-status passive'
+                      }
+                    >
+                      {selected.active
+                        ? 'AKTİF MÜŞTERİ'
+                        : 'PASİF MÜŞTERİ'}
+                    </span>
+                  </div>
+
+                  <div className="platform-customer-layout">
+                    <form
+                      className="form-grid platform-customer-form"
+                      onSubmit={saveCommercial}
+                    >
+                      <input
+                        className="full"
+                        placeholder="İşletme adı"
+                        value={
+                          selected.name ||
+                          ''
+                        }
+                        onChange={(event) =>
+                          setBrandingField(
+                            'name',
+                            event.target.value,
+                          )
+                        }
+                        required
+                      />
+
+                      <input
+                        placeholder="Yetkili kişi"
+                        value={
+                          selected.contactPersonName ||
+                          ''
+                        }
+                        onChange={(event) =>
+                          setBrandingField(
+                            'contactPersonName',
+                            event.target.value,
+                          )
+                        }
+                      />
+
+                      <input
+                        placeholder="Yetkili telefonu"
+                        value={
+                          selected.contactPersonPhone ||
+                          ''
+                        }
+                        onChange={(event) =>
+                          setBrandingField(
+                            'contactPersonPhone',
+                            event.target.value,
+                          )
+                        }
+                      />
+
+                      <input
+                        placeholder="İşletme telefonu"
+                        value={
+                          selected.phone ||
+                          ''
+                        }
+                        onChange={(event) =>
+                          setBrandingField(
+                            'phone',
+                            event.target.value,
+                          )
+                        }
+                      />
+
+                      <input
+                        placeholder="WhatsApp"
+                        value={
+                          selected.whatsappPhone ||
+                          ''
+                        }
+                        onChange={(event) =>
+                          setBrandingField(
+                            'whatsappPhone',
+                            event.target.value,
+                          )
+                        }
+                      />
+
+                      <input
+                        className="full"
+                        type="email"
+                        placeholder="İşletme e-posta"
+                        value={
+                          selected.email ||
+                          ''
+                        }
+                        onChange={(event) =>
+                          setBrandingField(
+                            'email',
+                            event.target.value,
+                          )
+                        }
+                      />
+
+                      <textarea
+                        className="full"
+                        placeholder="Adres"
+                        value={
+                          selected.address ||
+                          ''
+                        }
+                        onChange={(event) =>
+                          setBrandingField(
+                            'address',
+                            event.target.value,
+                          )
+                        }
+                      />
+
+                      <label className="platform-money-input">
+                        <span>
+                          Aylık hizmet bedeli
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={
+                            selected.monthlyFee ??
+                            0
+                          }
+                          onChange={(event) =>
+                            setBrandingField(
+                              'monthlyFee',
+                              event.target.value,
+                            )
+                          }
+                        />
+                      </label>
+
+                      <label className="platform-active-field">
+                        <span>
+                          Müşteri hesabı
+                        </span>
+
+                        <button
+                          type="button"
+                          className={
+                            selected.active
+                              ? 'platform-active-button active'
+                              : 'platform-active-button'
+                          }
+                          onClick={() =>
+                            setBrandingField(
+                              'active',
+                              !selected.active,
+                            )
+                          }
+                        >
+                          {selected.active
+                            ? 'Aktif'
+                            : 'Pasif'}
+                        </button>
+                      </label>
+
+                      <textarea
+                        className="full"
+                        placeholder="İGESA iç notu — müşteri görmez"
+                        value={
+                          selected.platformNotes ||
+                          ''
+                        }
+                        onChange={(event) =>
+                          setBrandingField(
+                            'platformNotes',
+                            event.target.value,
+                          )
+                        }
+                      />
+
+                      <button
+                        className="primary-button full"
+                        disabled={busy}
+                      >
+                        Müşteri Bilgilerini Kaydet
+                      </button>
+                    </form>
+
+                    <aside className="platform-account-side">
+                      <span className="platform-kicker">
+                        PANEL HESAPLARI
+                      </span>
+
+                      <h4>
+                        İşletme Kurucusu
+                      </h4>
+
+                      {selected.users?.length ? (
+                        selected.users.map(
+                          (owner) => (
+                            <div
+                              className="platform-owner-card"
+                              key={owner.id}
+                            >
+                              <div className="platform-owner-avatar">
+                                {owner.firstName
+                                  ?.charAt(0)
+                                  .toLocaleUpperCase(
+                                    'tr-TR',
+                                  )}
+                                {owner.lastName
+                                  ?.charAt(0)
+                                  .toLocaleUpperCase(
+                                    'tr-TR',
+                                  )}
+                              </div>
+
+                              <div>
+                                <strong>
+                                  {owner.firstName}{' '}
+                                  {owner.lastName}
+                                </strong>
+
+                                <span>
+                                  {owner.email}
+                                </span>
+
+                                <small>
+                                  {owner.phone ||
+                                    'Telefon yok'}{' '}
+                                  ·{' '}
+                                  {owner.active
+                                    ? 'Aktif'
+                                    : 'Pasif'}
+                                </small>
+                              </div>
+                            </div>
+                          ),
+                        )
+                      ) : (
+                        <div className="platform-empty">
+                          Kurucu panel hesabı bulunamadı.
+                        </div>
+                      )}
+
+                      <div className="platform-customer-metrics">
+                        <div>
+                          <span>
+                            Alt Müşteri
+                          </span>
+                          <strong>
+                            {selected._count
+                              ?.customers ||
+                              0}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>
+                            Araç
+                          </span>
+                          <strong>
+                            {selected._count
+                              ?.vehicles ||
+                              0}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>
+                            Personel
+                          </span>
+                          <strong>
+                            {selected._count
+                              ?.users ||
+                              0}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>
+                            İş Emri
+                          </span>
+                          <strong>
+                            {selected._count
+                              ?.serviceOrders ||
+                              0}
+                          </strong>
+                        </div>
+                      </div>
+                    </aside>
+                  </div>
+                </section>
+              )}
+
+              {activeSection ===
+                'account' && (
+                <>
+                  <section className="platform-cari-summary">
+                    <div>
+                      <span>
+                        Toplam Borç
+                      </span>
+                      <strong>
+                        {formatMoney(
+                          selected.ledgerDebit,
+                        )}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>
+                        Tahsilat
+                      </span>
+                      <strong>
+                        {formatMoney(
+                          selected.ledgerCredit,
+                        )}
+                      </strong>
+                    </div>
+
+                    <div
+                      className={
+                        Number(
+                          selected.ledgerBalance ||
+                            0,
+                        ) > 0
+                          ? 'warning'
+                          : 'success'
+                      }
+                    >
+                      <span>
+                        Güncel Bakiye
+                      </span>
+                      <strong>
+                        {formatMoney(
+                          selected.ledgerBalance,
+                        )}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>
+                        Aylık Sözleşme
+                      </span>
+                      <strong>
+                        {formatMoney(
+                          selected.monthlyFee,
+                        )}
+                      </strong>
+                    </div>
+                  </section>
+
+                  <section className="platform-card">
+                    <div className="platform-card-head">
+                      <div>
+                        <span className="platform-kicker">
+                          CARİ HAREKET
+                        </span>
+
+                        <h3>
+                          Borç / Tahsilat Ekle
+                        </h3>
+
+                        <p>
+                          İGESA'nın bu işletmeden alacağı ve
+                          müşteriden gelen tahsilatları kayıt altına alın.
+                        </p>
+                      </div>
+                    </div>
+
+                    <form
+                      className="platform-ledger-form"
+                      onSubmit={addLedgerEntry}
+                    >
+                      <select
+                        value={
+                          ledgerForm.type
+                        }
+                        onChange={(event) =>
+                          setLedgerForm({
+                            ...ledgerForm,
+                            type:
+                              event.target.value,
+                          })
+                        }
+                      >
+                        <option value="DEBIT">
+                          Borç / Fatura
+                        </option>
+                        <option value="CREDIT">
+                          Tahsilat
+                        </option>
+                      </select>
+
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="Tutar"
+                        value={
+                          ledgerForm.amount
+                        }
+                        onChange={(event) =>
+                          setLedgerForm({
+                            ...ledgerForm,
+                            amount:
+                              event.target.value,
+                          })
+                        }
+                        required
+                      />
+
+                      <input
+                        placeholder="Açıklama"
+                        value={
+                          ledgerForm.description
+                        }
+                        onChange={(event) =>
+                          setLedgerForm({
+                            ...ledgerForm,
+                            description:
+                              event.target.value,
+                          })
+                        }
+                        required
+                      />
+
+                      <input
+                        type="date"
+                        title="Vade tarihi"
+                        value={
+                          ledgerForm.dueDate
+                        }
+                        onChange={(event) =>
+                          setLedgerForm({
+                            ...ledgerForm,
+                            dueDate:
+                              event.target.value,
+                          })
+                        }
+                      />
+
+                      <button
+                        className="primary-button"
+                        disabled={busy}
+                      >
+                        Hareket Ekle
+                      </button>
+                    </form>
+                  </section>
+
+                  <section className="platform-card">
+                    <div className="platform-card-head">
+                      <div>
+                        <span className="platform-kicker">
+                          CARİ EKSTRE
+                        </span>
+
+                        <h3>
+                          Hesap Hareketleri
+                        </h3>
+
+                        <p>
+                          En yeni hareketler üstte gösterilir.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="platform-ledger-table-wrap">
+                      <table className="platform-ledger-table">
+                        <thead>
+                          <tr>
+                            <th>
+                              Tarih
+                            </th>
+                            <th>
+                              Tür
+                            </th>
+                            <th>
+                              Açıklama
+                            </th>
+                            <th>
+                              Vade
+                            </th>
+                            <th>
+                              Tutar
+                            </th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {selected.platformLedgerEntries
+                            ?.map(
+                              (entry) => (
+                                <tr
+                                  key={entry.id}
+                                >
+                                  <td>
+                                    {formatDate(
+                                      entry.occurredAt,
+                                    )}
+                                  </td>
+
+                                  <td>
+                                    <span
+                                      className={
+                                        entry.type ===
+                                        'DEBIT'
+                                          ? 'platform-ledger-type debit'
+                                          : 'platform-ledger-type credit'
+                                      }
+                                    >
+                                      {entry.type ===
+                                      'DEBIT'
+                                        ? 'BORÇ'
+                                        : 'TAHSİLAT'}
+                                    </span>
+                                  </td>
+
+                                  <td>
+                                    {entry.description}
+                                  </td>
+
+                                  <td>
+                                    {formatDate(
+                                      entry.dueDate,
+                                    )}
+                                  </td>
+
+                                  <td
+                                    className={
+                                      entry.type ===
+                                      'DEBIT'
+                                        ? 'platform-ledger-amount debit'
+                                        : 'platform-ledger-amount credit'
+                                    }
+                                  >
+                                    {entry.type ===
+                                    'DEBIT'
+                                      ? '+'
+                                      : '-'}
+                                    {formatMoney(
+                                      entry.amount,
+                                    )}
+                                  </td>
+                                </tr>
+                              ),
+                            )}
+
+                          {!selected.platformLedgerEntries
+                            ?.length && (
+                            <tr>
+                              <td
+                                colSpan="5"
+                                className="platform-ledger-empty"
+                              >
+                                Henüz cari hareket yok.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                </>
+              )}
+
+              {activeSection ===
                 'package' && (
                 <>
                   <section className="platform-card">
