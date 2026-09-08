@@ -33,6 +33,10 @@ export class UpdateCustomerDto {
 
   @IsOptional()
   @IsString()
+  nationalId?: string;
+
+  @IsOptional()
+  @IsString()
   address?: string;
 
   @IsOptional()
