@@ -10,9 +10,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { FeatureKey, UserRole } from '@prisma/client';
+import { FeatureKey, PermissionKey, UserRole } from '@prisma/client';
 
 import { Feature } from '../entitlements/feature.decorator';
+import { Permission } from '../permissions/permission.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -52,6 +53,8 @@ export class UsersController {
       ...safeUser,
       features:
         req.user.features ?? [],
+      permissions:
+        req.user.permissions ?? [],
       actorType:
         req.user.actorType ??
         'TENANT',
@@ -73,6 +76,7 @@ export class UsersController {
     );
   }
 
+@Permission(PermissionKey.STAFF_VIEW)
   @Get('technicians')
   @Roles(
     UserRole.OWNER,
@@ -89,6 +93,7 @@ export class UsersController {
   }
 
   @Feature(FeatureKey.STAFF)
+@Permission(PermissionKey.STAFF_VIEW)
   @Get()
   @Roles(
     UserRole.OWNER,
@@ -102,6 +107,7 @@ export class UsersController {
   }
 
   @Feature(FeatureKey.STAFF)
+@Permission(PermissionKey.STAFF_CREATE)
   @Post()
   @Roles(
     UserRole.OWNER,
@@ -120,6 +126,7 @@ export class UsersController {
   }
 
   @Feature(FeatureKey.STAFF)
+@Permission(PermissionKey.STAFF_UPDATE)
   @Patch(':id/active')
   @Roles(
     UserRole.OWNER,
@@ -141,6 +148,7 @@ export class UsersController {
   }
 
   @Feature(FeatureKey.STAFF)
+@Permission(PermissionKey.STAFF_UPDATE)
   @Patch(':id/branch')
   @Roles(
     UserRole.OWNER,
@@ -161,6 +169,7 @@ export class UsersController {
   }
 
   @Feature(FeatureKey.STAFF)
+@Permission(PermissionKey.STAFF_UPDATE)
   @Patch(':id/role')
   @Roles(
     UserRole.OWNER,
@@ -182,6 +191,7 @@ export class UsersController {
   }
 
   @Feature(FeatureKey.STAFF)
+@Permission(PermissionKey.STAFF_PASSWORD)
   @Patch(':id/password')
   @Roles(
     UserRole.OWNER,
