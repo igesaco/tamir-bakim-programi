@@ -2214,8 +2214,36 @@ export default function PlatformAdmin() {
                       </select>
                     </label>
 
+                    <label className="branding-mode-field">
+                      <span>Masaüstü arka planı</span>
+                      <select
+                        value={
+                          selected.defaultWallpaper ||
+                          'soft'
+                        }
+                        onChange={(event) =>
+                          setBrandingField(
+                            'defaultWallpaper',
+                            event.target.value,
+                          )
+                        }
+                      >
+                        <option value="soft">
+                          Sade
+                        </option>
+                        <option value="technical">
+                          Teknik
+                        </option>
+                        <option value="graphite">
+                          Füme
+                        </option>
+                      </select>
+                    </label>
+
                     <div
-                      className="branding-preview full"
+                      className={
+                        `branding-preview full branding-preview-${selected.defaultWallpaper || 'soft'}`
+                      }
                       style={{
                         '--preview-primary':
                           selected.primaryColor ||
