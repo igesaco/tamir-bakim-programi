@@ -24,6 +24,9 @@ const SENSITIVE_KEYS =
     'authorization',
     'jwtsecret',
     'databaseurl',
+    'nationalid',
+    'nationalidhash',
+    'customeridpepper',
   ]);
 
 function sanitizeAuditValue(
@@ -130,6 +133,12 @@ export class AuditInterceptor
               safeBody,
             ipAddress:
               req.ip,
+            actorType:
+              user.actorType ??
+              'TENANT',
+            platformUserId:
+              user.platformUserId ??
+              null,
           })
           .catch(
             () => undefined,
