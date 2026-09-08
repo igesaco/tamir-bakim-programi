@@ -40,6 +40,11 @@ export default function CustomerAppRedirect() {
       .get('qr')
       ?.trim() || '';
 
+  const requestedStore =
+    searchParams
+      .get('store')
+      ?.trim() || '';
+
   const platform =
     useMemo(
       detectPlatform,
@@ -73,17 +78,34 @@ export default function CustomerAppRedirect() {
       : `${appScheme}://home`;
 
   const storeUrl =
-    platform === 'android'
+    requestedStore === 'android'
       ? googlePlayUrl
-      : platform === 'ios'
+      : requestedStore === 'ios'
         ? appStoreUrl
-        : '';
+        : platform === 'android'
+          ? googlePlayUrl
+          : platform === 'ios'
+            ? appStoreUrl
+            : '';
 
   useEffect(() => {
+    if (!storeUrl) {
+      return undefined;
+    }
+
+    if (
+      requestedStore === 'android' ||
+      requestedStore === 'ios'
+    ) {
+      window.location.href =
+        storeUrl;
+
+      return undefined;
+    }
+
     if (
       platform ===
-        'desktop' ||
-      !storeUrl
+        'desktop'
     ) {
       return undefined;
     }
@@ -130,6 +152,7 @@ export default function CustomerAppRedirect() {
   }, [
     appDeepLink,
     platform,
+    requestedStore,
     storeUrl,
   ]);
 
@@ -207,10 +230,11 @@ export default function CustomerAppRedirect() {
 
         {qrToken && (
           <div className="customer-app-context">
-            Dijital bakım kartındaki araç,
-            uygulama açıldığında otomatik
-            olarak eşleştirme akışına
-            aktarılacaktır.
+            Dijital bakım kartındaki araç
+            mevcut müşteri hesabınız üzerinden
+            otomatik olarak açılacaktır. Ayrı
+            bir araç eşleştirme işlemi
+            gerekmeyecektir.
           </div>
         )}
 
