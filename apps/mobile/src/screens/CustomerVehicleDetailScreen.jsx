@@ -1,4 +1,5 @@
 import {
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +13,10 @@ import {
 import {
   useAuth,
 } from '../auth/AuthContext';
+import {
+  mediaUrl,
+  photoLabel,
+} from '../media';
 import {
   Button,
   Card,
@@ -157,6 +162,50 @@ export default function CustomerVehicleDetailScreen({
           güncellenecektir.
         </Text>
       </Card>
+
+      {vehicle.media?.length ? (
+        <>
+          <Text style={styles.sectionTitle}>
+            Araç Fotoğrafları
+          </Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={
+              styles.photoRow
+            }
+          >
+            {vehicle.media.map(
+              (media) => (
+                <View
+                  key={media.id}
+                  style={styles.photoCard}
+                >
+                  <Image
+                    source={{
+                      uri:
+                        mediaUrl(
+                          media,
+                        ),
+                    }}
+                    style={styles.photo}
+                  />
+
+                  <Text
+                    numberOfLines={1}
+                    style={styles.photoLabel}
+                  >
+                    {photoLabel(
+                      media.type,
+                    )}
+                  </Text>
+                </View>
+              ),
+            )}
+          </ScrollView>
+        </>
+      ) : null}
 
       {currentServiceOrder ? (
         <Card style={styles.section}>
@@ -308,6 +357,27 @@ const styles =
       color: colors.muted,
       fontSize: 10,
       lineHeight: 16,
+    },
+    photoRow: {
+      gap: 9,
+      paddingRight: 4,
+    },
+    photoCard: {
+      width: 164,
+    },
+    photo: {
+      width: 164,
+      height: 116,
+      borderRadius: 12,
+      backgroundColor:
+        colors.panel2,
+    },
+    photoLabel: {
+      marginTop: 5,
+      color:
+        colors.muted,
+      fontSize: 9,
+      fontWeight: '700',
     },
     sectionTitle: {
       marginTop: 20,
