@@ -153,6 +153,8 @@ const menu = [
       'MANAGER',
       'SERVICE_ADVISOR',
       'TECHNICIAN',
+      'WAREHOUSE',
+      'ACCOUNTING',
     ],
   },
 ];
