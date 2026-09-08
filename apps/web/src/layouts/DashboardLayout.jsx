@@ -18,6 +18,7 @@ const menu = [
     label: 'Dashboard',
     short: 'DB',
     icon: 'dashboard',
+    feature: 'DASHBOARD',
     roles: [
       'OWNER',
       'MANAGER',
@@ -29,6 +30,7 @@ const menu = [
     label: 'Müşteriler',
     short: 'MŞ',
     icon: 'customers',
+    feature: 'CUSTOMERS',
     roles: [
       'OWNER',
       'MANAGER',
@@ -40,6 +42,7 @@ const menu = [
     label: 'İş Emirleri',
     short: 'İE',
     icon: 'service',
+    feature: 'SERVICE_ORDERS',
     roles: [
       'OWNER',
       'MANAGER',
@@ -52,6 +55,7 @@ const menu = [
     label: 'Stok',
     short: 'ST',
     icon: 'inventory',
+    feature: 'INVENTORY',
     roles: [
       'OWNER',
       'MANAGER',
@@ -62,6 +66,7 @@ const menu = [
     label: 'Tedarikçiler',
     short: 'TD',
     icon: 'supplier',
+    feature: 'SUPPLIERS',
     roles: [
       'OWNER',
       'MANAGER',
@@ -72,6 +77,7 @@ const menu = [
     label: 'Personel',
     short: 'PN',
     icon: 'staff',
+    feature: 'STAFF',
     roles: [
       'OWNER',
       'MANAGER',
@@ -82,6 +88,7 @@ const menu = [
     label: 'Şubeler',
     short: 'ŞB',
     icon: 'branch',
+    feature: 'BRANCHES',
     roles: [
       'OWNER',
       'MANAGER',
@@ -92,6 +99,7 @@ const menu = [
     label: 'Bildirimler',
     short: 'BL',
     icon: 'bell',
+    feature: 'NOTIFICATIONS',
     roles: [
       'OWNER',
       'MANAGER',
@@ -103,6 +111,7 @@ const menu = [
     label: 'Kasa / Tahsilat',
     short: '₺',
     icon: 'cash',
+    feature: 'CASHIER',
     roles: [
       'OWNER',
       'MANAGER',
@@ -113,6 +122,7 @@ const menu = [
     label: 'Raporlar',
     short: 'RP',
     icon: 'reports',
+    feature: 'REPORTS',
     roles: [
       'OWNER',
       'MANAGER',
@@ -123,6 +133,7 @@ const menu = [
     label: 'Ayarlar',
     short: 'AY',
     icon: 'settings',
+    feature: 'SETTINGS',
     roles: [
       'OWNER',
       'MANAGER',
@@ -546,6 +557,12 @@ export default function DashboardLayout() {
           (item) =>
             item.roles.includes(
               user?.role,
+            ) &&
+            (
+              !item.feature ||
+              user?.features?.includes(
+                item.feature,
+              )
             ),
         ),
       [user?.role],
