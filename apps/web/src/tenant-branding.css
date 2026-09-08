@@ -34,3 +34,23 @@
   width: 100%;
   height: 100%;
 }
+
+.app-shell .topbar-identity h2,
+.app-shell .brand-copy strong,
+.app-shell .sidebar-user strong {
+  color: var(--tenant-secondary);
+}
+
+.branding-settings-card {
+  grid-column: 1 / -1;
+}
+
+.branding-preview-mark {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  overflow: hidden;
+  font-weight: 900;
+}
