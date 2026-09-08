@@ -938,7 +938,7 @@ export default function WorkOrdersScreen() {
                     <Text style={styles.mediaCount}>
                       Bu iş emrinde henüz fotoğraf yok.
                     </Text>
-                  )
+                  )}
                 </View>
               ) : null}
 
