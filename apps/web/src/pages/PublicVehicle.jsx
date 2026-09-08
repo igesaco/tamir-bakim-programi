@@ -6,6 +6,12 @@ import { useParams } from 'react-router-dom';
 
 import api from '../api/client';
 
+const maintenanceStatusLabels = {
+  OVERDUE: 'Gecikmiş',
+  DUE_SOON: 'Yaklaşıyor',
+  UPCOMING: 'Planlandı',
+};
+
 export default function PublicVehicle() {
   const { token } = useParams();
 
@@ -272,6 +278,23 @@ export default function PublicVehicle() {
                             )
                           : 'Tarih belirtilmedi'}
                       </span>
+
+                      <span
+                        className={
+                          plan.alertStatus ===
+                          'OVERDUE'
+                            ? 'status-badge danger'
+                            : plan.alertStatus ===
+                                'UPCOMING'
+                              ? 'status-badge success'
+                              : 'status-badge'
+                        }
+                      >
+                        {maintenanceStatusLabels[
+                          plan.alertStatus
+                        ] ||
+                          'Planlandı'}
+                      </span>
                     </div>
 
                     <div className="public-plan-km">
@@ -282,6 +305,27 @@ export default function PublicVehicle() {
                             'tr-TR',
                           )} KM`
                         : '-'}
+
+                      {plan.remainingKm !==
+                        null &&
+                      plan.remainingKm !==
+                        undefined ? (
+                        <span>
+                          {plan.remainingKm <= 0
+                            ? `${Number(
+                                Math.abs(
+                                  plan.remainingKm,
+                                ),
+                              ).toLocaleString(
+                                'tr-TR',
+                              )} KM geçti`
+                            : `${Number(
+                                plan.remainingKm,
+                              ).toLocaleString(
+                                'tr-TR',
+                              )} KM kaldı`}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                 ),
