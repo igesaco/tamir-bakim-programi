@@ -155,6 +155,15 @@ export class VehiclesService {
         },
         include: {
           customer: true,
+          organization: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true,
+              address: true,
+            },
+          },
           maintenanceRecords: {
             include: {
               items: true,
@@ -405,6 +414,15 @@ export class VehiclesService {
           transmission: true,
           mileage: true,
           qrToken: true,
+          organization: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true,
+              address: true,
+            },
+          },
           maintenanceRecords: {
             select: {
               id: true,
@@ -453,6 +471,7 @@ export class VehiclesService {
     const {
       maintenanceRecords,
       maintenancePlans,
+      organization,
       ...publicVehicle
     } = vehicle;
 
@@ -526,6 +545,8 @@ export class VehiclesService {
 
     return {
       vehicle: publicVehicle,
+      serviceProvider:
+        organization,
       lastMaintenanceRecord:
         maintenanceRecords[0] ??
         null,
