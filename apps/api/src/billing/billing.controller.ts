@@ -7,10 +7,14 @@ import {
   Post,
   Req,
   UseGuards,
-} from '@nestjs/common';
+  } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { FeatureKey, UserRole } from '@prisma/client';
+import { FeatureKey,
+  UserRole,
+  PermissionKey,
+} from '@prisma/client';
 
+import { Permission } from '../permissions/permission.decorator';
 import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -31,6 +35,7 @@ export class BillingController {
     private readonly billingService: BillingService,
   ) {}
 
+@Permission(PermissionKey.CASHIER_COLLECT)
   @Post('payments')
   create(
     @Req() req: any,
@@ -44,6 +49,7 @@ export class BillingController {
     );
   }
 
+@Permission(PermissionKey.CASHIER_STATUS)
   @Patch('payments/:id/status')
   updateStatus(
     @Req() req: any,
@@ -57,6 +63,7 @@ export class BillingController {
     );
   }
 
+@Permission(PermissionKey.CASHIER_VIEW)
   @Get('payments')
   findAll(@Req() req: any) {
     return this.billingService.findAll(
