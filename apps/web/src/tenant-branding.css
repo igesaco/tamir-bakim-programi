@@ -15,3 +15,11 @@
 .app-shell .nav-item.active {
   border-left-color: var(--tenant-primary);
 }
+
+.app-shell .primary-button {
+  background: var(--tenant-primary);
+}
+
+.app-shell .table-link {
+  color: var(--tenant-primary);
+}
