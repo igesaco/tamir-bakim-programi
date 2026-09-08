@@ -643,6 +643,7 @@ model ServiceOrder {
   maintenanceRecord  MaintenanceRecord?
   inventoryMovements InventoryMovement[]
   media              Media[]
+  workLogs           ServiceOrderWorkLog[]
   notifications      Notification[]
   payments           Payment[]
 
