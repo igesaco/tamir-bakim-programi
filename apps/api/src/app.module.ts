@@ -18,12 +18,14 @@ import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
 import { BranchesModule } from './branches/branches.module';
 import { CustomersModule } from './customers/customers.module';
+import { EntitlementsModule } from './entitlements/entitlements.module';
 import { InspectionsModule } from './inspections/inspections.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { MediaModule } from './media/media.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OrganizationsModule } from './organizations/organizations.module';
+import { PlatformModule } from './platform/platform.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { QuotesModule } from './quotes/quotes.module';
 import { ReportsModule } from './reports/reports.module';
@@ -54,6 +56,8 @@ mkdirSync(
     }),
 
     PrismaModule,
+    EntitlementsModule,
+    PlatformModule,
     OrganizationsModule,
     BranchesModule,
     AuthModule,
