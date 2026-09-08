@@ -11,3 +11,7 @@
 .app-shell .brand-mark {
   background: var(--tenant-primary);
 }
+
+.app-shell .nav-item.active {
+  border-left-color: var(--tenant-primary);
+}
