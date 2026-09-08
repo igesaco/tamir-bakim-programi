@@ -10,14 +10,18 @@
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { UserRole } from '@prisma/client';
+import { UserRole 
+  FeatureKey,
+} from '@prisma/client';
 
+import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { VehiclesService } from './vehicles.service';
 
+@Feature(FeatureKey.VEHICLES_QR)
 @Controller('vehicles')
 export class VehiclesController {
   constructor(
