@@ -10,8 +10,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { UserRole } from '@prisma/client';
+import { UserRole 
+  FeatureKey,
+} from '@prisma/client';
 
+import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreateMaintenancePackageDto } from './dto/create-maintenance-package.dto';
@@ -26,6 +29,7 @@ import { MaintenanceService } from './maintenance.service';
   UserRole.SERVICE_ADVISOR,
 )
 
+@Feature(FeatureKey.MAINTENANCE)
 @Controller('maintenance')
 export class MaintenanceController {
   constructor(
