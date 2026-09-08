@@ -21,7 +21,21 @@ export class NotificationsService {
     organizationId: string,
     role: UserRole,
     branchId: string | null,
+    userId?: string,
   ) {
+    if (
+      role === UserRole.TECHNICIAN ||
+      role === UserRole.WAREHOUSE ||
+      role === UserRole.ACCOUNTING
+    ) {
+      return {
+        organizationId,
+        userId:
+          userId ??
+          '__user_not_assigned__',
+      };
+    }
+
     return {
       organizationId,
       ...(role ===
@@ -165,12 +179,14 @@ export class NotificationsService {
     organizationId: string,
     role: UserRole,
     branchId: string | null,
+    userId?: string,
   ) {
     return this.prisma.notification.findMany({
       where: this.accessWhere(
         organizationId,
         role,
         branchId,
+        userId,
       ),
       orderBy: {
         createdAt: 'desc',
@@ -183,6 +199,7 @@ export class NotificationsService {
     id: string,
     role: UserRole,
     branchId: string | null,
+    userId?: string,
   ) {
     const notification =
       await this.prisma.notification.findFirst({
@@ -192,6 +209,7 @@ export class NotificationsService {
             organizationId,
             role,
             branchId,
+            userId,
           ),
         },
       });
