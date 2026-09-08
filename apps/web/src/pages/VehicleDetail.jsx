@@ -1,13 +1,76 @@
 ﻿import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 
 export default function VehicleDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
 
   const [vehicle, setVehicle] = useState(null);
   const [orders, setOrders] = useState([]);
   const [quotes, setQuotes] = useState([]);
+  const [qrBusy, setQrBusy] = useState(false);
+  const [qrMessage, setQrMessage] = useState('');
+  const [qrError, setQrError] = useState('');
+
+  const canManageQr =
+    user?.features?.includes(
+      'VEHICLES_QR',
+    ) &&
+    user?.permissions?.includes(
+      'VEHICLE_QR',
+    ) &&
+    [
+      'OWNER',
+      'MANAGER',
+      'SERVICE_ADVISOR',
+    ].includes(user?.role);
+
+  async function regenerateQr() {
+    const approved =
+      window.confirm(
+        'QR kod yenilensin mi? Eski QR kod ve eski bağlantı hemen geçersiz olacaktır.',
+      );
+
+    if (!approved) {
+      return;
+    }
+
+    setQrBusy(true);
+    setQrMessage('');
+    setQrError('');
+
+    try {
+      const response =
+        await api.patch(
+          `/vehicles/${id}/qr/regenerate`,
+        );
+
+      setVehicle(
+        (current) => ({
+          ...current,
+          ...response.data,
+        }),
+      );
+
+      setQrMessage(
+        'Bakım kartı QR kodu yenilendi. Eski QR artık geçersiz.',
+      );
+    } catch (err) {
+      const detail =
+        err?.response?.data?.message;
+
+      setQrError(
+        Array.isArray(detail)
+          ? detail.join(', ')
+          : detail ||
+              'QR kod yenilenemedi.',
+      );
+    } finally {
+      setQrBusy(false);
+    }
+  }
 
   useEffect(() => {
     Promise.all([
@@ -156,6 +219,18 @@ export default function VehicleDetail() {
             açılacak genel bakım görünümüdür.
           </p>
 
+          {qrMessage && (
+            <div className="page-message success-message">
+              {qrMessage}
+            </div>
+          )}
+
+          {qrError && (
+            <div className="page-message error-message">
+              {qrError}
+            </div>
+          )}
+
           {vehicle.qrActive === false ? (
             <div className="page-message error-message">
               Bu aracın QR kartı pasif.
@@ -187,6 +262,19 @@ export default function VehicleDetail() {
                 >
                   QR Yazdır
                 </a>
+
+                {canManageQr && (
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    disabled={qrBusy}
+                    onClick={regenerateQr}
+                  >
+                    {qrBusy
+                      ? 'QR Yenileniyor...'
+                      : 'QR Kodunu Yenile'}
+                  </button>
+                )}
               </div>
 
               <div className="qr-token-box">
