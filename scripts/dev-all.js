@@ -97,9 +97,20 @@ function start(
           ...process.env,
           ...env,
         },
-        shell: false,
+        shell:
+          process.platform ===
+          'win32',
       },
     );
+
+  child.on(
+    'error',
+    (error) => {
+      console.error(
+        `[DEV] ${name} başlatılamadı: ${error.message}`,
+      );
+    },
+  );
 
   child.on(
     'exit',
