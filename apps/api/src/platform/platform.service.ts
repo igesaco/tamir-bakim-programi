@@ -17,6 +17,7 @@ import { EntitlementsService } from '../entitlements/entitlements.service';
 import { defaultPermissionsForRole } from '../permissions/default-role-permissions';
 import { PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateOrganizationCustomerDto } from './dto/create-organization-customer.dto';
 import { CreatePlatformLedgerEntryDto } from './dto/create-platform-ledger-entry.dto';
 import { UpdateOrganizationBrandingDto } from './dto/update-organization-branding.dto';
 import { UpdateOrganizationCommercialDto } from './dto/update-organization-commercial.dto';
@@ -194,6 +195,153 @@ export class PlatformService
         },
       ],
     });
+  }
+
+  async createOrganizationCustomer(
+    dto: CreateOrganizationCustomerDto,
+  ) {
+    const ownerEmail =
+      dto.ownerEmail
+        .trim()
+        .toLowerCase();
+
+    const duplicate =
+      await this.prisma.user.findUnique({
+        where: {
+          email: ownerEmail,
+        },
+      });
+
+    if (duplicate) {
+      throw new BadRequestException(
+        'Bu e-posta adresiyle zaten bir panel hesabı bulunuyor.',
+      );
+    }
+
+    let packageId =
+      dto.packageId;
+
+    if (packageId) {
+      const packageRecord =
+        await this.prisma.servicePackage.findFirst({
+          where: {
+            id: packageId,
+            active: true,
+          },
+        });
+
+      if (!packageRecord) {
+        throw new BadRequestException(
+          'Seçilen paket bulunamadı veya aktif değil.',
+        );
+      }
+    } else {
+      const defaultPackage =
+        await this.prisma.servicePackage.findFirst({
+          where: {
+            active: true,
+          },
+          orderBy: [
+            {
+              sortOrder: 'asc',
+            },
+            {
+              name: 'asc',
+            },
+          ],
+        });
+
+      packageId =
+        defaultPackage?.id;
+    }
+
+    const passwordHash =
+      await bcrypt.hash(
+        dto.ownerPassword,
+        12,
+      );
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const organization =
+          await tx.organization.create({
+            data: {
+              name:
+                dto.organizationName.trim(),
+              packageId:
+                packageId || null,
+              contactPersonName:
+                dto.contactPersonName?.trim(),
+              contactPersonPhone:
+                dto.contactPersonPhone?.trim(),
+              phone:
+                dto.phone?.trim(),
+              whatsappPhone:
+                dto.whatsappPhone?.trim(),
+              email:
+                dto.email
+                  ?.trim()
+                  .toLowerCase(),
+              address:
+                dto.address?.trim(),
+              monthlyFee:
+                dto.monthlyFee || 0,
+              active: true,
+            },
+          });
+
+        const branch =
+          await tx.branch.create({
+            data: {
+              organizationId:
+                organization.id,
+              name:
+                'Merkez Şube',
+              phone:
+                dto.phone?.trim(),
+              address:
+                dto.address?.trim(),
+              active: true,
+            },
+          });
+
+        const owner =
+          await tx.user.create({
+            data: {
+              organizationId:
+                organization.id,
+              branchId: null,
+              firstName:
+                dto.ownerFirstName.trim(),
+              lastName:
+                dto.ownerLastName.trim(),
+              email:
+                ownerEmail,
+              phone:
+                dto.ownerPhone?.trim(),
+              passwordHash,
+              role:
+                UserRole.OWNER,
+              active: true,
+            },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+              role: true,
+              active: true,
+            },
+          });
+
+        return {
+          organization,
+          branch,
+          owner,
+        };
+      },
+    );
   }
 
   async listOrganizations() {
