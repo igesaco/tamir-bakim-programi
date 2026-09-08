@@ -30,6 +30,8 @@ import { UpdateOrganizationPackageDto } from './dto/update-organization-package.
 import { CreatePlatformLedgerEntryDto } from './dto/create-platform-ledger-entry.dto';
 import { UpdateOrganizationBrandingDto } from './dto/update-organization-branding.dto';
 import { UpdateOrganizationCommercialDto } from './dto/update-organization-commercial.dto';
+import { ResetUserPasswordDto } from '../users/dto/reset-user-password.dto';
+import { UpdateUserActiveDto } from '../users/dto/update-user-active.dto';
 
 class PlatformLoginDto {
   @IsEmail()
@@ -237,6 +239,40 @@ export class PlatformController {
     return this.platformService.resetRolePermissions(
       id,
       role,
+    );
+  }
+
+  @Patch('organizations/:id/users/:userId/active')
+  @UseGuards(
+    AuthGuard('jwt'),
+    PlatformGuard,
+  )
+  setTenantUserActive(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @Body() dto: UpdateUserActiveDto,
+  ) {
+    return this.platformService.setTenantUserActive(
+      id,
+      userId,
+      dto.active,
+    );
+  }
+
+  @Patch('organizations/:id/users/:userId/password')
+  @UseGuards(
+    AuthGuard('jwt'),
+    PlatformGuard,
+  )
+  resetTenantUserPassword(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @Body() dto: ResetUserPasswordDto,
+  ) {
+    return this.platformService.resetTenantUserPassword(
+      id,
+      userId,
+      dto.password,
     );
   }
 
