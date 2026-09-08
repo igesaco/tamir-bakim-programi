@@ -223,6 +223,9 @@ export class InspectionsService {
       );
     }
 
+    const resolvedBranchId =
+      branch.id;
+
     if (
       !dto.customerId &&
       (
@@ -265,7 +268,8 @@ export class InspectionsService {
                 ...(actorRole ===
                 UserRole.SERVICE_ADVISOR
                   ? {
-                      branchId,
+                      branchId:
+                        resolvedBranchId,
                     }
                   : {}),
               },
@@ -316,7 +320,8 @@ export class InspectionsService {
                 ...(actorRole ===
                 UserRole.SERVICE_ADVISOR
                   ? {
-                      branchId,
+                      branchId:
+                        resolvedBranchId,
                     }
                   : {}),
               },
@@ -331,7 +336,8 @@ export class InspectionsService {
               await tx.customer.create({
                 data: {
                   organizationId,
-                  branchId,
+                  branchId:
+                    resolvedBranchId,
                   firstName:
                     dto.customerFirstName!
                       .trim(),
@@ -371,7 +377,8 @@ export class InspectionsService {
                 ...(actorRole ===
                 UserRole.SERVICE_ADVISOR
                   ? {
-                      branchId,
+                      branchId:
+                        resolvedBranchId,
                     }
                   : {}),
               },
@@ -426,7 +433,8 @@ export class InspectionsService {
               await tx.vehicle.create({
                 data: {
                   organizationId,
-                  branchId,
+                  branchId:
+                    resolvedBranchId,
                   customerId:
                     customer.id,
                   plate:
@@ -506,7 +514,8 @@ export class InspectionsService {
           await tx.serviceOrder.create({
             data: {
               organizationId,
-              branchId,
+              branchId:
+                resolvedBranchId,
               customerId:
                 customer.id,
               vehicleId:
