@@ -227,6 +227,8 @@ export function AuthProvider({
         platformLogin,
         enterOrganization,
         returnToPlatform,
+        refreshUser:
+          loadCurrentUser,
         isImpersonating:
           user?.actorType ===
           'TENANT_IMPERSONATION',
