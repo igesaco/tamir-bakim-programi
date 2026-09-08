@@ -1,13 +1,12 @@
 import {
   IsString,
-  Length,
   MinLength,
 } from 'class-validator';
 
 export class StartPortalQrAccessDto {
   @IsString()
-  @Length(11, 11)
-  nationalId: string;
+  @MinLength(10)
+  phone: string;
 
   @IsString()
   @MinLength(10)
