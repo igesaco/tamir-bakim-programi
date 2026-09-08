@@ -40,6 +40,7 @@ const mediaStorageDir =
   UserRole.OWNER,
   UserRole.MANAGER,
   UserRole.SERVICE_ADVISOR,
+  UserRole.TECHNICIAN,
 )
 
 @Feature(FeatureKey.MEDIA)
