@@ -12,6 +12,34 @@ const maintenanceStatusLabels = {
   UPCOMING: 'Planlandı',
 };
 
+function whatsappUrl(phone) {
+  if (!phone) {
+    return '';
+  }
+
+  let digits =
+    phone.replace(/\D/g, '');
+
+  if (
+    digits.length === 11 &&
+    digits.startsWith('0')
+  ) {
+    digits =
+      `90${digits.slice(1)}`;
+  }
+
+  if (
+    digits.length === 10
+  ) {
+    digits =
+      `90${digits}`;
+  }
+
+  return digits
+    ? `https://wa.me/${digits}`
+    : '';
+}
+
 export default function PublicVehicle() {
   const { token } = useParams();
 
@@ -59,6 +87,25 @@ export default function PublicVehicle() {
   const vehicle =
     data.vehicle || data;
 
+  const serviceProvider =
+    data.serviceProvider ||
+    null;
+
+  const serviceWhatsapp =
+    whatsappUrl(
+      serviceProvider?.phone,
+    );
+
+  const googlePlayHref =
+    `/uygulama?store=android&qr=${encodeURIComponent(
+      token,
+    )}`;
+
+  const appStoreHref =
+    `/uygulama?store=ios&qr=${encodeURIComponent(
+      token,
+    )}`;
+
   const lastMaintenance =
     data.lastMaintenanceRecord ||
     data.lastMaintenance ||
@@ -83,6 +130,55 @@ export default function PublicVehicle() {
           DİJİTAL BAKIM KARTI
         </div>
 
+        {serviceProvider && (
+          <div className="public-service-card">
+            <div className="public-service-mark">
+              {serviceProvider.name
+                ?.trim()
+                ?.slice(0, 2)
+                ?.toUpperCase() ||
+                'TB'}
+            </div>
+
+            <div className="public-service-copy">
+              <span>
+                BAKIM KARTINI OLUŞTURAN SERVİS
+              </span>
+              <strong>
+                {serviceProvider.name}
+              </strong>
+
+              {serviceProvider.address && (
+                <small>
+                  {serviceProvider.address}
+                </small>
+              )}
+            </div>
+
+            <div className="public-service-actions">
+              {serviceWhatsapp && (
+                <a
+                  className="public-service-button whatsapp"
+                  href={serviceWhatsapp}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  WhatsApp
+                </a>
+              )}
+
+              {serviceProvider.phone && (
+                <a
+                  className="public-service-button"
+                  href={`tel:${serviceProvider.phone}`}
+                >
+                  Ara
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="public-vehicle-card">
           <div>
             <span className="public-label">
@@ -100,7 +196,7 @@ export default function PublicVehicle() {
           </div>
 
           <div className="public-km">
-            <span>Güncel KM</span>
+            <span>Son Kayıtlı KM</span>
 
             <strong>
               {Number(
@@ -319,11 +415,11 @@ export default function PublicVehicle() {
                               ).toLocaleString(
                                 'tr-TR',
                               )} KM geçti`
-                            : `${Number(
+                            : `Son kayıtlı KM'ye göre ${Number(
                                 plan.remainingKm,
                               ).toLocaleString(
                                 'tr-TR',
-                              )} KM kaldı`}
+                              )} KM fark var`}
                         </span>
                       ) : null}
                     </div>
@@ -377,10 +473,29 @@ export default function PublicVehicle() {
               <span aria-hidden="true">→</span>
             </a>
 
+            <div className="public-store-row">
+              <a
+                className="public-store-link"
+                href={googlePlayHref}
+              >
+                <strong>Google Play</strong>
+                <span>Android uygulaması</span>
+              </a>
+
+              <a
+                className="public-store-link"
+                href={appStoreHref}
+              >
+                <strong>App Store</strong>
+                <span>iPhone uygulaması</span>
+              </a>
+            </div>
+
             <small>
-              Uygulama yüklüyse açılır; yüklü
-              değilse Google Play veya App Store'a
-              yönlendirilirsiniz.
+              Uygulamada servis bildirimleri,
+              bakım hatırlatmaları ve periyodik
+              kilometre güncelleme talepleri
+              alabilirsiniz.
             </small>
           </div>
         </div>
