@@ -1,0 +1,7 @@
+ALTER TABLE "Organization"
+ADD COLUMN "logoUrl" TEXT,
+ADD COLUMN "panelTitle" TEXT,
+ADD COLUMN "primaryColor" TEXT NOT NULL DEFAULT '#F59E0B',
+ADD COLUMN "secondaryColor" TEXT NOT NULL DEFAULT '#E9EDF2',
+ADD COLUMN "sidebarColor" TEXT NOT NULL DEFAULT '#111419',
+ADD COLUMN "defaultPanelMode" TEXT NOT NULL DEFAULT 'classic';
