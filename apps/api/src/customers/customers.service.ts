@@ -9,6 +9,7 @@ import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { nationalIdFingerprint } from './customer-identity';
 
 @Injectable()
 export class CustomersService {
@@ -32,6 +33,20 @@ export class CustomersService {
           }
         : {}),
     };
+  }
+
+  private safeCustomer<T extends {
+    nationalIdHash?: string | null;
+  }>(
+    customer: T,
+  ) {
+    const {
+      nationalIdHash:
+        _nationalIdHash,
+      ...safe
+    } = customer;
+
+    return safe;
   }
 
   private async validateBranch(
@@ -93,7 +108,15 @@ export class CustomersService {
       branchId,
     );
 
-    return this.prisma.customer.create({
+    const nationalId =
+      dto.nationalId?.trim()
+        ? nationalIdFingerprint(
+            dto.nationalId,
+          )
+        : null;
+
+    const created =
+      await this.prisma.customer.create({
       data: {
         firstName:
           dto.firstName.trim(),
@@ -107,6 +130,10 @@ export class CustomersService {
             .toLowerCase(),
         taxNumber:
           dto.taxNumber?.trim(),
+        nationalIdHash:
+          nationalId?.hash,
+        nationalIdLast4:
+          nationalId?.last4,
         address:
           dto.address,
         notes:
@@ -119,14 +146,19 @@ export class CustomersService {
         vehicles: true,
       },
     });
+
+    return this.safeCustomer(
+      created,
+    );
   }
 
-  findAll(
+  async findAll(
     organizationId: string,
     role: UserRole,
     branchId: string | null,
   ) {
-    return this.prisma.customer.findMany({
+    const customers =
+      await this.prisma.customer.findMany({
       where: this.accessWhere(
         organizationId,
         role,
@@ -140,6 +172,13 @@ export class CustomersService {
         createdAt: 'desc',
       },
     });
+
+    return customers.map(
+      (customer) =>
+        this.safeCustomer(
+          customer,
+        ),
+    );
   }
 
   async findOne(
@@ -170,7 +209,9 @@ export class CustomersService {
       );
     }
 
-    return customer;
+    return this.safeCustomer(
+      customer,
+    );
   }
 
   async update(
@@ -190,6 +231,38 @@ export class CustomersService {
 
     let targetBranchId =
       customer.branchId;
+
+    let nationalIdHash:
+      | string
+      | null
+      | undefined;
+
+    let nationalIdLast4:
+      | string
+      | null
+      | undefined;
+
+    if (
+      dto.nationalId !==
+      undefined
+    ) {
+      if (
+        dto.nationalId.trim()
+      ) {
+        const fingerprint =
+          nationalIdFingerprint(
+            dto.nationalId,
+          );
+
+        nationalIdHash =
+          fingerprint.hash;
+        nationalIdLast4 =
+          fingerprint.last4;
+      } else {
+        nationalIdHash = null;
+        nationalIdLast4 = null;
+      }
+    }
 
     if (dto.branchId) {
       if (
@@ -232,6 +305,8 @@ export class CustomersService {
                   .toLowerCase(),
               taxNumber:
                 dto.taxNumber,
+              nationalIdHash,
+              nationalIdLast4,
               address:
                 dto.address,
               notes:
@@ -260,7 +335,9 @@ export class CustomersService {
           });
         }
 
-        return updated;
+        return this.safeCustomer(
+          updated,
+        );
       },
     );
   }
