@@ -4,6 +4,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { FeatureKey } from '@prisma/client';
 import { PassportStrategy } from '@nestjs/passport';
 import {
   ExtractJwt,
@@ -117,8 +118,8 @@ export class JwtStrategy extends PassportStrategy(
       }
 
       const features =
-        await this.entitlementsService.getEffectiveFeatures(
-          user.organizationId,
+        Object.values(
+          FeatureKey,
         );
 
       return {
