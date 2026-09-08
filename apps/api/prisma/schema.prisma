@@ -350,7 +350,6 @@ model Branch {
   inventories        Inventory[]
   inventoryMovements InventoryMovement[]
   media              Media[]
-  workLogs           ServiceOrderWorkLog[]
   notifications      Notification[]
   payments           Payment[]
   auditLogs          AuditLog[]
