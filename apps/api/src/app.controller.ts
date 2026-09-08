@@ -11,6 +11,18 @@ export class AppController {
     private readonly prisma: PrismaService,
   ) {}
 
+  @Get()
+  root() {
+    return {
+      name: 'Tamir Bakım API',
+      status: 'online',
+      webApplication:
+        'https://tamir-bakim-programi.onrender.com',
+      health:
+        '/health',
+    };
+  }
+
   @Get('health')
   async health() {
     await this.prisma.$queryRaw`SELECT 1`;
