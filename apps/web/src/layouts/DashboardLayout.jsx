@@ -450,6 +450,15 @@ export default function DashboardLayout() {
       ? organization.defaultPanelMode
       : 'classic';
 
+  const tenantDefaultWallpaper =
+    desktopWallpapers.some(
+      (item) =>
+        item.value ===
+        organization.defaultWallpaper,
+    )
+      ? organization.defaultWallpaper
+      : 'soft';
+
   const tenantPanelTitle =
     organization.panelTitle ||
     'Yönetim Paneli';
@@ -476,8 +485,16 @@ export default function DashboardLayout() {
       tenantSidebar,
   };
 
-  const modeStorageKey =
-    `tb-ui-mode:${user?.id || 'default'}`;
+  const [
+    logoFailed,
+    setLogoFailed,
+  ] = useState(false);
+
+  useEffect(() => {
+    setLogoFailed(false);
+  }, [
+    organization.logoUrl,
+  ]);
 
   const themeStorageKey =
     `tb-ui-theme:${user?.id || 'default'}`;
@@ -485,24 +502,8 @@ export default function DashboardLayout() {
   const tabsStorageKey =
     `tb-desktop-tabs:${user?.id || 'default'}`;
 
-  const wallpaperStorageKey =
-    `tb-desktop-wallpaper:${user?.id || 'default'}`;
-
-  const [uiMode, setUiMode] =
-    useState(() => {
-      const stored =
-        localStorage.getItem(
-          modeStorageKey,
-        );
-
-      return [
-        'classic',
-        'desktop',
-        'focus',
-      ].includes(stored)
-        ? stored
-        : tenantDefaultMode;
-    });
+  const uiMode =
+    tenantDefaultMode;
 
   const [theme, setTheme] =
     useState(() => {
@@ -516,20 +517,8 @@ export default function DashboardLayout() {
         : 'dark';
     });
 
-  const [desktopWallpaper, setDesktopWallpaper] =
-    useState(() => {
-      const stored =
-        localStorage.getItem(
-          wallpaperStorageKey,
-        );
-
-      return desktopWallpapers.some(
-        (item) =>
-          item.value === stored,
-      )
-        ? stored
-        : 'soft';
-    });
+  const desktopWallpaper =
+    tenantDefaultWallpaper;
 
   const [openTabs, setOpenTabs] =
     useState(() => {
@@ -565,31 +554,6 @@ export default function DashboardLayout() {
   useEffect(() => {
     const stored =
       localStorage.getItem(
-        modeStorageKey,
-      );
-
-    if (
-      stored &&
-      [
-        'classic',
-        'desktop',
-        'focus',
-      ].includes(stored)
-    ) {
-      setUiMode(stored);
-    } else {
-      setUiMode(
-        tenantDefaultMode,
-      );
-    }
-  }, [
-    modeStorageKey,
-    tenantDefaultMode,
-  ]);
-
-  useEffect(() => {
-    const stored =
-      localStorage.getItem(
         themeStorageKey,
       );
 
@@ -599,16 +563,6 @@ export default function DashboardLayout() {
         : 'dark',
     );
   }, [themeStorageKey]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      modeStorageKey,
-      uiMode,
-    );
-  }, [
-    modeStorageKey,
-    uiMode,
-  ]);
 
   useEffect(() => {
     localStorage.setItem(
@@ -650,12 +604,6 @@ export default function DashboardLayout() {
         user?.permissions,
       ],
     );
-
-  const currentMode =
-    uiModes.find(
-      (item) =>
-        item.value === uiMode,
-    ) ?? uiModes[0];
 
   const currentPage =
     getPageInfo(
@@ -715,16 +663,6 @@ export default function DashboardLayout() {
   }, [
     tabsStorageKey,
     openTabs,
-  ]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      wallpaperStorageKey,
-      desktopWallpaper,
-    );
-  }, [
-    wallpaperStorageKey,
-    desktopWallpaper,
   ]);
 
   function openDesktopApp(
@@ -824,41 +762,6 @@ export default function DashboardLayout() {
     </div>
   );
 
-  const modeControl = (
-    <div
-      className="ui-mode-buttons"
-      role="group"
-      aria-label="Görünüm modu"
-    >
-      {uiModes.map(
-        (mode) => (
-          <button
-            key={
-              mode.value
-            }
-            type="button"
-            title={
-              mode.description
-            }
-            className={
-              uiMode ===
-              mode.value
-                ? 'ui-mode-button active'
-                : 'ui-mode-button'
-            }
-            onClick={() =>
-              setUiMode(
-                mode.value,
-              )
-            }
-          >
-            {mode.label}
-          </button>
-        ),
-      )}
-    </div>
-  );
-
   if (
     uiMode === 'desktop'
   ) {
@@ -877,15 +780,20 @@ export default function DashboardLayout() {
           <div className="desktop-brand-badge">
             <div
               className={
-                organization.logoUrl
+                organization.logoUrl &&
+                !logoFailed
                   ? 'brand-mark brand-mark-image'
                   : 'brand-mark'
               }
             >
-              {organization.logoUrl ? (
+              {organization.logoUrl &&
+              !logoFailed ? (
                 <img
                   src={organization.logoUrl}
                   alt={organization.name || 'İşletme logosu'}
+                  onError={() =>
+                    setLogoFailed(true)
+                  }
                 />
               ) : (
                 tenantInitials
@@ -1047,7 +955,8 @@ export default function DashboardLayout() {
                     size={16}
                   />
                   <span>
-                    Tamir Bakım
+                    {organization.name ||
+                      'Tamir Bakım'}
                   </span>
                   <b>›</b>
                   <strong>
@@ -1130,7 +1039,7 @@ export default function DashboardLayout() {
               }
               title="Başlat"
             >
-              TB
+              {tenantInitials}
             </button>
 
             <div className="desktop-taskbar-apps">
@@ -1173,36 +1082,7 @@ export default function DashboardLayout() {
             </div>
 
             <div className="desktop-taskbar-right">
-              <div
-                className="desktop-wallpaper-switch"
-                role="group"
-                aria-label="Masaüstü arka planı"
-              >
-                {desktopWallpapers.map(
-                  (item) => (
-                    <button
-                      key={item.value}
-                      type="button"
-                      className={
-                        desktopWallpaper ===
-                        item.value
-                          ? 'desktop-wallpaper-button active'
-                          : 'desktop-wallpaper-button'
-                      }
-                      onClick={() =>
-                        setDesktopWallpaper(
-                          item.value,
-                        )
-                      }
-                    >
-                      {item.label}
-                    </button>
-                  ),
-                )}
-              </div>
-
               {themeControl}
-              {modeControl}
 
               <button
                 type="button"
@@ -1332,18 +1212,15 @@ export default function DashboardLayout() {
           <div className="ui-mode-control">
             <div className="ui-mode-copy">
               <strong>
-                Görünüm
+                Tema
               </strong>
 
               <span>
-                {
-                  currentMode.description
-                }
+                Kişisel görünüm
               </span>
             </div>
 
             {themeControl}
-            {modeControl}
           </div>
         </header>
 
