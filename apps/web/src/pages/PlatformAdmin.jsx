@@ -10,41 +10,235 @@ import { useAuth } from '../auth/AuthContext';
 const featureLabels = {
   DASHBOARD: 'Dashboard',
   CUSTOMERS: 'Müşteriler',
-  VEHICLES_QR:
-    'Araçlar + QR',
-  SERVICE_ORDERS:
-    'İş Emirleri',
-  APPOINTMENTS:
-    'Randevular',
-  MAINTENANCE:
-    'Bakım Planlaması',
-  QUOTES:
-    'Teklif / Proforma',
-  INVENTORY:
-    'Stok',
-  SUPPLIERS:
-    'Tedarikçiler',
-  STAFF:
-    'Personel',
-  BRANCHES:
-    'Şubeler',
-  NOTIFICATIONS:
-    'Bildirimler',
-  CASHIER:
-    'Cari / Tahsilat',
-  REPORTS:
-    'Raporlar',
-  SETTINGS:
-    'Ayarlar',
-  INSPECTIONS:
-    'Araç Kabul',
-  MEDIA:
-    'Medya / Evrak',
-  CUSTOMER_PORTAL:
-    'Müşteri Portalı',
-  AUDIT:
-    'Denetim Kayıtları',
+  VEHICLES_QR: 'Araçlar + QR',
+  SERVICE_ORDERS: 'İş Emirleri',
+  APPOINTMENTS: 'Randevular',
+  MAINTENANCE: 'Bakım Planlaması',
+  QUOTES: 'Teklif / Proforma',
+  INVENTORY: 'Stok',
+  SUPPLIERS: 'Tedarikçiler',
+  STAFF: 'Personel',
+  BRANCHES: 'Şubeler',
+  NOTIFICATIONS: 'Bildirimler',
+  CASHIER: 'Cari / Tahsilat',
+  REPORTS: 'Raporlar',
+  SETTINGS: 'Ayarlar',
+  INSPECTIONS: 'Araç Kabul',
+  MEDIA: 'Medya / Evrak',
+  CUSTOMER_PORTAL: 'Müşteri Portalı',
+  AUDIT: 'Denetim Kayıtları',
 };
+
+const featureGroups = [
+  {
+    title: 'Servis Operasyonları',
+    description:
+      'Günlük servis akışı ve müşteri işlemleri.',
+    items: [
+      'DASHBOARD',
+      'CUSTOMERS',
+      'VEHICLES_QR',
+      'SERVICE_ORDERS',
+      'APPOINTMENTS',
+      'INSPECTIONS',
+      'MEDIA',
+      'NOTIFICATIONS',
+    ],
+  },
+  {
+    title: 'Teklif ve Bakım',
+    description:
+      'Teklif, proforma ve periyodik bakım yönetimi.',
+    items: [
+      'QUOTES',
+      'MAINTENANCE',
+    ],
+  },
+  {
+    title: 'Stok ve Tedarik',
+    description:
+      'Parça, depo ve tedarikçi operasyonları.',
+    items: [
+      'INVENTORY',
+      'SUPPLIERS',
+    ],
+  },
+  {
+    title: 'Yönetim ve Finans',
+    description:
+      'Personel, şube, cari, rapor ve işletme ayarları.',
+    items: [
+      'STAFF',
+      'BRANCHES',
+      'CASHIER',
+      'REPORTS',
+      'SETTINGS',
+      'AUDIT',
+    ],
+  },
+  {
+    title: 'Müşteri Deneyimi',
+    description:
+      'Sanayicinin kendi müşterisine sunduğu dijital erişim.',
+    items: [
+      'CUSTOMER_PORTAL',
+    ],
+  },
+];
+
+const roleLabels = {
+  OWNER: 'İşletme Kurucusu',
+  MANAGER: 'Yönetici',
+  SERVICE_ADVISOR: 'Servis Danışmanı',
+  TECHNICIAN: 'Teknik Bakım Personeli',
+  WAREHOUSE: 'Depo / Stok Personeli',
+  ACCOUNTING: 'Muhasebe / Kasa',
+};
+
+const roleDescriptions = {
+  OWNER:
+    'İşletmenin ana yöneticisi. Varsayılan olarak tüm işlem yetkilerine sahiptir.',
+  MANAGER:
+    'Operasyon yöneticisi. Varsayılan olarak tüm işlem yetkilerine sahiptir.',
+  SERVICE_ADVISOR:
+    'Müşteri kabul, randevu, iş emri, teklif ve servis koordinasyonu.',
+  TECHNICIAN:
+    'Atanmış iş emirlerini görür ve teknik servis durumlarını günceller.',
+  WAREHOUSE:
+    'Stok, parça giriş-çıkış ve tedarikçi operasyonları.',
+  ACCOUNTING:
+    'Cari, tahsilat, ödeme durumu ve raporlama işlemleri.',
+};
+
+const permissionGroups = [
+  {
+    title: 'Müşteri',
+    items: [
+      ['CUSTOMER_VIEW', 'Müşteri görüntüle'],
+      ['CUSTOMER_CREATE', 'Müşteri oluştur'],
+      ['CUSTOMER_UPDATE', 'Müşteri düzenle'],
+      ['CUSTOMER_DELETE', 'Müşteri sil'],
+    ],
+  },
+  {
+    title: 'Araç ve QR',
+    items: [
+      ['VEHICLE_VIEW', 'Araç görüntüle'],
+      ['VEHICLE_CREATE', 'Araç oluştur'],
+      ['VEHICLE_UPDATE', 'Araç düzenle'],
+      ['VEHICLE_DELETE', 'Araç sil'],
+      ['VEHICLE_QR', 'QR / dijital kart işlemleri'],
+    ],
+  },
+  {
+    title: 'İş Emri',
+    items: [
+      ['SERVICE_ORDER_VIEW', 'İş emri görüntüle'],
+      ['SERVICE_ORDER_CREATE', 'İş emri oluştur'],
+      ['SERVICE_ORDER_EDIT', 'İş emri düzenle'],
+      ['SERVICE_ORDER_ASSIGN', 'Personel / teknisyen ata'],
+      ['SERVICE_ORDER_STATUS', 'İş emri durumunu değiştir'],
+      ['SERVICE_ORDER_ITEM_MANAGE', 'İşçilik / parça kalemi yönet'],
+    ],
+  },
+  {
+    title: 'Randevu ve Kabul',
+    items: [
+      ['APPOINTMENT_VIEW', 'Randevuları görüntüle'],
+      ['APPOINTMENT_MANAGE', 'Randevu oluştur / değiştir'],
+      ['INSPECTION_VIEW', 'Araç kabul formunu görüntüle'],
+      ['INSPECTION_MANAGE', 'Araç kabul formunu düzenle'],
+      ['MEDIA_VIEW', 'Fotoğraf / evrak görüntüle'],
+      ['MEDIA_UPLOAD', 'Fotoğraf / evrak yükle'],
+      ['MEDIA_DELETE', 'Fotoğraf / evrak sil'],
+    ],
+  },
+  {
+    title: 'Teklif ve Bakım',
+    items: [
+      ['QUOTE_VIEW', 'Teklifleri görüntüle'],
+      ['QUOTE_CREATE', 'Teklif / proforma oluştur'],
+      ['QUOTE_STATUS', 'Teklif durumunu değiştir'],
+      ['MAINTENANCE_VIEW', 'Bakım planlarını görüntüle'],
+      ['MAINTENANCE_MANAGE', 'Bakım planı oluştur / tamamla'],
+    ],
+  },
+  {
+    title: 'Stok ve Tedarik',
+    items: [
+      ['INVENTORY_VIEW', 'Stok görüntüle'],
+      ['INVENTORY_MANAGE', 'Stok hareketi / parça yönet'],
+      ['SUPPLIER_VIEW', 'Tedarikçileri görüntüle'],
+      ['SUPPLIER_MANAGE', 'Tedarikçi oluştur / düzenle'],
+    ],
+  },
+  {
+    title: 'Personel ve Şube',
+    items: [
+      ['STAFF_VIEW', 'Personeli görüntüle'],
+      ['STAFF_CREATE', 'Personel oluştur'],
+      ['STAFF_UPDATE', 'Personel yetki / şube / durum değiştir'],
+      ['STAFF_PASSWORD', 'Personel şifresi sıfırla'],
+      ['BRANCH_VIEW', 'Şubeleri görüntüle'],
+      ['BRANCH_MANAGE', 'Şube oluştur / durum değiştir'],
+    ],
+  },
+  {
+    title: 'Finans ve Yönetim',
+    items: [
+      ['CASHIER_VIEW', 'Cari / ödeme görüntüle'],
+      ['CASHIER_COLLECT', 'Tahsilat oluştur'],
+      ['CASHIER_STATUS', 'Ödeme durumunu değiştir'],
+      ['REPORTS_VIEW', 'Raporları görüntüle'],
+      ['SETTINGS_VIEW', 'İşletme ayarlarını görüntüle'],
+      ['SETTINGS_MANAGE', 'İşletme ayarlarını değiştir'],
+      ['NOTIFICATION_VIEW', 'Bildirimleri görüntüle'],
+      ['NOTIFICATION_MANAGE', 'Bildirim oluştur'],
+    ],
+  },
+];
+
+const allPermissionKeys =
+  permissionGroups.flatMap(
+    (group) =>
+      group.items.map(
+        ([key]) => key,
+      ),
+  );
+
+function errorMessage(
+  error,
+  fallback,
+) {
+  const message =
+    error?.response?.data?.message;
+
+  return Array.isArray(message)
+    ? message.join(', ')
+    : message || fallback;
+}
+
+function Toggle({
+  checked,
+  onChange,
+  disabled,
+}) {
+  return (
+    <button
+      type="button"
+      className={
+        checked
+          ? 'platform-toggle active'
+          : 'platform-toggle'
+      }
+      aria-pressed={checked}
+      onClick={onChange}
+      disabled={disabled}
+    >
+      <span />
+    </button>
+  );
+}
 
 export default function PlatformAdmin() {
   const {
@@ -59,6 +253,12 @@ export default function PlatformAdmin() {
     useState([]);
   const [selectedId, setSelectedId] =
     useState('');
+  const [selectedRole, setSelectedRole] =
+    useState('SERVICE_ADVISOR');
+  const [search, setSearch] =
+    useState('');
+  const [activeSection, setActiveSection] =
+    useState('package');
   const [busy, setBusy] =
     useState(false);
   const [error, setError] =
@@ -71,12 +271,8 @@ export default function PlatformAdmin() {
       packagesResponse,
       organizationsResponse,
     ] = await Promise.all([
-      api.get(
-        '/platform/packages',
-      ),
-      api.get(
-        '/platform/organizations',
-      ),
+      api.get('/platform/packages'),
+      api.get('/platform/organizations'),
     ]);
 
     setPackages(
@@ -98,8 +294,10 @@ export default function PlatformAdmin() {
   useEffect(() => {
     load().catch((err) => {
       setError(
-        err?.response?.data?.message ||
+        errorMessage(
+          err,
           'Ajans paneli yüklenemedi.',
+        ),
       );
     });
   }, []);
@@ -118,50 +316,134 @@ export default function PlatformAdmin() {
       ],
     );
 
-  const allFeatures =
-    useMemo(
-      () =>
-        Object.keys(
-          featureLabels,
+  const filteredOrganizations =
+    useMemo(() => {
+      const term =
+        search
+          .trim()
+          .toLocaleLowerCase(
+            'tr-TR',
+          );
+
+      if (!term) {
+        return organizations;
+      }
+
+      return organizations.filter(
+        (organization) =>
+          [
+            organization.name,
+            organization.email,
+            organization.phone,
+            organization.package
+              ?.name,
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLocaleLowerCase(
+              'tr-TR',
+            )
+            .includes(term),
+      );
+    }, [
+      organizations,
+      search,
+    ]);
+
+  const totalUsers =
+    organizations.reduce(
+      (sum, item) =>
+        sum +
+        Number(
+          item._count?.users ||
+            0,
         ),
-      [],
+      0,
     );
 
-  async function setPackage(
-    packageId,
-  ) {
-    if (!selected) {
-      return;
-    }
+  const totalVehicles =
+    organizations.reduce(
+      (sum, item) =>
+        sum +
+        Number(
+          item._count?.vehicles ||
+            0,
+        ),
+      0,
+    );
 
+  const currentRoleMatrix =
+    selected
+      ?.effectiveRolePermissions?.[
+        selectedRole
+      ] || {
+        effective: [],
+        defaults: [],
+        overrides: [],
+      };
+
+  const roleEffective =
+    currentRoleMatrix.effective ||
+    [];
+
+  const roleDefaults =
+    currentRoleMatrix.defaults ||
+    [];
+
+  const roleOverrides =
+    currentRoleMatrix.overrides ||
+    [];
+
+  async function run(
+    action,
+    successMessage,
+  ) {
     setBusy(true);
     setError('');
     setMessage('');
 
     try {
-      await api.patch(
-        `/platform/organizations/${selected.id}/package`,
-        {
-          packageId,
-        },
-      );
+      await action();
 
-      setMessage(
-        'İşletme paketi güncellendi.',
-      );
+      if (successMessage) {
+        setMessage(
+          successMessage,
+        );
+      }
 
       await load();
     } catch (err) {
       setError(
-        err?.response?.data?.message ||
-          'Paket güncellenemedi.',
+        errorMessage(
+          err,
+          'İşlem tamamlanamadı.',
+        ),
       );
     } finally {
       setBusy(false);
     }
   }
 
-  async function toggleFeature(
+  function setPackage(
+    packageId,
+  ) {
+    if (!selected) {
+      return;
+    }
+
+    return run(
+      () =>
+        api.patch(
+          `/platform/organizations/${selected.id}/package`,
+          {
+            packageId,
+          },
+        ),
+      'İşletme paketi güncellendi.',
+    );
+  }
+
+  function toggleFeature(
     feature,
   ) {
     if (!selected) {
@@ -172,62 +454,90 @@ export default function PlatformAdmin() {
       !selected.effectiveFeatures
         ?.includes(feature);
 
-    setBusy(true);
-    setError('');
-    setMessage('');
-
-    try {
-      await api.put(
-        `/platform/organizations/${selected.id}/features/${feature}`,
-        {
-          enabled,
-        },
-      );
-
-      setMessage(
-        `${featureLabels[feature]} yetkisi güncellendi.`,
-      );
-
-      await load();
-    } catch (err) {
-      setError(
-        err?.response?.data?.message ||
-          'Modül yetkisi güncellenemedi.',
-      );
-    } finally {
-      setBusy(false);
-    }
+    return run(
+      () =>
+        api.put(
+          `/platform/organizations/${selected.id}/features/${feature}`,
+          {
+            enabled,
+          },
+        ),
+      `${featureLabels[feature]} modülü güncellendi.`,
+    );
   }
 
-  async function resetOverride(
+  function resetFeature(
     feature,
   ) {
     if (!selected) {
       return;
     }
 
-    setBusy(true);
-    setError('');
-    setMessage('');
+    return run(
+      () =>
+        api.delete(
+          `/platform/organizations/${selected.id}/features/${feature}`,
+        ),
+      'Modül paket varsayılanına döndürüldü.',
+    );
+  }
 
-    try {
-      await api.delete(
-        `/platform/organizations/${selected.id}/features/${feature}`,
-      );
-
-      setMessage(
-        'Modül paket varsayılanına döndürüldü.',
-      );
-
-      await load();
-    } catch (err) {
-      setError(
-        err?.response?.data?.message ||
-          'Özel yetki kaldırılamadı.',
-      );
-    } finally {
-      setBusy(false);
+  function togglePermission(
+    permission,
+  ) {
+    if (!selected) {
+      return;
     }
+
+    const allowed =
+      !roleEffective.includes(
+        permission,
+      );
+
+    return run(
+      () =>
+        api.put(
+          `/platform/organizations/${selected.id}/roles/${selectedRole}/permissions/${permission}`,
+          {
+            allowed,
+          },
+        ),
+      `${roleLabels[selectedRole]} yetkisi güncellendi.`,
+    );
+  }
+
+  function replaceRolePermissions(
+    permissions,
+    label,
+  ) {
+    if (!selected) {
+      return;
+    }
+
+    return run(
+      () =>
+        api.put(
+          `/platform/organizations/${selected.id}/roles/${selectedRole}/permissions`,
+          {
+            permissions,
+          },
+        ),
+      label,
+    );
+  }
+
+  function resetRolePermissions() {
+    if (!selected) {
+      return;
+    }
+
+    return run(
+      () =>
+        api.delete(
+          `/platform/organizations/${selected.id}/roles/${selectedRole}/permissions`,
+        ),
+      `${roleLabels[selectedRole]} varsayılan yetkilerine döndürüldü.`,
+    );
   }
 
   async function enter() {
@@ -247,30 +557,93 @@ export default function PlatformAdmin() {
         '/';
     } catch (err) {
       setError(
-        err?.response?.data?.message ||
+        errorMessage(
+          err,
           'İşletme paneline girilemedi.',
+        ),
       );
       setBusy(false);
     }
   }
 
+  function featureState(
+    feature,
+  ) {
+    const enabled =
+      selected?.effectiveFeatures
+        ?.includes(feature);
+
+    const override =
+      selected?.featureOverrides
+        ?.find(
+          (item) =>
+            item.feature ===
+            feature,
+        );
+
+    const inPackage =
+      selected?.package
+        ?.features
+        ?.includes(feature);
+
+    return {
+      enabled,
+      override,
+      inPackage,
+    };
+  }
+
+  function permissionState(
+    permission,
+  ) {
+    const enabled =
+      roleEffective.includes(
+        permission,
+      );
+
+    const defaultEnabled =
+      roleDefaults.includes(
+        permission,
+      );
+
+    const override =
+      roleOverrides.find(
+        (item) =>
+          item.permission ===
+          permission,
+      );
+
+    return {
+      enabled,
+      defaultEnabled,
+      override,
+    };
+  }
+
   return (
     <div className="platform-page">
       <header className="platform-header">
-        <div>
-          <span className="platform-kicker">
-            İGESA PLATFORM
-          </span>
+        <div className="platform-header-brand">
+          <div className="platform-header-logo">
+            İG
+          </div>
 
-          <h1>
-            Yetki ve Paket Yönetimi
-          </h1>
+          <div>
+            <span className="platform-kicker">
+              İGESA PLATFORM
+            </span>
 
-          <p>
-            Ajans hesabı tüm
-            işletmeleri ve paket
-            modüllerini yönetebilir.
-          </p>
+            <h1>
+              Ajans Yönetim Merkezi
+            </h1>
+
+            <p>
+              İşletmeleri, paketleri,
+              modülleri ve personel
+              işlem yetkilerini tek
+              merkezden yönetin.
+            </p>
+          </div>
         </div>
 
         <div className="platform-user">
@@ -279,13 +652,14 @@ export default function PlatformAdmin() {
               {user?.firstName}{' '}
               {user?.lastName}
             </strong>
+
             <span>
               {user?.platformRole}
             </span>
           </div>
 
           <button
-            className="secondary-button"
+            className="platform-logout"
             onClick={logout}
           >
             Çıkış
@@ -293,26 +667,98 @@ export default function PlatformAdmin() {
         </div>
       </header>
 
+      <section className="platform-summary">
+        <div className="platform-summary-card">
+          <span>
+            İşletme
+          </span>
+          <strong>
+            {organizations.length}
+          </strong>
+          <small>
+            Platformdaki toplam müşteri işletme
+          </small>
+        </div>
+
+        <div className="platform-summary-card">
+          <span>
+            Personel
+          </span>
+          <strong>
+            {totalUsers}
+          </strong>
+          <small>
+            Tüm işletmelerdeki aktif kullanıcı havuzu
+          </small>
+        </div>
+
+        <div className="platform-summary-card">
+          <span>
+            Araç
+          </span>
+          <strong>
+            {totalVehicles}
+          </strong>
+          <small>
+            Sistemde kayıtlı toplam araç
+          </small>
+        </div>
+
+        <div className="platform-summary-card accent">
+          <span>
+            Hazır Paket
+          </span>
+          <strong>
+            {packages.length}
+          </strong>
+          <small>
+            Başlangıç · Profesyonel · Servis 360
+          </small>
+        </div>
+      </section>
+
       {message && (
-        <div className="page-message success-message">
+        <div className="page-message success-message platform-flash">
           {message}
         </div>
       )}
 
       {error && (
-        <div className="page-message error-message">
+        <div className="page-message error-message platform-flash">
           {error}
         </div>
       )}
 
       <div className="platform-grid">
         <aside className="platform-organizations">
-          <h3>
-            İşletmeler
-          </h3>
+          <div className="platform-sidebar-head">
+            <div>
+              <span className="platform-kicker">
+                MÜŞTERİLERİMİZ
+              </span>
+              <h3>
+                İşletmeler
+              </h3>
+            </div>
+
+            <span className="platform-count">
+              {organizations.length}
+            </span>
+          </div>
+
+          <input
+            className="platform-search"
+            placeholder="İşletme, paket, telefon ara..."
+            value={search}
+            onChange={(event) =>
+              setSearch(
+                event.target.value,
+              )
+            }
+          />
 
           <div className="platform-org-list">
-            {organizations.map(
+            {filteredOrganizations.map(
               (organization) => (
                 <button
                   type="button"
@@ -331,249 +777,626 @@ export default function PlatformAdmin() {
                     )
                   }
                 >
-                  <strong>
-                    {
-                      organization.name
-                    }
-                  </strong>
+                  <div className="platform-org-avatar">
+                    {organization.name
+                      ?.trim()
+                      .charAt(0)
+                      .toLocaleUpperCase(
+                        'tr-TR',
+                      ) || '?'}
+                  </div>
 
-                  <span>
-                    {organization.package
-                      ?.name ||
-                      'Paket yok'}
-                  </span>
+                  <div className="platform-org-copy">
+                    <strong>
+                      {
+                        organization.name
+                      }
+                    </strong>
 
-                  <small>
-                    {
-                      organization
-                        ._count
-                        ?.customers
-                    }{' '}
-                    müşteri ·{' '}
-                    {
-                      organization
-                        ._count
-                        ?.vehicles
-                    }{' '}
-                    araç
-                  </small>
+                    <span>
+                      {organization.package
+                        ?.name ||
+                        'Paket yok'}
+                    </span>
+
+                    <small>
+                      {
+                        organization
+                          ._count
+                          ?.customers
+                      }{' '}
+                      müşteri ·{' '}
+                      {
+                        organization
+                          ._count
+                          ?.vehicles
+                      }{' '}
+                      araç ·{' '}
+                      {
+                        organization
+                          ._count
+                          ?.users
+                      }{' '}
+                      personel
+                    </small>
+                  </div>
                 </button>
               ),
+            )}
+
+            {!filteredOrganizations.length && (
+              <div className="platform-empty">
+                Aramaya uygun işletme bulunamadı.
+              </div>
             )}
           </div>
         </aside>
 
         <main className="platform-detail">
           {!selected ? (
-            <div className="panel-card">
-              İşletme seçin.
+            <div className="platform-empty-state">
+              Yönetmek için bir işletme seçin.
             </div>
           ) : (
             <>
-              <div className="panel-card platform-org-head">
+              <div className="platform-org-hero">
                 <div>
                   <span className="platform-kicker">
-                    İŞLETME
+                    SEÇİLİ İŞLETME
                   </span>
 
                   <h2>
-                    {
-                      selected.name
-                    }
+                    {selected.name}
                   </h2>
 
                   <p>
-                    {
-                      selected.email ||
+                    {selected.email ||
                       selected.phone ||
-                      'İletişim bilgisi yok'
-                    }
+                      'İletişim bilgisi yok'}
                   </p>
+
+                  <div className="platform-org-meta">
+                    <span>
+                      Paket:{' '}
+                      <strong>
+                        {selected.package
+                          ?.name ||
+                          'Tanımsız'}
+                      </strong>
+                    </span>
+
+                    <span>
+                      Modül:{' '}
+                      <strong>
+                        {selected.effectiveFeatures
+                          ?.length ||
+                          0}
+                      </strong>
+                    </span>
+
+                    <span>
+                      Şube:{' '}
+                      <strong>
+                        {selected._count
+                          ?.branches ||
+                          0}
+                      </strong>
+                    </span>
+                  </div>
                 </div>
 
                 <button
-                  className="primary-button"
+                  className="platform-enter-button"
                   disabled={busy}
                   onClick={enter}
                 >
-                  İşletme Paneline Gir
+                  <span>
+                    İşletme Paneline Gir
+                  </span>
+                  <strong>
+                    →
+                  </strong>
                 </button>
               </div>
 
-              <div className="panel-card spaced-card">
-                <div className="card-title-row">
-                  <div>
-                    <h3>
-                      Hazır Paket
-                    </h3>
-                    <p className="sub-text">
-                      Paket seçildiğinde
-                      temel modül listesi
-                      otomatik uygulanır.
-                    </p>
-                  </div>
+              <div className="platform-section-tabs">
+                <button
+                  type="button"
+                  className={
+                    activeSection ===
+                    'package'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() =>
+                    setActiveSection(
+                      'package',
+                    )
+                  }
+                >
+                  Paket & Modüller
+                </button>
 
-                  <select
-                    value={
-                      selected.packageId ||
-                      ''
-                    }
-                    disabled={busy}
-                    onChange={(event) =>
-                      setPackage(
-                        event.target.value,
-                      )
-                    }
-                  >
-                    <option value="">
-                      Paket seç
-                    </option>
-
-                    {packages.map(
-                      (item) => (
-                        <option
-                          key={
-                            item.id
-                          }
-                          value={
-                            item.id
-                          }
-                        >
-                          {
-                            item.name
-                          }
-                        </option>
-                      ),
-                    )}
-                  </select>
-                </div>
-
-                <div className="platform-package-cards">
-                  {packages.map(
-                    (item) => (
-                      <div
-                        className={
-                          selected.packageId ===
-                          item.id
-                            ? 'platform-package active'
-                            : 'platform-package'
-                        }
-                        key={
-                          item.id
-                        }
-                      >
-                        <strong>
-                          {
-                            item.name
-                          }
-                        </strong>
-
-                        <span>
-                          {
-                            item.description
-                          }
-                        </span>
-
-                        <small>
-                          {
-                            item.features
-                              ?.length
-                          }{' '}
-                          modül
-                        </small>
-                      </div>
-                    ),
-                  )}
-                </div>
+                <button
+                  type="button"
+                  className={
+                    activeSection ===
+                    'roles'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() =>
+                    setActiveSection(
+                      'roles',
+                    )
+                  }
+                >
+                  Personel Yetkileri
+                </button>
               </div>
 
-              <div className="panel-card spaced-card">
-                <div className="card-title-row">
-                  <div>
-                    <h3>
-                      Modül Yetkileri
-                    </h3>
-                    <p className="sub-text">
-                      Paket dışında
-                      işletmeye özel modül
-                      açabilir veya
-                      kapatabilirsiniz.
-                    </p>
-                  </div>
-                </div>
+              {activeSection ===
+                'package' && (
+                <>
+                  <section className="platform-card">
+                    <div className="platform-card-head">
+                      <div>
+                        <span className="platform-kicker">
+                          ABONELİK
+                        </span>
 
-                <div className="platform-feature-grid">
-                  {allFeatures.map(
-                    (feature) => {
-                      const enabled =
-                        selected.effectiveFeatures
-                          ?.includes(
-                            feature,
-                          );
+                        <h3>
+                          Hazır Paket
+                        </h3>
 
-                      const override =
-                        selected.featureOverrides
-                          ?.find(
-                            (item) =>
-                              item.feature ===
-                              feature,
-                          );
+                        <p>
+                          Temel modülleri paket ile belirleyin.
+                          İsterseniz aşağıdan tek tek özel
+                          modül açıp kapatabilirsiniz.
+                        </p>
+                      </div>
 
-                      return (
-                        <div
-                          className={
-                            enabled
-                              ? 'platform-feature active'
-                              : 'platform-feature'
-                          }
-                          key={
-                            feature
-                          }
-                        >
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() =>
-                              toggleFeature(
-                                feature,
-                              )
-                            }
-                          >
-                            <span>
-                              {
-                                featureLabels[
-                                  feature
-                                ]
+                      <select
+                        className="platform-package-select"
+                        value={
+                          selected.packageId ||
+                          ''
+                        }
+                        disabled={busy}
+                        onChange={(event) =>
+                          setPackage(
+                            event.target.value,
+                          )
+                        }
+                      >
+                        <option value="">
+                          Paket seç
+                        </option>
+
+                        {packages.map(
+                          (item) => (
+                            <option
+                              key={
+                                item.id
                               }
-                            </span>
+                              value={
+                                item.id
+                              }
+                            >
+                              {item.name}
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    </div>
 
-                            <strong>
-                              {enabled
-                                ? 'AÇIK'
-                                : 'KAPALI'}
-                            </strong>
-                          </button>
+                    <div className="platform-package-cards">
+                      {packages.map(
+                        (item) => {
+                          const active =
+                            selected.packageId ===
+                            item.id;
 
-                          {override && (
+                          return (
                             <button
                               type="button"
-                              className="platform-feature-reset"
+                              className={
+                                active
+                                  ? 'platform-package active'
+                                  : 'platform-package'
+                              }
+                              key={
+                                item.id
+                              }
                               disabled={busy}
                               onClick={() =>
-                                resetOverride(
-                                  feature,
+                                setPackage(
+                                  item.id,
                                 )
                               }
                             >
-                              Özel ayarı kaldır
+                              <span className="platform-package-badge">
+                                {active
+                                  ? 'AKTİF'
+                                  : item.code}
+                              </span>
+
+                              <strong>
+                                {item.name}
+                              </strong>
+
+                              <p>
+                                {item.description}
+                              </p>
+
+                              <small>
+                                {item.features
+                                  ?.length}{' '}
+                                temel modül
+                              </small>
                             </button>
-                          )}
+                          );
+                        },
+                      )}
+                    </div>
+                  </section>
+
+                  <section className="platform-card">
+                    <div className="platform-card-head">
+                      <div>
+                        <span className="platform-kicker">
+                          MODÜL ERİŞİMİ
+                        </span>
+
+                        <h3>
+                          Panel Kontrolleri
+                        </h3>
+
+                        <p>
+                          Paketten gelen erişimi işletmeye özel
+                          olarak geçersiz kılabilirsiniz.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="platform-feature-groups">
+                      {featureGroups.map(
+                        (group) => (
+                          <div
+                            className="platform-feature-group"
+                            key={
+                              group.title
+                            }
+                          >
+                            <div className="platform-feature-group-head">
+                              <div>
+                                <h4>
+                                  {group.title}
+                                </h4>
+                                <p>
+                                  {group.description}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="platform-feature-grid">
+                              {group.items.map(
+                                (feature) => {
+                                  const state =
+                                    featureState(
+                                      feature,
+                                    );
+
+                                  return (
+                                    <div
+                                      className={
+                                        state.enabled
+                                          ? 'platform-feature active'
+                                          : 'platform-feature'
+                                      }
+                                      key={
+                                        feature
+                                      }
+                                    >
+                                      <div className="platform-feature-row">
+                                        <div>
+                                          <strong>
+                                            {
+                                              featureLabels[
+                                                feature
+                                              ]
+                                            }
+                                          </strong>
+
+                                          <span>
+                                            {state.override
+                                              ? state.enabled
+                                                ? 'İGESA özel olarak açtı'
+                                                : 'İGESA özel olarak kapattı'
+                                              : state.inPackage
+                                                ? 'Paketten geliyor'
+                                                : 'Pakette yok'}
+                                          </span>
+                                        </div>
+
+                                        <Toggle
+                                          checked={
+                                            state.enabled
+                                          }
+                                          disabled={
+                                            busy
+                                          }
+                                          onChange={() =>
+                                            toggleFeature(
+                                              feature,
+                                            )
+                                          }
+                                        />
+                                      </div>
+
+                                      {state.override && (
+                                        <button
+                                          type="button"
+                                          className="platform-reset-link"
+                                          disabled={
+                                            busy
+                                          }
+                                          onClick={() =>
+                                            resetFeature(
+                                              feature,
+                                            )
+                                          }
+                                        >
+                                          Paket varsayılanına dön
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                },
+                              )}
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </section>
+                </>
+              )}
+
+              {activeSection ===
+                'roles' && (
+                <section className="platform-card">
+                  <div className="platform-card-head platform-role-head">
+                    <div>
+                      <span className="platform-kicker">
+                        DETAYLI YETKİ
+                      </span>
+
+                      <h3>
+                        Personel İşlem Yetkileri
+                      </h3>
+
+                      <p>
+                        Modüle girebilmek paket ile belirlenir.
+                        Buradaki kontroller, o modül içindeki
+                        hangi işlemlerin yapılabileceğini belirler.
+                      </p>
+                    </div>
+
+                    <div className="platform-role-actions">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() =>
+                          replaceRolePermissions(
+                            allPermissionKeys,
+                            'Seçili rol için tüm detay yetkileri açıldı.',
+                          )
+                        }
+                      >
+                        Tümünü Aç
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() =>
+                          replaceRolePermissions(
+                            [],
+                            'Seçili rol için tüm detay yetkileri kapatıldı.',
+                          )
+                        }
+                      >
+                        Tümünü Kapat
+                      </button>
+
+                      <button
+                        type="button"
+                        className="primary"
+                        disabled={busy}
+                        onClick={
+                          resetRolePermissions
+                        }
+                      >
+                        Varsayılana Dön
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="platform-role-tabs">
+                    {Object.keys(
+                      roleLabels,
+                    ).map(
+                      (role) => (
+                        <button
+                          type="button"
+                          key={
+                            role
+                          }
+                          className={
+                            selectedRole ===
+                            role
+                              ? 'active'
+                              : ''
+                          }
+                          onClick={() =>
+                            setSelectedRole(
+                              role,
+                            )
+                          }
+                        >
+                          <strong>
+                            {
+                              roleLabels[
+                                role
+                              ]
+                            }
+                          </strong>
+
+                          <span>
+                            {
+                              selected
+                                .effectiveRolePermissions?.[
+                                role
+                              ]?.effective
+                                ?.length ||
+                              0
+                            }{' '}
+                            yetki
+                          </span>
+                        </button>
+                      ),
+                    )}
+                  </div>
+
+                  <div className="platform-role-description">
+                    <div>
+                      <strong>
+                        {
+                          roleLabels[
+                            selectedRole
+                          ]
+                        }
+                      </strong>
+
+                      <span>
+                        {
+                          roleDescriptions[
+                            selectedRole
+                          ]
+                        }
+                      </span>
+                    </div>
+
+                    <div className="platform-role-meter">
+                      <span>
+                        Aktif Yetki
+                      </span>
+
+                      <strong>
+                        {
+                          roleEffective.length
+                        }
+                        /
+                        {
+                          allPermissionKeys.length
+                        }
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="platform-permission-groups">
+                    {permissionGroups.map(
+                      (group) => (
+                        <div
+                          className="platform-permission-group"
+                          key={
+                            group.title
+                          }
+                        >
+                          <div className="platform-permission-title">
+                            <h4>
+                              {group.title}
+                            </h4>
+
+                            <span>
+                              {
+                                group.items.filter(
+                                  ([key]) =>
+                                    roleEffective.includes(
+                                      key,
+                                    ),
+                                ).length
+                              }
+                              /
+                              {
+                                group.items.length
+                              }
+                            </span>
+                          </div>
+
+                          <div className="platform-permission-list">
+                            {group.items.map(
+                              ([
+                                permission,
+                                label,
+                              ]) => {
+                                const state =
+                                  permissionState(
+                                    permission,
+                                  );
+
+                                return (
+                                  <div
+                                    className={
+                                      state.enabled
+                                        ? 'platform-permission-row active'
+                                        : 'platform-permission-row'
+                                    }
+                                    key={
+                                      permission
+                                    }
+                                  >
+                                    <div>
+                                      <strong>
+                                        {label}
+                                      </strong>
+
+                                      <span>
+                                        {state.override
+                                          ? state.enabled
+                                            ? 'Özel olarak açık'
+                                            : 'Özel olarak kapalı'
+                                          : state.defaultEnabled
+                                            ? 'Rol varsayılanı: açık'
+                                            : 'Rol varsayılanı: kapalı'}
+                                      </span>
+                                    </div>
+
+                                    <Toggle
+                                      checked={
+                                        state.enabled
+                                      }
+                                      disabled={
+                                        busy
+                                      }
+                                      onChange={() =>
+                                        togglePermission(
+                                          permission,
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                );
+                              },
+                            )}
+                          </div>
                         </div>
-                      );
-                    },
-                  )}
-                </div>
-              </div>
+                      ),
+                    )}
+                  </div>
+                </section>
+              )}
             </>
           )}
         </main>
