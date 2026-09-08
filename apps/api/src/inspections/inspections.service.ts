@@ -798,7 +798,16 @@ export class InspectionsService {
           dto.valuablesNote,
       },
       include: {
-        vehicle: true,
+        vehicle: {
+          include: {
+            customer: true,
+          },
+        },
+        serviceOrder: {
+          include: {
+            items: true,
+          },
+        },
         inspector: {
           select: {
             id: true,
@@ -826,7 +835,16 @@ export class InspectionsService {
         ),
       },
       include: {
-        vehicle: true,
+        vehicle: {
+          include: {
+            customer: true,
+          },
+        },
+        serviceOrder: {
+          include: {
+            items: true,
+          },
+        },
         inspector: {
           select: {
             id: true,
