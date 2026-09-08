@@ -313,6 +313,31 @@ export default function PlatformAdmin() {
   const [ownerProfiles, setOwnerProfiles] =
     useState({});
 
+  const [
+    showCreateCustomer,
+    setShowCreateCustomer,
+  ] = useState(false);
+
+  const [
+    newCustomerForm,
+    setNewCustomerForm,
+  ] = useState({
+    organizationName: '',
+    ownerFirstName: '',
+    ownerLastName: '',
+    ownerEmail: '',
+    ownerPhone: '',
+    ownerPassword: '',
+    packageId: '',
+    contactPersonName: '',
+    contactPersonPhone: '',
+    phone: '',
+    whatsappPhone: '',
+    email: '',
+    address: '',
+    monthlyFee: '',
+  });
+
   async function load() {
     const [
       packagesResponse,
@@ -486,6 +511,106 @@ export default function PlatformAdmin() {
         errorMessage(
           err,
           'İşlem tamamlanamadı.',
+        ),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createAgencyCustomer(
+    event,
+  ) {
+    event.preventDefault();
+
+    setBusy(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const response =
+        await api.post(
+          '/platform/organizations',
+          {
+            organizationName:
+              newCustomerForm.organizationName.trim(),
+            ownerFirstName:
+              newCustomerForm.ownerFirstName.trim(),
+            ownerLastName:
+              newCustomerForm.ownerLastName.trim(),
+            ownerEmail:
+              newCustomerForm.ownerEmail.trim(),
+            ownerPhone:
+              newCustomerForm.ownerPhone.trim() ||
+              undefined,
+            ownerPassword:
+              newCustomerForm.ownerPassword,
+            packageId:
+              newCustomerForm.packageId ||
+              undefined,
+            contactPersonName:
+              newCustomerForm.contactPersonName.trim() ||
+              undefined,
+            contactPersonPhone:
+              newCustomerForm.contactPersonPhone.trim() ||
+              undefined,
+            phone:
+              newCustomerForm.phone.trim() ||
+              undefined,
+            whatsappPhone:
+              newCustomerForm.whatsappPhone.trim() ||
+              undefined,
+            email:
+              newCustomerForm.email.trim() ||
+              undefined,
+            address:
+              newCustomerForm.address.trim() ||
+              undefined,
+            monthlyFee:
+              newCustomerForm.monthlyFee
+                ? Number(
+                    newCustomerForm.monthlyFee,
+                  )
+                : 0,
+          },
+        );
+
+      await load();
+
+      setSelectedId(
+        response.data
+          .organization.id,
+      );
+      setActiveSection(
+        'customer',
+      );
+      setShowCreateCustomer(
+        false,
+      );
+      setNewCustomerForm({
+        organizationName: '',
+        ownerFirstName: '',
+        ownerLastName: '',
+        ownerEmail: '',
+        ownerPhone: '',
+        ownerPassword: '',
+        packageId: '',
+        contactPersonName: '',
+        contactPersonPhone: '',
+        phone: '',
+        whatsappPhone: '',
+        email: '',
+        address: '',
+        monthlyFee: '',
+      });
+      setMessage(
+        'Yeni ajans müşterisi ve kurucu panel hesabı oluşturuldu.',
+      );
+    } catch (err) {
+      setError(
+        errorMessage(
+          err,
+          'Müşteri işletme oluşturulamadı.',
         ),
       );
     } finally {
@@ -1121,6 +1246,331 @@ export default function PlatformAdmin() {
         </div>
       )}
 
+      {showCreateCustomer && (
+        <div
+          className="platform-modal-backdrop"
+          role="presentation"
+          onMouseDown={() =>
+            setShowCreateCustomer(
+              false,
+            )
+          }
+        >
+          <section
+            className="platform-create-customer-modal"
+            onMouseDown={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <div className="platform-create-customer-head">
+              <div>
+                <span className="platform-kicker">
+                  YENİ AJANS MÜŞTERİSİ
+                </span>
+
+                <h2>
+                  Sanayici / Servis Hesabı Oluştur
+                </h2>
+
+                <p>
+                  İşletme, Merkez Şube ve kurucu panel hesabı
+                  tek işlemde oluşturulur.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowCreateCustomer(
+                    false,
+                  )
+                }
+              >
+                ×
+              </button>
+            </div>
+
+            <form
+              className="platform-create-customer-form"
+              onSubmit={createAgencyCustomer}
+            >
+              <div className="platform-create-customer-section">
+                <span>
+                  İŞLETME
+                </span>
+
+                <div className="platform-create-customer-grid">
+                  <input
+                    className="full"
+                    placeholder="İşletme adı *"
+                    value={
+                      newCustomerForm.organizationName
+                    }
+                    onChange={(event) =>
+                      setNewCustomerForm({
+                        ...newCustomerForm,
+                        organizationName:
+                          event.target.value,
+                      })
+                    }
+                    required
+                  />
+
+                  <input
+                    placeholder="İşletme telefonu"
+                    value={
+                      newCustomerForm.phone
+                    }
+                    onChange={(event) =>
+                      setNewCustomerForm({
+                        ...newCustomerForm,
+                        phone:
+                          event.target.value,
+                      })
+                    }
+                  />
+
+                  <input
+                    placeholder="WhatsApp"
+                    value={
+                      newCustomerForm.whatsappPhone
+                    }
+                    onChange={(event) =>
+                      setNewCustomerForm({
+                        ...newCustomerForm,
+                        whatsappPhone:
+                          event.target.value,
+                      })
+                    }
+                  />
+
+                  <input
+                    className="full"
+                    type="email"
+                    placeholder="İşletme e-posta"
+                    value={
+                      newCustomerForm.email
+                    }
+                    onChange={(event) =>
+                      setNewCustomerForm({
+                        ...newCustomerForm,
+                        email:
+                          event.target.value,
+                      })
+                    }
+                  />
+
+                  <textarea
+                    className="full"
+                    placeholder="Adres"
+                    value={
+                      newCustomerForm.address
+                    }
+                    onChange={(event) =>
+                      setNewCustomerForm({
+                        ...newCustomerForm,
+                        address:
+                          event.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="platform-create-customer-section">
+                <span>
+                  YETKİLİ / SÖZLEŞME
+                </span>
+
+                <div className="platform-create-customer-grid">
+                  <input
+                    placeholder="Yetkili kişi"
+                    value={
+                      newCustomerForm.contactPersonName
+                    }
+                    onChange={(event) =>
+                      setNewCustomerForm({
+                        ...newCustomerForm,
+                        contactPersonName:
+                          event.target.value,
+                      })
+                    }
+                  />
+
+                  <input
+                    placeholder="Yetkili telefonu"
+                    value={
+                      newCustomerForm.contactPersonPhone
+                    }
+                    onChange={(event) =>
+                      setNewCustomerForm({
+                        ...newCustomerForm,
+                        contactPersonPhone:
+                          event.target.value,
+                      })
+                    }
+                  />
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Aylık hizmet bedeli"
+                    value={
+                      newCustomerForm.monthlyFee
+                    }
+                    onChange={(event) =>
+                      setNewCustomerForm({
+                        ...newCustomerForm,
+                        monthlyFee:
+                          event.target.value,
+                      })
+                    }
+                  />
+
+                  <select
+                    value={
+                      newCustomerForm.packageId
+                    }
+                    onChange={(event) =>
+                      setNewCustomerForm({
+                        ...newCustomerForm,
+                        packageId:
+                          event.target.value,
+                      })
+                    }
+                  >
+                    <option value="">
+                      Varsayılan paket
+                    </option>
+
+                    {packages.map(
+                      (item) => (
+                        <option
+                          key={item.id}
+                          value={item.id}
+                        >
+                          {item.name}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              <div className="platform-create-customer-section">
+                <span>
+                  KURUCU PANEL HESABI
+                </span>
+
+                <div className="platform-create-customer-grid">
+                  <input
+                    placeholder="Ad *"
+                    value={
+                      newCustomerForm.ownerFirstName
+                    }
+                    onChange={(event) =>
+                      setNewCustomerForm({
+                        ...newCustomerForm,
+                        ownerFirstName:
+                          event.target.value,
+                      })
+                    }
+                    required
+                  />
+
+                  <input
+                    placeholder="Soyad *"
+                    value={
+                      newCustomerForm.ownerLastName
+                    }
+                    onChange={(event) =>
+                      setNewCustomerForm({
+                        ...newCustomerForm,
+                        ownerLastName:
+                          event.target.value,
+                      })
+                    }
+                    required
+                  />
+
+                  <input
+                    type="email"
+                    placeholder="Panel giriş e-postası *"
+                    value={
+                      newCustomerForm.ownerEmail
+                    }
+                    onChange={(event) =>
+                      setNewCustomerForm({
+                        ...newCustomerForm,
+                        ownerEmail:
+                          event.target.value,
+                      })
+                    }
+                    required
+                  />
+
+                  <input
+                    placeholder="Kurucu telefonu"
+                    value={
+                      newCustomerForm.ownerPhone
+                    }
+                    onChange={(event) =>
+                      setNewCustomerForm({
+                        ...newCustomerForm,
+                        ownerPhone:
+                          event.target.value,
+                      })
+                    }
+                  />
+
+                  <input
+                    className="full"
+                    type="password"
+                    minLength="8"
+                    placeholder="İlk panel şifresi (en az 8 karakter) *"
+                    value={
+                      newCustomerForm.ownerPassword
+                    }
+                    onChange={(event) =>
+                      setNewCustomerForm({
+                        ...newCustomerForm,
+                        ownerPassword:
+                          event.target.value,
+                      })
+                    }
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="platform-create-customer-actions">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowCreateCustomer(
+                      false,
+                    )
+                  }
+                >
+                  Vazgeç
+                </button>
+
+                <button
+                  type="submit"
+                  className="primary-button"
+                  disabled={busy}
+                >
+                  {busy
+                    ? 'Oluşturuluyor...'
+                    : 'Müşteriyi ve Paneli Oluştur'}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+
       <div className="platform-grid">
         <aside className="platform-organizations">
           <div className="platform-sidebar-head">
@@ -1148,6 +1598,21 @@ export default function PlatformAdmin() {
               )
             }
           />
+
+          <button
+            type="button"
+            className="platform-new-customer-button"
+            onClick={() =>
+              setShowCreateCustomer(
+                true,
+              )
+            }
+          >
+            <span>
+              +
+            </span>
+            Yeni Müşteri Ekle
+          </button>
 
           <div className="platform-org-list">
             {filteredOrganizations.map(
