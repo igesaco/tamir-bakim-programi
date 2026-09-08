@@ -20,6 +20,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreateInspectionDto } from './dto/create-inspection.dto';
 import { CreateInspectionItemDto } from './dto/create-inspection-item.dto';
+import { CreateMobileIntakeDto } from './dto/create-mobile-intake.dto';
 import { InspectionsService } from './inspections.service';
 
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -35,6 +36,21 @@ export class InspectionsController {
   constructor(
     private readonly inspectionsService: InspectionsService,
   ) {}
+
+@Permission(PermissionKey.INSPECTION_MANAGE)
+  @Post('mobile-intake')
+  createMobileIntake(
+    @Req() req: any,
+    @Body() dto: CreateMobileIntakeDto,
+  ) {
+    return this.inspectionsService.createMobileIntake(
+      req.user.organizationId,
+      req.user.branchId,
+      req.user.role,
+      req.user.sub,
+      dto,
+    );
+  }
 
 @Permission(PermissionKey.INSPECTION_MANAGE)
   @Post()
