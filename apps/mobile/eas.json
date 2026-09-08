@@ -1,0 +1,24 @@
+{
+  "cli": {
+    "version": ">= 16.17.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://tamir-bakim-api.onrender.com"
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://tamir-bakim-api.onrender.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
