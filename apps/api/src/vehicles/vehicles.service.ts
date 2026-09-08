@@ -4,6 +4,7 @@
   NotFoundException,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
@@ -282,6 +283,37 @@ export class VehiclesService {
 
       throw error;
     }
+  }
+
+  async regenerateQr(
+    organizationId: string,
+    id: string,
+    role: UserRole,
+    branchId: string | null,
+  ) {
+    await this.findOne(
+      organizationId,
+      id,
+      role,
+      branchId,
+    );
+
+    return this.prisma.vehicle.update({
+      where: {
+        id,
+      },
+      data: {
+        qrToken:
+          randomUUID(),
+        qrActive: true,
+      },
+      select: {
+        id: true,
+        qrToken: true,
+        qrActive: true,
+        updatedAt: true,
+      },
+    });
   }
 
   async remove(
