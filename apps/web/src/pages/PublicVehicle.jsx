@@ -93,6 +93,7 @@ export default function PublicVehicle() {
 
   const serviceWhatsapp =
     whatsappUrl(
+      serviceProvider?.whatsappPhone ||
       serviceProvider?.phone,
     );
 
