@@ -9,8 +9,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { UserRole } from '@prisma/client';
+import { FeatureKey, UserRole } from '@prisma/client';
 
+import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreateNotificationDto } from './dto/create-notification.dto';
@@ -23,6 +24,7 @@ import { NotificationsService } from './notifications.service';
   UserRole.SERVICE_ADVISOR,
 )
 
+@Feature(FeatureKey.NOTIFICATIONS)
 @Controller('notifications')
 export class NotificationsController {
   constructor(
