@@ -4,12 +4,17 @@
     "slug": "tamir-bakim-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
-    "ios": {
-      "supportsTablet": true
-    },
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
     "android": {
       "package": "com.igesa.tamirbakim"
-    }
+    },
+    "ios": {
+      "bundleIdentifier": "com.igesa.tamirbakim",
+      "supportsTablet": true
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }
