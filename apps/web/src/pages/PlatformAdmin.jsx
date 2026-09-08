@@ -307,6 +307,9 @@ export default function PlatformAdmin() {
       dueDate: '',
     });
 
+  const [ownerPasswords, setOwnerPasswords] =
+    useState({});
+
   async function load() {
     const [
       packagesResponse,
@@ -751,6 +754,69 @@ export default function PlatformAdmin() {
       ledgerForm.type === 'DEBIT'
         ? 'Cari borç kaydı eklendi.'
         : 'Tahsilat kaydı eklendi.',
+    );
+  }
+
+  function toggleOwnerActive(
+    owner,
+  ) {
+    if (!selected) {
+      return;
+    }
+
+    return run(
+      () =>
+        api.patch(
+          `/platform/organizations/${selected.id}/users/${owner.id}/active`,
+          {
+            active:
+              !owner.active,
+          },
+        ),
+      owner.active
+        ? 'Panel hesabı pasif yapıldı.'
+        : 'Panel hesabı aktif edildi.',
+    );
+  }
+
+  function resetOwnerPassword(
+    event,
+    owner,
+  ) {
+    event.preventDefault();
+
+    if (!selected) {
+      return;
+    }
+
+    const password =
+      ownerPasswords[
+        owner.id
+      ] || '';
+
+    if (password.length < 8) {
+      setError(
+        'Yeni şifre en az 8 karakter olmalıdır.',
+      );
+      return;
+    }
+
+    return run(
+      () =>
+        api.patch(
+          `/platform/organizations/${selected.id}/users/${owner.id}/password`,
+          {
+            password,
+          },
+        ).then(() => {
+          setOwnerPasswords(
+            (current) => ({
+              ...current,
+              [owner.id]: '',
+            }),
+          );
+        }),
+      'Panel hesabının şifresi yenilendi.',
     );
   }
 
@@ -1503,6 +1569,64 @@ export default function PlatformAdmin() {
                                     ? 'Aktif'
                                     : 'Pasif'}
                                 </small>
+
+                                <div className="platform-owner-actions">
+                                  <button
+                                    type="button"
+                                    className={
+                                      owner.active
+                                        ? 'platform-owner-toggle active'
+                                        : 'platform-owner-toggle'
+                                    }
+                                    disabled={busy}
+                                    onClick={() =>
+                                      toggleOwnerActive(
+                                        owner,
+                                      )
+                                    }
+                                  >
+                                    {owner.active
+                                      ? 'Hesabı Pasif Yap'
+                                      : 'Hesabı Aktif Et'}
+                                  </button>
+                                </div>
+
+                                <form
+                                  className="platform-owner-password"
+                                  onSubmit={(event) =>
+                                    resetOwnerPassword(
+                                      event,
+                                      owner,
+                                    )
+                                  }
+                                >
+                                  <input
+                                    type="password"
+                                    minLength="8"
+                                    placeholder="Yeni panel şifresi"
+                                    value={
+                                      ownerPasswords[
+                                        owner.id
+                                      ] || ''
+                                    }
+                                    onChange={(event) =>
+                                      setOwnerPasswords(
+                                        (current) => ({
+                                          ...current,
+                                          [owner.id]:
+                                            event.target.value,
+                                        }),
+                                      )
+                                    }
+                                  />
+
+                                  <button
+                                    type="submit"
+                                    disabled={busy}
+                                  >
+                                    Şifreyi Yenile
+                                  </button>
+                                </form>
                               </div>
                             </div>
                           ),
