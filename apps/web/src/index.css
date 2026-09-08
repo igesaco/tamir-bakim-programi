@@ -6251,3 +6251,231 @@ html[data-theme="dark"] body {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* === QR LABEL / A4 PRINT MODES === */
+.qr-print-mode-switch {
+  display: flex;
+  gap: 7px;
+  margin-left: auto;
+}
+
+.qr-print-mode-switch
+.small-button.active {
+  border-color: #f59e0b;
+  background: #f59e0b;
+  color: #17120a;
+}
+
+.qr-print-label-sheet {
+  width: 90mm;
+  min-height: 60mm;
+  padding: 7mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.qr-label-service {
+  margin-bottom: 3mm;
+  color: #343a40;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.qr-label-code {
+  margin: 2mm auto 3mm;
+  padding: 2mm;
+}
+
+.qr-label-code img {
+  width: 34mm;
+  max-width: 34mm;
+}
+
+.qr-print-label-sheet
+.qr-print-brand {
+  margin-bottom: 2mm;
+  font-size: 8px;
+  letter-spacing: 1.2px;
+}
+
+.qr-print-label-sheet h1 {
+  font-size: 22px;
+}
+
+.qr-print-label-sheet
+.qr-print-vehicle {
+  margin: 1mm 0 2mm;
+  font-size: 10px;
+}
+
+.qr-print-label-sheet h2 {
+  margin: 0 auto;
+  max-width: 70mm;
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.qr-label-contact {
+  margin-top: 2mm;
+  color: #555d65;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.qr-print-a4-sheet {
+  min-height: 277mm;
+  text-align: left;
+}
+
+.qr-a4-service-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+  margin-bottom: 34px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e1e5e8;
+}
+
+.qr-a4-service-head span,
+.qr-a4-service-head strong,
+.qr-a4-service-head small {
+  display: block;
+}
+
+.qr-a4-service-head
+> div:first-child
+> span {
+  margin-bottom: 5px;
+  color: #818990;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .8px;
+}
+
+.qr-a4-service-head
+> div:first-child
+> strong {
+  font-size: 20px;
+}
+
+.qr-a4-service-head
+> div:first-child
+> small {
+  max-width: 430px;
+  margin-top: 5px;
+  color: #727980;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.qr-a4-service-contact {
+  color: #606870;
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.qr-print-a4-sheet
+.qr-print-brand,
+.qr-print-a4-sheet h1,
+.qr-print-a4-sheet
+.qr-print-vehicle,
+.qr-print-a4-sheet
+.qr-print-code,
+.qr-print-a4-sheet h2,
+.qr-print-a4-sheet
+.qr-print-url,
+.qr-print-a4-sheet
+.qr-print-note {
+  text-align: center;
+}
+
+.qr-a4-benefits,
+.qr-a4-actions {
+  margin: 28px auto 0;
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.qr-a4-benefits > div,
+.qr-a4-actions > div {
+  padding: 14px;
+  border: 1px solid #e0e4e7;
+  border-radius: 10px;
+  background: #f7f8f9;
+}
+
+.qr-a4-benefits strong,
+.qr-a4-benefits span,
+.qr-a4-actions strong,
+.qr-a4-actions span {
+  display: block;
+}
+
+.qr-a4-benefits strong,
+.qr-a4-actions strong {
+  font-size: 11px;
+}
+
+.qr-a4-benefits span,
+.qr-a4-actions span {
+  margin-top: 5px;
+  color: #697179;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.qr-a4-actions {
+  margin-top: 10px;
+}
+
+@media (max-width: 650px) {
+  .qr-print-mode-switch {
+    margin-left: 0;
+  }
+
+  .qr-print-label-sheet {
+    width: 100%;
+  }
+
+  .qr-a4-service-head {
+    flex-direction: column;
+  }
+
+  .qr-a4-service-contact {
+    text-align: left;
+  }
+
+  .qr-a4-benefits,
+  .qr-a4-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  @page {
+    margin: 0;
+  }
+
+  .qr-print-mode-label
+  .qr-print-label-sheet {
+    width: 90mm;
+    height: 60mm;
+    min-height: 60mm;
+    padding: 6mm;
+    overflow: hidden;
+  }
+
+  .qr-print-mode-a4
+  .qr-print-a4-sheet {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 18mm;
+  }
+}
