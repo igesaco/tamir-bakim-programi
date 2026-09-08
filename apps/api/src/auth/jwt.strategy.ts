@@ -4,7 +4,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { FeatureKey } from '@prisma/client';
+import { FeatureKey, PermissionKey } from '@prisma/client';
 import { PassportStrategy } from '@nestjs/passport';
 import {
   ExtractJwt,
