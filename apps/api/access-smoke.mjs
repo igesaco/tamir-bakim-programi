@@ -212,7 +212,7 @@ async function main() {
   );
 
   await request(
-    '/inventory',
+    '/inventory/parts',
     {
       token:
         tenantToken,
@@ -330,7 +330,7 @@ async function main() {
   );
 
   await request(
-    '/inventory',
+    '/inventory/parts',
     {
       token:
         agencyTenantToken,
@@ -359,7 +359,7 @@ async function main() {
   );
 
   await request(
-    '/inventory',
+    '/inventory/parts',
     {
       token:
         tenantToken,
@@ -380,7 +380,7 @@ async function main() {
   );
 
   await request(
-    '/inventory',
+    '/inventory/parts',
     {
       token:
         tenantToken,
@@ -398,7 +398,7 @@ async function main() {
   );
 
   await request(
-    '/inventory',
+    '/inventory/parts',
     {
       token:
         tenantToken,
