@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 
 export default function RoleRoute({
   roles,
+  feature,
   children,
 }) {
   const { user, loading } = useAuth();
@@ -20,6 +21,20 @@ export default function RoleRoute({
     return (
       <Navigate
         to="/login"
+        replace
+      />
+    );
+  }
+
+  if (
+    feature &&
+    !user.features?.includes(
+      feature,
+    )
+  ) {
+    return (
+      <Navigate
+        to="/"
         replace
       />
     );
