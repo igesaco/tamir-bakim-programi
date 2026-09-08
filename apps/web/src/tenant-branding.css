@@ -81,3 +81,29 @@
   height: 34px;
   padding: 2px;
 }
+
+.branding-preview {
+  min-height: 190px;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  overflow: hidden;
+  border: 1px solid #30363d;
+  border-radius: 14px;
+}
+
+.branding-preview aside {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  background: var(--preview-sidebar);
+}
+
+.branding-preview main {
+  padding: 24px;
+  background: #101318;
+}
+
+.branding-preview main > span {
+  color: var(--preview-secondary);
+  font-weight: 800;
+}
