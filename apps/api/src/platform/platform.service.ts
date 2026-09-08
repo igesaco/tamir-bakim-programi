@@ -17,7 +17,9 @@ import { EntitlementsService } from '../entitlements/entitlements.service';
 import { defaultPermissionsForRole } from '../permissions/default-role-permissions';
 import { PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { UpdateOrganizationDto } from '../organizations/dto/update-organization.dto';
+import { CreatePlatformLedgerEntryDto } from './dto/create-platform-ledger-entry.dto';
+import { UpdateOrganizationBrandingDto } from './dto/update-organization-branding.dto';
+import { UpdateOrganizationCommercialDto } from './dto/update-organization-commercial.dto';
 
 @Injectable()
 export class PlatformService
@@ -200,6 +202,29 @@ export class PlatformService
           package: true,
           featureOverrides: true,
           rolePermissionOverrides: true,
+          users: {
+            where: {
+              role: UserRole.OWNER,
+            },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+              active: true,
+              createdAt: true,
+            },
+            orderBy: {
+              createdAt: 'asc',
+            },
+          },
+          platformLedgerEntries: {
+            orderBy: {
+              occurredAt: 'desc',
+            },
+            take: 50,
+          },
           _count: {
             select: {
               branches: true,
@@ -217,8 +242,39 @@ export class PlatformService
 
     return Promise.all(
       organizations.map(
-        async (organization) => ({
+        async (organization) => {
+          const ledgerTotals =
+            organization.platformLedgerEntries.reduce(
+              (totals, entry) => {
+                const amount =
+                  Number(entry.amount);
+
+                if (
+                  entry.type ===
+                  'DEBIT'
+                ) {
+                  totals.debit += amount;
+                } else {
+                  totals.credit += amount;
+                }
+
+                return totals;
+              },
+              {
+                debit: 0,
+                credit: 0,
+              },
+            );
+
+          return {
           ...organization,
+          ledgerBalance:
+            ledgerTotals.debit -
+            ledgerTotals.credit,
+          ledgerDebit:
+            ledgerTotals.debit,
+          ledgerCredit:
+            ledgerTotals.credit,
           effectiveFeatures:
             await this.entitlementsService.getEffectiveFeatures(
               organization.id,
@@ -227,14 +283,15 @@ export class PlatformService
             await this.permissionsService.getRolePermissionMatrix(
               organization.id,
             ),
-        }),
+          };
+        },
       ),
     );
   }
 
   async updateOrganizationBranding(
     organizationId: string,
-    dto: UpdateOrganizationDto,
+    dto: UpdateOrganizationBrandingDto,
   ) {
     return this.prisma.organization.update({
       where: {
@@ -253,6 +310,96 @@ export class PlatformService
           dto.sidebarColor,
         defaultPanelMode:
           dto.defaultPanelMode,
+        defaultWallpaper:
+          dto.defaultWallpaper,
+      },
+    });
+  }
+
+  async updateOrganizationCommercial(
+    organizationId: string,
+    dto: UpdateOrganizationCommercialDto,
+  ) {
+    return this.prisma.organization.update({
+      where: {
+        id: organizationId,
+      },
+      data: {
+        name:
+          dto.name,
+        email:
+          dto.email,
+        phone:
+          dto.phone,
+        whatsappPhone:
+          dto.whatsappPhone,
+        address:
+          dto.address,
+        contactPersonName:
+          dto.contactPersonName,
+        contactPersonPhone:
+          dto.contactPersonPhone,
+        platformNotes:
+          dto.platformNotes,
+        monthlyFee:
+          dto.monthlyFee,
+        active:
+          dto.active,
+      },
+    });
+  }
+
+  async listLedger(
+    organizationId: string,
+  ) {
+    await this.prisma.organization.findUniqueOrThrow({
+      where: {
+        id: organizationId,
+      },
+    });
+
+    return this.prisma.platformLedgerEntry.findMany({
+      where: {
+        organizationId,
+      },
+      orderBy: [
+        {
+          occurredAt: 'desc',
+        },
+        {
+          createdAt: 'desc',
+        },
+      ],
+    });
+  }
+
+  async createLedgerEntry(
+    organizationId: string,
+    dto: CreatePlatformLedgerEntryDto,
+  ) {
+    await this.prisma.organization.findUniqueOrThrow({
+      where: {
+        id: organizationId,
+      },
+    });
+
+    return this.prisma.platformLedgerEntry.create({
+      data: {
+        organizationId,
+        type:
+          dto.type,
+        amount:
+          dto.amount,
+        description:
+          dto.description.trim(),
+        dueDate:
+          dto.dueDate
+            ? new Date(dto.dueDate)
+            : null,
+        occurredAt:
+          dto.occurredAt
+            ? new Date(dto.occurredAt)
+            : new Date(),
       },
     });
   }
