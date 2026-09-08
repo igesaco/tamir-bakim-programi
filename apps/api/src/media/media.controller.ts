@@ -9,10 +9,13 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
-} from '@nestjs/common';
+  } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { FeatureKey, UserRole } from '@prisma/client';
+import { FeatureKey,
+  UserRole,
+  PermissionKey,
+} from '@prisma/client';
 import { diskStorage } from 'multer';
 import {
   extname,
@@ -20,6 +23,7 @@ import {
 } from 'path';
 
 import { Feature } from '../entitlements/feature.decorator';
+import { Permission } from '../permissions/permission.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UploadMediaDto } from './dto/upload-media.dto';
@@ -45,6 +49,7 @@ export class MediaController {
     private readonly mediaService: MediaService,
   ) {}
 
+@Permission(PermissionKey.MEDIA_UPLOAD)
   @Post('upload')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -149,6 +154,7 @@ export class MediaController {
     );
   }
 
+@Permission(PermissionKey.MEDIA_VIEW)
   @Get()
   findAll(@Req() req: any) {
     return this.mediaService.findAll(
@@ -158,6 +164,7 @@ export class MediaController {
     );
   }
 
+@Permission(PermissionKey.MEDIA_VIEW)
   @Get(':id')
   findOne(
     @Req() req: any,
