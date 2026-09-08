@@ -14,7 +14,15 @@
       "supportsTablet": true
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Araç ve servis fotoğraflarını iş emrine eklemek için fotoğraflarınıza erişim gerekir.",
+          "cameraPermission": "Araç ve servis fotoğraflarını çekmek için kameraya erişim gerekir.",
+          "microphonePermission": false
+        }
+      ]
     ]
   }
 }
