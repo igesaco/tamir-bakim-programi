@@ -8,10 +8,14 @@
   Post,
   Req,
   UseGuards,
-} from '@nestjs/common';
+  } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { FeatureKey, UserRole } from '@prisma/client';
+import { FeatureKey,
+  UserRole,
+  PermissionKey,
+} from '@prisma/client';
 
+import { Permission } from '../permissions/permission.decorator';
 import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -33,6 +37,7 @@ export class CustomersController {
     private readonly customersService: CustomersService,
   ) {}
 
+@Permission(PermissionKey.CUSTOMER_CREATE)
   @Post()
   create(
     @Req() req: any,
@@ -46,6 +51,7 @@ export class CustomersController {
     );
   }
 
+@Permission(PermissionKey.CUSTOMER_VIEW)
   @Get()
   findAll(@Req() req: any) {
     return this.customersService.findAll(
@@ -55,6 +61,7 @@ export class CustomersController {
     );
   }
 
+@Permission(PermissionKey.CUSTOMER_VIEW)
   @Get(':id')
   findOne(
     @Req() req: any,
@@ -68,6 +75,7 @@ export class CustomersController {
     );
   }
 
+@Permission(PermissionKey.CUSTOMER_UPDATE)
   @Patch(':id')
   update(
     @Req() req: any,
@@ -83,6 +91,7 @@ export class CustomersController {
     );
   }
 
+@Permission(PermissionKey.CUSTOMER_DELETE)
   @Delete(':id')
   remove(
     @Req() req: any,
