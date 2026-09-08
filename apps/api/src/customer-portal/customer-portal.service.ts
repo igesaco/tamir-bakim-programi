@@ -323,7 +323,7 @@ export class CustomerPortalService {
         registeredPhone
     ) {
       throw new BadRequestException(
-        'Telefon numarası bakım kartındaki müşteri kaydıyla eşleşmedi.',
+        'Bilgiler doğrulanamadı. Servis kaydındaki telefon numaranızı kontrol edin.',
       );
     }
 
