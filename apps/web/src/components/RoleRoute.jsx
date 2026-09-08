@@ -34,7 +34,7 @@ export default function RoleRoute({
   ) {
     return (
       <Navigate
-        to="/"
+        to="/account"
         replace
       />
     );
@@ -46,7 +46,7 @@ export default function RoleRoute({
   ) {
     return (
       <Navigate
-        to="/"
+        to="/account"
         replace
       />
     );
