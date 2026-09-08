@@ -21,6 +21,15 @@ const tabs = [
   ['contact', 'İletişim'],
 ];
 
+const tabFeatures = {
+  vehicles: 'VEHICLES_QR',
+  maintenance: 'MAINTENANCE',
+  quotes: 'QUOTES',
+  appointments: 'APPOINTMENTS',
+  account: 'CASHIER',
+  contact: 'CUSTOMERS',
+};
+
 const emptyQuoteItem = () => ({
   type: 'LABOR',
   name: '',
@@ -88,10 +97,19 @@ export default function CustomerDetail() {
   const [error, setError] =
     useState('');
 
-  const canViewFinance = [
-    'OWNER',
-    'MANAGER',
-  ].includes(user?.role);
+  const hasFeature = (
+    feature,
+  ) =>
+    user?.features?.includes(
+      feature,
+    ) ?? false;
+
+  const canViewFinance =
+    [
+      'OWNER',
+      'MANAGER',
+    ].includes(user?.role) &&
+    hasFeature('CASHIER');
 
   const [vehicleForm, setVehicleForm] =
     useState({
@@ -202,24 +220,58 @@ export default function CustomerDetail() {
   async function load() {
     setError('');
 
-    const requests = [
-      api.get(`/customers/${id}`),
-      api.get('/service-orders'),
-      api.get('/quotes'),
-      api.get('/appointments'),
-      api.get('/maintenance/plans'),
-      api.get('/maintenance/records'),
-      api.get('/maintenance/packages'),
-    ];
-
-    if (canViewFinance) {
-      requests.push(
-        api.get('/billing/payments'),
-      );
-    }
+    const emptyResponse =
+      Promise.resolve({
+        data: [],
+      });
 
     const responses =
-      await Promise.all(requests);
+      await Promise.all([
+        api.get(`/customers/${id}`),
+        hasFeature(
+          'SERVICE_ORDERS',
+        )
+          ? api.get(
+              '/service-orders',
+            )
+          : emptyResponse,
+        hasFeature('QUOTES')
+          ? api.get('/quotes')
+          : emptyResponse,
+        hasFeature(
+          'APPOINTMENTS',
+        )
+          ? api.get(
+              '/appointments',
+            )
+          : emptyResponse,
+        hasFeature(
+          'MAINTENANCE',
+        )
+          ? api.get(
+              '/maintenance/plans',
+            )
+          : emptyResponse,
+        hasFeature(
+          'MAINTENANCE',
+        )
+          ? api.get(
+              '/maintenance/records',
+            )
+          : emptyResponse,
+        hasFeature(
+          'MAINTENANCE',
+        )
+          ? api.get(
+              '/maintenance/packages',
+            )
+          : emptyResponse,
+        canViewFinance
+          ? api.get(
+              '/billing/payments',
+            )
+          : emptyResponse,
+      ]);
 
     const [
       customerResponse,
@@ -324,17 +376,27 @@ export default function CustomerDetail() {
       );
     });
 
-    api.get('/vehicle-catalog/makes')
-      .then((response) => {
-        setMakes(response.data);
-        setCatalogWarning('');
-      })
-      .catch(() => {
-        setMakes([]);
-        setCatalogWarning(
-          'Araç marka kataloğu yüklenemedi. Marka ve modeli manuel yazabilirsiniz.',
-        );
-      });
+    if (
+      hasFeature(
+        'VEHICLES_QR',
+      )
+    ) {
+      api.get(
+        '/vehicle-catalog/makes',
+      )
+        .then((response) => {
+          setMakes(
+            response.data,
+          );
+          setCatalogWarning('');
+        })
+        .catch(() => {
+          setMakes([]);
+          setCatalogWarning(
+            'Araç marka kataloğu yüklenemedi. Marka ve modeli manuel yazabilirsiniz.',
+          );
+        });
+    }
   }, [id, canViewFinance]);
 
   const quoteTotals =
@@ -1025,8 +1087,13 @@ export default function CustomerDetail() {
         {tabs
           .filter(
             ([key]) =>
-              key !== 'account' ||
-              canViewFinance,
+              hasFeature(
+                tabFeatures[key],
+              ) &&
+              (
+                key !== 'account' ||
+                canViewFinance
+              ),
           )
           .map(
             ([key, label]) => (
