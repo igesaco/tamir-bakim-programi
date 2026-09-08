@@ -165,7 +165,7 @@ export default function App() {
               index
               element={
                 <ForRoles
-                  roles={SERVICE_ROLES}
+                  roles={SERVICE_ORDER_ROLES}
                   feature="DASHBOARD"
                 >
                   <Dashboard />
