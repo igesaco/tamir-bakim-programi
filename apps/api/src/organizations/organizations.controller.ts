@@ -7,13 +7,15 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { UserRole } from '@prisma/client';
+import { FeatureKey, UserRole } from '@prisma/client';
 
 import { OrganizationsService } from './organizations.service';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
+import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 
+@Feature(FeatureKey.SETTINGS)
 @Controller('organizations')
 @UseGuards(AuthGuard('jwt'))
 export class OrganizationsController {
