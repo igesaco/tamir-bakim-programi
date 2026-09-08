@@ -5,6 +5,18 @@ import {
 } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
+function defaultPathForUser(user) {
+  if (user?.role === 'WAREHOUSE') {
+    return '/inventory';
+  }
+
+  if (user?.role === 'ACCOUNTING') {
+    return '/cashier';
+  }
+
+  return '/';
+}
+
 export default function Login() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
@@ -15,7 +27,12 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
 
   if (user) {
-    return <Navigate to="/" replace />;
+    return (
+      <Navigate
+        to={defaultPathForUser(user)}
+        replace
+      />
+    );
   }
 
   async function handleSubmit(event) {
@@ -25,8 +42,17 @@ export default function Login() {
     setError('');
 
     try {
-      await login(email, password);
-      navigate('/');
+      const loggedInUser =
+        await login(
+          email,
+          password,
+        );
+
+      navigate(
+        defaultPathForUser(
+          loggedInUser,
+        ),
+      );
     } catch {
       setError('E-posta veya şifre hatalı.');
     } finally {
