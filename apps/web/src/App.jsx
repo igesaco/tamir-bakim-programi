@@ -61,6 +61,16 @@ const MANAGEMENT_ROLES = [
   'MANAGER',
 ];
 
+const INVENTORY_ROLES = [
+  ...MANAGEMENT_ROLES,
+  'WAREHOUSE',
+];
+
+const FINANCE_ROLES = [
+  ...MANAGEMENT_ROLES,
+  'ACCOUNTING',
+];
+
 function ProtectedLayout() {
   return (
     <ProtectedRoute>
@@ -285,7 +295,7 @@ export default function App() {
               path="inventory"
               element={
                 <ForRoles
-                  roles={MANAGEMENT_ROLES}
+                  roles={INVENTORY_ROLES}
                   feature="INVENTORY"
                 >
                   <Inventory />
@@ -297,7 +307,7 @@ export default function App() {
               path="suppliers"
               element={
                 <ForRoles
-                  roles={MANAGEMENT_ROLES}
+                  roles={INVENTORY_ROLES}
                   feature="SUPPLIERS"
                 >
                   <Suppliers />
@@ -345,7 +355,7 @@ export default function App() {
               path="cashier"
               element={
                 <ForRoles
-                  roles={MANAGEMENT_ROLES}
+                  roles={FINANCE_ROLES}
                   feature="CASHIER"
                 >
                   <Cashier />
@@ -357,7 +367,7 @@ export default function App() {
               path="reports"
               element={
                 <ForRoles
-                  roles={MANAGEMENT_ROLES}
+                  roles={FINANCE_ROLES}
                   feature="REPORTS"
                 >
                   <Reports />
