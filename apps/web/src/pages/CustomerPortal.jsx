@@ -127,6 +127,7 @@ export default function CustomerPortal() {
     useState({
       nationalId: '',
       plate: '',
+      phone: '',
     });
 
   const [
@@ -162,8 +163,8 @@ export default function CustomerPortal() {
             body:
               fromMaintenanceCard
                 ? {
-                    nationalId:
-                      identity.nationalId,
+                    phone:
+                      identity.phone,
                     qrToken,
                   }
                 : identity,
@@ -256,7 +257,7 @@ export default function CustomerPortal() {
 
             <p>
               {fromMaintenanceCard
-                ? 'Bakım kartındaki araca ait müşteri bilgilerini açmak için T.C. kimlik numaranızla doğrulama başlatın.'
+                ? 'Bakım kartındaki aracın sahibi olduğunuzu, servis kaydındaki telefon numaranızla doğrulayın.'
                 : 'T.C. kimlik numaranız ve araç plakanız ile doğrulama başlatın.'}
             </p>
 
@@ -264,28 +265,49 @@ export default function CustomerPortal() {
               onSubmit={start}
               className="customer-portal-form"
             >
-              <label>
-                T.C. Kimlik No
-                <input
-                  inputMode="numeric"
-                  maxLength="11"
-                  value={
-                    identity.nationalId
-                  }
-                  onChange={(event) =>
-                    setIdentity({
-                      ...identity,
-                      nationalId:
-                        event.target.value
-                          .replace(
-                            /\D/g,
-                            '',
-                          ),
-                    })
-                  }
-                  required
-                />
-              </label>
+              {fromMaintenanceCard ? (
+                <label>
+                  Telefon Numarası
+                  <input
+                    inputMode="tel"
+                    placeholder="05xx xxx xx xx"
+                    value={
+                      identity.phone
+                    }
+                    onChange={(event) =>
+                      setIdentity({
+                        ...identity,
+                        phone:
+                          event.target.value,
+                      })
+                    }
+                    required
+                  />
+                </label>
+              ) : (
+                <label>
+                  T.C. Kimlik No
+                  <input
+                    inputMode="numeric"
+                    maxLength="11"
+                    value={
+                      identity.nationalId
+                    }
+                    onChange={(event) =>
+                      setIdentity({
+                        ...identity,
+                        nationalId:
+                          event.target.value
+                            .replace(
+                              /\D/g,
+                              '',
+                            ),
+                      })
+                    }
+                    required
+                  />
+                </label>
+              )}
 
               {!fromMaintenanceCard && (
                 <label>
@@ -325,7 +347,7 @@ export default function CustomerPortal() {
 
             <div className="customer-portal-security">
               {fromMaintenanceCard
-                ? 'QR kod yalnızca dijital bakım kartını açar. Kişisel ve finansal bilgiler SMS doğrulaması sonrasında gösterilir.'
+                ? 'QR kod yalnızca dijital bakım kartını açar. Telefon eşleşmesi ve SMS doğrulaması olmadan kişisel bilgiler gösterilmez.'
                 : 'Cari ve ödeme bilgileri yalnızca SMS doğrulaması sonrasında gösterilir.'}
             </div>
           </section>
