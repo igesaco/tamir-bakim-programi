@@ -23,6 +23,7 @@ import { EntitlementsService } from '../entitlements/entitlements.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StartPortalAccessDto } from './dto/start-portal-access.dto';
 import { StartPortalQrAccessDto } from './dto/start-portal-qr-access.dto';
+import { StartPortalPhoneAccessDto } from './dto/start-portal-phone-access.dto';
 import { VerifyPortalAccessDto } from './dto/verify-portal-access.dto';
 
 @Injectable()
@@ -269,6 +270,173 @@ export class CustomerPortalService {
           this.maskPhone(
             vehicle.customer.phone,
           ),
+        ...delivery,
+      };
+    } catch (error) {
+      await this.prisma.customerPortalChallenge.delete({
+        where: {
+          id: challenge.id,
+        },
+      });
+
+      throw error;
+    }
+  }
+
+  async startFromPhone(
+    dto: StartPortalPhoneAccessDto,
+  ) {
+    const normalized =
+      this.normalizePhone(
+        dto.phone,
+      );
+
+    if (normalized.length < 10) {
+      throw new BadRequestException(
+        'Telefon numarası geçersiz.',
+      );
+    }
+
+    const candidates = [
+      normalized,
+      `0${normalized}`,
+      `90${normalized}`,
+      `+90${normalized}`,
+    ];
+
+    const customers =
+      await this.prisma.customer.findMany({
+        where: {
+          phone: {
+            in: candidates,
+          },
+          portalEnabled: true,
+          organization: {
+            active: true,
+          },
+          vehicles: {
+            some: {},
+          },
+        },
+        include: {
+          vehicles: {
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 1,
+          },
+        },
+        take: 10,
+      });
+
+    const customer =
+      customers.find(
+        (item) =>
+          item.phone &&
+          this.normalizePhone(
+            item.phone,
+          ) === normalized &&
+          item.vehicles.length > 0,
+      );
+
+    const vehicle =
+      customer?.vehicles[0];
+
+    if (
+      !customer ||
+      !vehicle ||
+      !customer.phone
+    ) {
+      throw new BadRequestException(
+        'Bilgiler doğrulanamadı. Servis kaydındaki telefon numaranızı kontrol edin.',
+      );
+    }
+
+    const features =
+      await this.entitlementsService.getEffectiveFeatures(
+        customer.organizationId,
+      );
+
+    if (
+      !features.includes(
+        FeatureKey.CUSTOMER_PORTAL,
+      )
+    ) {
+      throw new ForbiddenException(
+        'Müşteri uygulaması bu işletme için aktif değil.',
+      );
+    }
+
+    const recentCount =
+      await this.prisma.customerPortalChallenge.count({
+        where: {
+          customerId:
+            customer.id,
+          vehicleId:
+            vehicle.id,
+          createdAt: {
+            gte: new Date(
+              Date.now() -
+                15 * 60 * 1000,
+            ),
+          },
+        },
+      });
+
+    if (recentCount >= 5) {
+      throw new BadRequestException(
+        'Çok fazla doğrulama isteği yapıldı. Lütfen daha sonra tekrar deneyin.',
+      );
+    }
+
+    const code =
+      String(
+        randomInt(
+          100000,
+          1000000,
+        ),
+      );
+
+    const codeHash =
+      await bcrypt.hash(
+        code,
+        10,
+      );
+
+    const challenge =
+      await this.prisma.customerPortalChallenge.create({
+        data: {
+          customerId:
+            customer.id,
+          vehicleId:
+            vehicle.id,
+          codeHash,
+          expiresAt:
+            new Date(
+              Date.now() +
+                5 * 60 * 1000,
+            ),
+        },
+      });
+
+    try {
+      const delivery =
+        await this.sendOtp(
+          customer.phone,
+          code,
+        );
+
+      return {
+        challengeId:
+          challenge.id,
+        expiresInSeconds:
+          300,
+        maskedPhone:
+          this.maskPhone(
+            customer.phone,
+          ),
+        source:
+          'CUSTOMER_APP_PHONE',
         ...delivery,
       };
     } catch (error) {
