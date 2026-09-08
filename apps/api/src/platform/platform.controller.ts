@@ -27,7 +27,9 @@ import { ReplaceRolePermissionsDto } from './dto/replace-role-permissions.dto';
 import { SetFeatureOverrideDto } from './dto/set-feature-override.dto';
 import { SetRolePermissionDto } from './dto/set-role-permission.dto';
 import { UpdateOrganizationPackageDto } from './dto/update-organization-package.dto';
-import { UpdateOrganizationDto } from '../organizations/dto/update-organization.dto';
+import { CreatePlatformLedgerEntryDto } from './dto/create-platform-ledger-entry.dto';
+import { UpdateOrganizationBrandingDto } from './dto/update-organization-branding.dto';
+import { UpdateOrganizationCommercialDto } from './dto/update-organization-commercial.dto';
 
 class PlatformLoginDto {
   @IsEmail()
@@ -89,9 +91,52 @@ export class PlatformController {
   )
   updateBranding(
     @Param('id') id: string,
-    @Body() dto: UpdateOrganizationDto,
+    @Body() dto: UpdateOrganizationBrandingDto,
   ) {
     return this.platformService.updateOrganizationBranding(
+      id,
+      dto,
+    );
+  }
+
+  @Patch('organizations/:id/commercial')
+  @UseGuards(
+    AuthGuard('jwt'),
+    PlatformGuard,
+  )
+  updateCommercial(
+    @Param('id') id: string,
+    @Body() dto: UpdateOrganizationCommercialDto,
+  ) {
+    return this.platformService.updateOrganizationCommercial(
+      id,
+      dto,
+    );
+  }
+
+  @Get('organizations/:id/ledger')
+  @UseGuards(
+    AuthGuard('jwt'),
+    PlatformGuard,
+  )
+  ledger(
+    @Param('id') id: string,
+  ) {
+    return this.platformService.listLedger(
+      id,
+    );
+  }
+
+  @Post('organizations/:id/ledger')
+  @UseGuards(
+    AuthGuard('jwt'),
+    PlatformGuard,
+  )
+  createLedgerEntry(
+    @Param('id') id: string,
+    @Body() dto: CreatePlatformLedgerEntryDto,
+  ) {
+    return this.platformService.createLedgerEntry(
       id,
       dto,
     );
