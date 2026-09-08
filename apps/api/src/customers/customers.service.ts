@@ -17,6 +17,24 @@ export class CustomersService {
     private readonly prisma: PrismaService,
   ) {}
 
+  private cleanPhone(
+    phone?: string,
+  ) {
+    if (
+      phone === undefined
+    ) {
+      return undefined;
+    }
+
+    const digits =
+      phone.replace(
+        /\D/g,
+        '',
+      );
+
+    return digits || null;
+  }
+
   private accessWhere(
     organizationId: string,
     role: UserRole,
@@ -123,7 +141,9 @@ export class CustomersService {
         lastName:
           dto.lastName?.trim(),
         phone:
-          dto.phone?.trim(),
+          this.cleanPhone(
+            dto.phone,
+          ),
         email:
           dto.email
             ?.trim()
@@ -298,7 +318,9 @@ export class CustomersService {
               lastName:
                 dto.lastName,
               phone:
-                dto.phone,
+                this.cleanPhone(
+                  dto.phone,
+                ),
               email:
                 dto.email
                   ?.trim()
