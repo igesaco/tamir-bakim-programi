@@ -219,6 +219,38 @@ function errorMessage(
     : message || fallback;
 }
 
+function formatMoney(
+  value,
+) {
+  return new Intl.NumberFormat(
+    'tr-TR',
+    {
+      style: 'currency',
+      currency: 'TRY',
+      maximumFractionDigits: 2,
+    },
+  ).format(
+    Number(value || 0),
+  );
+}
+
+function formatDate(
+  value,
+) {
+  if (!value) {
+    return '-';
+  }
+
+  return new Intl.DateTimeFormat(
+    'tr-TR',
+    {
+      dateStyle: 'medium',
+    },
+  ).format(
+    new Date(value),
+  );
+}
+
 function Toggle({
   checked,
   onChange,
@@ -259,13 +291,21 @@ export default function PlatformAdmin() {
   const [search, setSearch] =
     useState('');
   const [activeSection, setActiveSection] =
-    useState('package');
+    useState('customer');
   const [busy, setBusy] =
     useState(false);
   const [error, setError] =
     useState('');
   const [message, setMessage] =
     useState('');
+
+  const [ledgerForm, setLedgerForm] =
+    useState({
+      type: 'DEBIT',
+      amount: '',
+      description: '',
+      dueDate: '',
+    });
 
   async function load() {
     const [
@@ -368,6 +408,28 @@ export default function PlatformAdmin() {
         sum +
         Number(
           item._count?.vehicles ||
+            0,
+        ),
+      0,
+    );
+
+  const totalMonthlyFee =
+    organizations.reduce(
+      (sum, item) =>
+        sum +
+        Number(
+          item.monthlyFee ||
+            0,
+        ),
+      0,
+    );
+
+  const totalLedgerBalance =
+    organizations.reduce(
+      (sum, item) =>
+        sum +
+        Number(
+          item.ledgerBalance ||
             0,
         ),
       0,
@@ -594,9 +656,101 @@ export default function PlatformAdmin() {
             defaultPanelMode:
               selected.defaultPanelMode ||
               'classic',
+            defaultWallpaper:
+              selected.defaultWallpaper ||
+              'soft',
           },
         ),
       'Panel tasarımı güncellendi.',
+    );
+  }
+
+  function saveCommercial(
+    event,
+  ) {
+    event.preventDefault();
+
+    if (!selected) {
+      return;
+    }
+
+    return run(
+      () =>
+        api.patch(
+          `/platform/organizations/${selected.id}/commercial`,
+          {
+            name:
+              selected.name,
+            email:
+              selected.email || undefined,
+            phone:
+              selected.phone || undefined,
+            whatsappPhone:
+              selected.whatsappPhone || undefined,
+            address:
+              selected.address || undefined,
+            contactPersonName:
+              selected.contactPersonName || undefined,
+            contactPersonPhone:
+              selected.contactPersonPhone || undefined,
+            platformNotes:
+              selected.platformNotes || undefined,
+            monthlyFee:
+              Number(
+                selected.monthlyFee ||
+                0,
+              ),
+            active:
+              Boolean(
+                selected.active,
+              ),
+          },
+        ),
+      'Müşteri işletme bilgileri güncellendi.',
+    );
+  }
+
+  function addLedgerEntry(
+    event,
+  ) {
+    event.preventDefault();
+
+    if (
+      !selected ||
+      !ledgerForm.amount ||
+      !ledgerForm.description.trim()
+    ) {
+      return;
+    }
+
+    return run(
+      () =>
+        api.post(
+          `/platform/organizations/${selected.id}/ledger`,
+          {
+            type:
+              ledgerForm.type,
+            amount:
+              Number(
+                ledgerForm.amount,
+              ),
+            description:
+              ledgerForm.description.trim(),
+            dueDate:
+              ledgerForm.dueDate ||
+              undefined,
+          },
+        ).then(() => {
+          setLedgerForm({
+            type: 'DEBIT',
+            amount: '',
+            description: '',
+            dueDate: '',
+          });
+        }),
+      ledgerForm.type === 'DEBIT'
+        ? 'Cari borç kaydı eklendi.'
+        : 'Tahsilat kaydı eklendi.',
     );
   }
 
