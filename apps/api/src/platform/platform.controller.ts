@@ -27,6 +27,7 @@ import { ReplaceRolePermissionsDto } from './dto/replace-role-permissions.dto';
 import { SetFeatureOverrideDto } from './dto/set-feature-override.dto';
 import { SetRolePermissionDto } from './dto/set-role-permission.dto';
 import { UpdateOrganizationPackageDto } from './dto/update-organization-package.dto';
+import { CreateOrganizationCustomerDto } from './dto/create-organization-customer.dto';
 import { CreatePlatformLedgerEntryDto } from './dto/create-platform-ledger-entry.dto';
 import { UpdateOrganizationBrandingDto } from './dto/update-organization-branding.dto';
 import { UpdateOrganizationCommercialDto } from './dto/update-organization-commercial.dto';
@@ -85,6 +86,19 @@ export class PlatformController {
   )
   organizations() {
     return this.platformService.listOrganizations();
+  }
+
+  @Post('organizations')
+  @UseGuards(
+    AuthGuard('jwt'),
+    PlatformGuard,
+  )
+  createOrganization(
+    @Body() dto: CreateOrganizationCustomerDto,
+  ) {
+    return this.platformService.createOrganizationCustomer(
+      dto,
+    );
   }
 
   @Patch('organizations/:id/branding')
