@@ -5,13 +5,17 @@ import {
   Patch,
   Req,
   UseGuards,
-} from '@nestjs/common';
+  } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { FeatureKey, UserRole } from '@prisma/client';
+import { FeatureKey,
+  UserRole,
+  PermissionKey,
+} from '@prisma/client';
 
 import { OrganizationsService } from './organizations.service';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { Feature } from '../entitlements/feature.decorator';
+import { Permission } from '../permissions/permission.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 
@@ -23,6 +27,7 @@ export class OrganizationsController {
     private readonly organizationsService: OrganizationsService,
   ) {}
 
+@Permission(PermissionKey.SETTINGS_VIEW)
   @Get('me')
   findMine(@Req() req: any) {
     return this.organizationsService.findMine(
@@ -30,6 +35,7 @@ export class OrganizationsController {
     );
   }
 
+@Permission(PermissionKey.SETTINGS_MANAGE)
   @Patch('me')
   @Roles(UserRole.OWNER, UserRole.MANAGER)
   @UseGuards(RolesGuard)
