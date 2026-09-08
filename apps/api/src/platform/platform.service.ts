@@ -223,7 +223,6 @@ export class PlatformService
             orderBy: {
               occurredAt: 'desc',
             },
-            take: 50,
           },
           _count: {
             select: {
