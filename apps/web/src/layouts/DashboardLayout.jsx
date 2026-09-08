@@ -197,26 +197,7 @@ const desktopWallpapers = [
   },
 ];
 
-const uiModes = [
-  {
-    value: 'classic',
-    label: 'Klasik',
-    description:
-      'Sol menülü standart yönetim görünümü.',
-  },
-  {
-    value: 'desktop',
-    label: 'Masaüstü',
-    description:
-      'Tam masaüstü, uygulama ikonları ve klasör tipi pencereler.',
-  },
-  {
-    value: 'focus',
-    label: 'Çalışma Alanı',
-    description:
-      'Üst yatay uygulama şeridi ve geniş çalışma ekranı.',
-  },
-];
+
 
 function MenuIcon({
   name,
