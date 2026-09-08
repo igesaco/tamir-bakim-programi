@@ -1076,3 +1076,68 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.platform-owner-profile-form {
+  margin-top: 12px;
+  padding: 11px;
+  border: 1px solid #2d3740;
+  border-radius: 10px;
+  background: #0d1217;
+}
+
+.platform-owner-profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.platform-owner-profile-grid input {
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid #303943;
+  border-radius: 8px;
+  outline: none;
+  background: #10161b;
+  color: #e8edf1;
+  font-size: 8px;
+}
+
+.platform-owner-profile-grid input:focus {
+  border-color: #f59e0b;
+}
+
+.platform-owner-profile-grid .full {
+  grid-column: 1 / -1;
+}
+
+.platform-owner-save {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 9px;
+  border: 1px solid #5b461f;
+  border-radius: 8px;
+  background:
+    linear-gradient(
+      145deg,
+      #2a2111,
+      #1c160d
+    );
+  color: #f2b548;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.platform-owner-save:hover {
+  border-color: #f59e0b;
+}
+
+@media (max-width: 520px) {
+  .platform-owner-profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-owner-profile-grid .full {
+    grid-column: auto;
+  }
+}
