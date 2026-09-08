@@ -101,6 +101,26 @@ export class VehiclesController {
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
   )
+  @Permission(PermissionKey.VEHICLE_QR)
+  @Patch(':id/qr/regenerate')
+  regenerateQr(
+    @Req() req: any,
+    @Param('id') id: string,
+  ) {
+    return this.vehiclesService.regenerateQr(
+      req.user.organizationId,
+      id,
+      req.user.role,
+      req.user.branchId,
+    );
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+  )
 @Permission(PermissionKey.VEHICLE_UPDATE)
   @Patch(':id')
   update(
