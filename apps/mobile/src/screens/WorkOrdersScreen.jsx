@@ -1,4 +1,5 @@
 import {
+  Image,
   Modal,
   Pressable,
   RefreshControl,
@@ -15,6 +16,10 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 
 import api from '../api/client';
+import {
+  mediaUrl,
+  photoLabel,
+} from '../media';
 import { useAuth } from '../auth/AuthContext';
 import {
   canUse,
@@ -315,45 +320,19 @@ export default function WorkOrdersScreen() {
     }
   }
 
-  async function takePhoto() {
-    if (!selected) {
-      return;
-    }
-
-    setError('');
-    setMessage('');
-
-    const permission =
-      await ImagePicker.requestCameraPermissionsAsync();
-
-    if (!permission.granted) {
-      setError(
-        'Fotoğraf çekmek için kamera izni gerekli.',
-      );
-      return;
-    }
-
-    const result =
-      await ImagePicker.launchCameraAsync({
-        quality: 0.72,
-        allowsEditing: false,
-      });
-
-    if (result.canceled) {
-      return;
-    }
-
-    const asset =
-      result.assets?.[0];
-
-    if (!asset?.uri) {
-      setError(
-        'Fotoğraf alınamadı.',
-      );
+  async function uploadPhotoAsset(
+    asset,
+  ) {
+    if (
+      !selected ||
+      !asset?.uri
+    ) {
       return;
     }
 
     setBusy(true);
+    setError('');
+    setMessage('');
 
     try {
       const formData =
@@ -409,7 +388,7 @@ export default function WorkOrdersScreen() {
       );
 
       setMessage(
-        'Fotoğraf iş emrine eklendi.',
+        'Fotoğraf iş emrine ve araca eklendi.',
       );
 
       await refreshSelected();
@@ -423,6 +402,92 @@ export default function WorkOrdersScreen() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function takePhoto() {
+    if (!selected) {
+      return;
+    }
+
+    setError('');
+    setMessage('');
+
+    const permission =
+      await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      setError(
+        'Fotoğraf çekmek için kamera izni gerekli.',
+      );
+      return;
+    }
+
+    const result =
+      await ImagePicker.launchCameraAsync({
+        quality: 0.72,
+        allowsEditing: false,
+      });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const asset =
+      result.assets?.[0];
+
+    if (!asset?.uri) {
+      setError(
+        'Fotoğraf alınamadı.',
+      );
+      return;
+    }
+
+    await uploadPhotoAsset(
+      asset,
+    );
+  }
+
+  async function pickPhoto() {
+    if (!selected) {
+      return;
+    }
+
+    setError('');
+    setMessage('');
+
+    const permission =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      setError(
+        'Galeriden fotoğraf seçmek için izin gerekli.',
+      );
+      return;
+    }
+
+    const result =
+      await ImagePicker.launchImageLibraryAsync({
+        quality: 0.72,
+        allowsEditing: false,
+      });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const asset =
+      result.assets?.[0];
+
+    if (!asset?.uri) {
+      setError(
+        'Fotoğraf seçilemedi.',
+      );
+      return;
+    }
+
+    await uploadPhotoAsset(
+      asset,
+    );
   }
 
   async function refresh() {
@@ -810,22 +875,70 @@ export default function WorkOrdersScreen() {
                     )}
                   </View>
 
-                  <View style={styles.photoButton}>
-                    <Button
-                      title={
-                        busy
-                          ? 'Yükleniyor...'
-                          : 'Kamera ile Fotoğraf Çek'
-                      }
-                      disabled={busy}
-                      onPress={takePhoto}
-                    />
+                  <View style={styles.photoActionRow}>
+                    <View style={styles.photoAction}>
+                      <Button
+                        title={
+                          busy
+                            ? 'Yükleniyor...'
+                            : 'Kamera'
+                        }
+                        disabled={busy}
+                        onPress={takePhoto}
+                      />
+                    </View>
+
+                    <View style={styles.photoAction}>
+                      <Button
+                        title="Galeriden Ekle"
+                        tone="ghost"
+                        disabled={busy}
+                        onPress={pickPhoto}
+                      />
+                    </View>
                   </View>
 
-                  <Text style={styles.mediaCount}>
-                    İş emrindeki medya:{' '}
-                    {selected?.media?.length || 0}
-                  </Text>
+                  {selected?.media?.length ? (
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={
+                        styles.mediaRow
+                      }
+                    >
+                      {selected.media.map(
+                        (media) => (
+                          <View
+                            key={media.id}
+                            style={styles.mediaItem}
+                          >
+                            <Image
+                              source={{
+                                uri:
+                                  mediaUrl(
+                                    media,
+                                  ),
+                              }}
+                              style={styles.mediaImage}
+                            />
+
+                            <Text
+                              numberOfLines={1}
+                              style={styles.mediaLabel}
+                            >
+                              {photoLabel(
+                                media.type,
+                              )}
+                            </Text>
+                          </View>
+                        ),
+                      )}
+                    </ScrollView>
+                  ) : (
+                    <Text style={styles.mediaCount}>
+                      Bu iş emrinde henüz fotoğraf yok.
+                    </Text>
+                  )
                 </View>
               ) : null}
 
@@ -1089,8 +1202,34 @@ const styles = StyleSheet.create({
   segmentTextActive: {
     color: colors.accent,
   },
-  photoButton: {
+  photoActionRow: {
     marginTop: 10,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  photoAction: {
+    flex: 1,
+  },
+  mediaRow: {
+    marginTop: 10,
+    gap: 8,
+  },
+  mediaItem: {
+    width: 126,
+  },
+  mediaImage: {
+    width: 126,
+    height: 92,
+    borderRadius: 10,
+    backgroundColor:
+      colors.panel2,
+  },
+  mediaLabel: {
+    marginTop: 4,
+    color:
+      colors.muted,
+    fontSize: 8,
+    fontWeight: '700',
   },
   mediaCount: {
     marginTop: 8,
