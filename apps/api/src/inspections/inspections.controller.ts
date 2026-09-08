@@ -9,9 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { UserRole 
-  FeatureKey,
-} from '@prisma/client';
+import { FeatureKey, UserRole } from '@prisma/client';
 
 import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
