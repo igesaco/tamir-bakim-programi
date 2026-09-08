@@ -710,6 +710,71 @@ export class CustomerPortalService {
           0,
         );
 
+    const now =
+      new Date();
+
+    const dueSoonAt =
+      new Date(
+        now.getTime() +
+          30 *
+            24 *
+            60 *
+            60 *
+            1000,
+      );
+
+    const customerMaintenancePlans =
+      maintenancePlans.map(
+        (plan) => {
+          const remainingKm =
+            plan.nextDueKm ===
+              null ||
+            plan.nextDueKm ===
+              undefined
+              ? null
+              : plan.nextDueKm -
+                vehicle.mileage;
+
+          const kmOverdue =
+            remainingKm !== null &&
+            remainingKm <= 0;
+
+          const dateOverdue =
+            Boolean(
+              plan.nextDueDate &&
+                plan.nextDueDate <
+                  now,
+            );
+
+          const kmDueSoon =
+            remainingKm !== null &&
+            remainingKm > 0 &&
+            remainingKm <= 1000;
+
+          const dateDueSoon =
+            Boolean(
+              plan.nextDueDate &&
+                plan.nextDueDate >=
+                  now &&
+                plan.nextDueDate <=
+                  dueSoonAt,
+            );
+
+          return {
+            ...plan,
+            remainingKm,
+            alertStatus:
+              kmOverdue ||
+              dateOverdue
+                ? 'OVERDUE'
+                : kmDueSoon ||
+                    dateDueSoon
+                  ? 'DUE_SOON'
+                  : 'UPCOMING',
+          };
+        },
+      );
+
     return {
       customer,
       vehicle,
@@ -727,7 +792,8 @@ export class CustomerPortalService {
         null,
       activeServiceOrders,
       maintenanceHistory,
-      maintenancePlans,
+      maintenancePlans:
+        customerMaintenancePlans,
       payments,
     };
   }
