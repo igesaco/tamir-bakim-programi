@@ -102,7 +102,8 @@ VALUES
     'STAFF'::"FeatureKey",
     'NOTIFICATIONS'::"FeatureKey",
     'INSPECTIONS'::"FeatureKey",
-    'MEDIA'::"FeatureKey"
+    'MEDIA'::"FeatureKey",
+    'CUSTOMER_PORTAL'::"FeatureKey"
   ],
   10,
   CURRENT_TIMESTAMP
@@ -126,7 +127,8 @@ VALUES
     'INVENTORY'::"FeatureKey",
     'SUPPLIERS'::"FeatureKey",
     'STAFF'::"FeatureKey",
-    'BRANCHES'::"FeatureKey"
+    'BRANCHES'::"FeatureKey",
+    'CUSTOMER_PORTAL'::"FeatureKey"
   ],
   20,
   CURRENT_TIMESTAMP
