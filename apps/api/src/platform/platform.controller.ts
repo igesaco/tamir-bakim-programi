@@ -11,7 +11,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { FeatureKey } from '@prisma/client';
+import {
+  FeatureKey,
+  PermissionKey,
+  UserRole,
+} from '@prisma/client';
 import {
   IsEmail,
   IsString,
@@ -19,7 +23,9 @@ import {
 
 import { PlatformGuard } from './platform.guard';
 import { PlatformService } from './platform.service';
+import { ReplaceRolePermissionsDto } from './dto/replace-role-permissions.dto';
 import { SetFeatureOverrideDto } from './dto/set-feature-override.dto';
+import { SetRolePermissionDto } from './dto/set-role-permission.dto';
 import { UpdateOrganizationPackageDto } from './dto/update-organization-package.dto';
 
 class PlatformLoginDto {
@@ -119,6 +125,57 @@ export class PlatformController {
     return this.platformService.removeFeatureOverride(
       id,
       feature,
+    );
+  }
+
+  @Put('organizations/:id/roles/:role/permissions/:permission')
+  @UseGuards(
+    AuthGuard('jwt'),
+    PlatformGuard,
+  )
+  setRolePermission(
+    @Param('id') id: string,
+    @Param('role') role: UserRole,
+    @Param('permission') permission: PermissionKey,
+    @Body() dto: SetRolePermissionDto,
+  ) {
+    return this.platformService.setRolePermission(
+      id,
+      role,
+      permission,
+      dto.allowed,
+    );
+  }
+
+  @Put('organizations/:id/roles/:role/permissions')
+  @UseGuards(
+    AuthGuard('jwt'),
+    PlatformGuard,
+  )
+  replaceRolePermissions(
+    @Param('id') id: string,
+    @Param('role') role: UserRole,
+    @Body() dto: ReplaceRolePermissionsDto,
+  ) {
+    return this.platformService.replaceRolePermissions(
+      id,
+      role,
+      dto.permissions,
+    );
+  }
+
+  @Delete('organizations/:id/roles/:role/permissions')
+  @UseGuards(
+    AuthGuard('jwt'),
+    PlatformGuard,
+  )
+  resetRolePermissions(
+    @Param('id') id: string,
+    @Param('role') role: UserRole,
+  ) {
+    return this.platformService.resetRolePermissions(
+      id,
+      role,
     );
   }
 
