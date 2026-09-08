@@ -394,6 +394,7 @@ export class CustomerPortalService {
           serviceOrder: {
             customerId,
             organizationId,
+            vehicleId,
           },
         },
         select: {
@@ -406,6 +407,18 @@ export class CustomerPortalService {
         where: {
           customerId,
           organizationId,
+          OR: [
+            {
+              serviceOrder: {
+                vehicleId,
+              },
+            },
+            {
+              quote: {
+                vehicleId,
+              },
+            },
+          ],
         },
         select: {
           id: true,
