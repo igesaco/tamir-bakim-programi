@@ -1,4 +1,5 @@
 import {
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -12,6 +13,7 @@ import {
 } from 'react';
 
 import api from '../api/client';
+import StaffCustomerDetailScreen from './StaffCustomerDetailScreen';
 import { useAuth } from '../auth/AuthContext';
 import {
   canUse,
@@ -29,7 +31,9 @@ import {
   spacing,
 } from '../theme';
 
-export default function CustomersScreen() {
+export default function CustomersScreen({
+  onStartIntake,
+}) {
   const { user } = useAuth();
 
   const [items, setItems] =
@@ -61,6 +65,11 @@ export default function CustomersScreen() {
 
   const [message, setMessage] =
     useState('');
+
+  const [
+    selectedCustomerId,
+    setSelectedCustomerId,
+  ] = useState(null);
 
   const canCreate =
     canUse(user, {
@@ -185,6 +194,24 @@ export default function CustomersScreen() {
     } finally {
       setRefreshing(false);
     }
+  }
+
+  if (selectedCustomerId) {
+    return (
+      <StaffCustomerDetailScreen
+        customerId={
+          selectedCustomerId
+        }
+        onBack={() =>
+          setSelectedCustomerId(
+            null,
+          )
+        }
+        onStartIntake={
+          onStartIntake
+        }
+      />
+    );
   }
 
   return (
@@ -324,37 +351,49 @@ export default function CustomersScreen() {
       <View style={styles.list}>
         {filtered.map(
           (item) => (
-            <Card
+            <Pressable
               key={item.id}
-              style={styles.customerCard}
+              onPress={() =>
+                setSelectedCustomerId(
+                  item.id,
+                )
+              }
+              style={({ pressed }) => [
+                pressed &&
+                  styles.pressed,
+              ]}
             >
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {item.firstName
-                    ?.charAt(0)
-                    ?.toUpperCase() ||
-                    '?'}
-                </Text>
-              </View>
+              <Card
+                style={styles.customerCard}
+              >
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {item.firstName
+                      ?.charAt(0)
+                      ?.toUpperCase() ||
+                      '?'}
+                  </Text>
+                </View>
 
-              <View style={styles.customerCopy}>
-                <Text style={styles.customerName}>
-                  {item.firstName}{' '}
-                  {item.lastName}
-                </Text>
+                <View style={styles.customerCopy}>
+                  <Text style={styles.customerName}>
+                    {item.firstName}{' '}
+                    {item.lastName}
+                  </Text>
 
-                <Text style={styles.customerMeta}>
-                  {item.phone ||
-                    item.email ||
-                    'İletişim bilgisi yok'}
-                </Text>
+                  <Text style={styles.customerMeta}>
+                    {item.phone ||
+                      item.email ||
+                      'İletişim bilgisi yok'}
+                  </Text>
 
-                <Text style={styles.customerMeta}>
-                  {item.vehicles?.length || 0}{' '}
-                  araç
-                </Text>
-              </View>
-            </Card>
+                  <Text style={styles.customerMeta}>
+                    {item.vehicles?.length || 0}{' '}
+                    araç · Detayı aç →
+                  </Text>
+                </View>
+              </Card>
+            </Pressable>
           ),
         )}
 
@@ -383,6 +422,9 @@ const styles = StyleSheet.create({
   list: {
     marginTop: 12,
     gap: 8,
+  },
+  pressed: {
+    opacity: .78,
   },
   customerCard: {
     flexDirection: 'row',
