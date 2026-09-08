@@ -10,8 +10,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { UserRole } from '@prisma/client';
+import { FeatureKey, UserRole } from '@prisma/client';
 
+import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -87,6 +88,7 @@ export class UsersController {
     );
   }
 
+  @Feature(FeatureKey.STAFF)
   @Get()
   @Roles(
     UserRole.OWNER,
@@ -99,6 +101,7 @@ export class UsersController {
     );
   }
 
+  @Feature(FeatureKey.STAFF)
   @Post()
   @Roles(
     UserRole.OWNER,
@@ -116,6 +119,7 @@ export class UsersController {
     );
   }
 
+  @Feature(FeatureKey.STAFF)
   @Patch(':id/active')
   @Roles(
     UserRole.OWNER,
@@ -136,6 +140,7 @@ export class UsersController {
     );
   }
 
+  @Feature(FeatureKey.STAFF)
   @Patch(':id/branch')
   @Roles(
     UserRole.OWNER,
@@ -155,6 +160,7 @@ export class UsersController {
     );
   }
 
+  @Feature(FeatureKey.STAFF)
   @Patch(':id/role')
   @Roles(
     UserRole.OWNER,
@@ -175,6 +181,7 @@ export class UsersController {
     );
   }
 
+  @Feature(FeatureKey.STAFF)
   @Patch(':id/password')
   @Roles(
     UserRole.OWNER,
