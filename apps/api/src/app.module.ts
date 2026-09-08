@@ -17,6 +17,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
 import { BranchesModule } from './branches/branches.module';
+import { CustomerPortalModule } from './customer-portal/customer-portal.module';
 import { CustomersModule } from './customers/customers.module';
 import { EntitlementsModule } from './entitlements/entitlements.module';
 import { InspectionsModule } from './inspections/inspections.module';
@@ -62,6 +63,7 @@ mkdirSync(
     BranchesModule,
     AuthModule,
     UsersModule,
+    CustomerPortalModule,
     CustomersModule,
     VehiclesModule,
     AppointmentsModule,
