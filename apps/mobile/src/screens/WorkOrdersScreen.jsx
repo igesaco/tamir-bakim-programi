@@ -12,10 +12,12 @@ import {
   useMemo,
   useState,
 } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 
 import api from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import {
+  canUse,
   hasPermission,
 } from '../permissions';
 import {
@@ -37,29 +39,81 @@ import {
   spacing,
 } from '../theme';
 
+const photoTypes = [
+  ['BEFORE', 'Öncesi'],
+  ['AFTER', 'Sonrası'],
+  ['DAMAGE', 'Hasar'],
+  ['PART', 'Parça'],
+  ['ENGINE', 'Motor'],
+  ['ODOMETER', 'Kilometre'],
+];
+
+function apiMessage(
+  err,
+  fallback,
+) {
+  const detail =
+    err?.response?.data?.message;
+
+  return Array.isArray(detail)
+    ? detail.join(', ')
+    : detail || fallback;
+}
+
 export default function WorkOrdersScreen() {
   const { user } = useAuth();
 
   const [orders, setOrders] =
     useState([]);
-
   const [search, setSearch] =
     useState('');
-
   const [selected, setSelected] =
     useState(null);
-
   const [busy, setBusy] =
     useState(false);
-
+  const [detailBusy, setDetailBusy] =
+    useState(false);
   const [refreshing, setRefreshing] =
     useState(false);
-
   const [error, setError] =
     useState('');
-
   const [message, setMessage] =
     useState('');
+
+  const [workMode, setWorkMode] =
+    useState('NOTE');
+  const [workNote, setWorkNote] =
+    useState('');
+  const [partName, setPartName] =
+    useState('');
+  const [partQuantity, setPartQuantity] =
+    useState('1');
+  const [photoType, setPhotoType] =
+    useState('AFTER');
+
+  const canChangeStatus =
+    hasPermission(
+      user,
+      'SERVICE_ORDER_STATUS',
+    );
+
+  const canWriteWorkLog =
+    hasPermission(
+      user,
+      'SERVICE_ORDER_WORKLOG',
+    );
+
+  const canUploadMedia =
+    canUse(user, {
+      feature: 'MEDIA',
+      permission: 'MEDIA_UPLOAD',
+    });
+
+  const allowedStatuses =
+    user?.role ===
+    'TECHNICIAN'
+      ? technicianStatuses
+      : managerStatuses;
 
   async function load() {
     const response =
@@ -70,28 +124,15 @@ export default function WorkOrdersScreen() {
     setOrders(
       response.data,
     );
-
-    if (selected) {
-      const refreshed =
-        response.data.find(
-          (item) =>
-            item.id ===
-            selected.id,
-        );
-
-      if (refreshed) {
-        setSelected(
-          refreshed,
-        );
-      }
-    }
   }
 
   useEffect(() => {
     load().catch((err) => {
       setError(
-        err?.response?.data?.message ||
+        apiMessage(
+          err,
           'İş emirleri yüklenemedi.',
+        ),
       );
     });
   }, []);
@@ -132,17 +173,48 @@ export default function WorkOrdersScreen() {
       search,
     ]);
 
-  const canChangeStatus =
-    hasPermission(
-      user,
-      'SERVICE_ORDER_STATUS',
-    );
+  async function openOrder(
+    id,
+  ) {
+    setDetailBusy(true);
+    setError('');
+    setMessage('');
 
-  const allowedStatuses =
-    user?.role ===
-    'TECHNICIAN'
-      ? technicianStatuses
-      : managerStatuses;
+    try {
+      const response =
+        await api.get(
+          `/service-orders/${id}`,
+        );
+
+      setSelected(
+        response.data,
+      );
+    } catch (err) {
+      setError(
+        apiMessage(
+          err,
+          'İş emri detayı yüklenemedi.',
+        ),
+      );
+    } finally {
+      setDetailBusy(false);
+    }
+  }
+
+  async function refreshSelected() {
+    if (!selected?.id) {
+      return;
+    }
+
+    const response =
+      await api.get(
+        `/service-orders/${selected.id}`,
+      );
+
+    setSelected(
+      response.data,
+    );
+  }
 
   async function setStatus(
     status,
@@ -156,32 +228,197 @@ export default function WorkOrdersScreen() {
     setMessage('');
 
     try {
-      const response =
-        await api.patch(
-          `/service-orders/${selected.id}/status`,
-          {
-            status,
-          },
-        );
-
-      setSelected(
-        response.data,
+      await api.patch(
+        `/service-orders/${selected.id}/status`,
+        {
+          status,
+        },
       );
 
       setMessage(
         `Durum: ${serviceStatusLabels[status] || status}`,
       );
 
-      await load();
+      await Promise.all([
+        load(),
+        refreshSelected(),
+      ]);
     } catch (err) {
-      const detail =
-        err?.response?.data?.message;
-
       setError(
-        Array.isArray(detail)
-          ? detail.join(', ')
-          : detail ||
-              'Durum güncellenemedi.',
+        apiMessage(
+          err,
+          'Durum güncellenemedi.',
+        ),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addWorkLog() {
+    if (!selected) {
+      return;
+    }
+
+    setBusy(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const payload =
+        workMode ===
+        'PART_USED'
+          ? {
+              type: 'PART_USED',
+              partName:
+                partName.trim(),
+              quantity:
+                Number(
+                  partQuantity,
+                ),
+              note:
+                workNote.trim() ||
+                undefined,
+            }
+          : {
+              type: 'NOTE',
+              note:
+                workNote.trim(),
+            };
+
+      await api.post(
+        `/service-orders/${selected.id}/work-logs`,
+        payload,
+      );
+
+      setWorkNote('');
+      setPartName('');
+      setPartQuantity('1');
+
+      setMessage(
+        workMode ===
+        'PART_USED'
+          ? 'Kullanılan parça kaydedildi.'
+          : 'Teknik işlem notu kaydedildi.',
+      );
+
+      await refreshSelected();
+    } catch (err) {
+      setError(
+        apiMessage(
+          err,
+          'Teknik kayıt eklenemedi.',
+        ),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function takePhoto() {
+    if (!selected) {
+      return;
+    }
+
+    setError('');
+    setMessage('');
+
+    const permission =
+      await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      setError(
+        'Fotoğraf çekmek için kamera izni gerekli.',
+      );
+      return;
+    }
+
+    const result =
+      await ImagePicker.launchCameraAsync({
+        quality: 0.72,
+        allowsEditing: false,
+      });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const asset =
+      result.assets?.[0];
+
+    if (!asset?.uri) {
+      setError(
+        'Fotoğraf alınamadı.',
+      );
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      const formData =
+        new FormData();
+
+      const fileName =
+        asset.fileName ||
+        `servis-${Date.now()}.jpg`;
+
+      const mimeType =
+        asset.mimeType ||
+        'image/jpeg';
+
+      formData.append(
+        'file',
+        {
+          uri: asset.uri,
+          name: fileName,
+          type: mimeType,
+        },
+      );
+
+      formData.append(
+        'type',
+        photoType,
+      );
+
+      formData.append(
+        'vehicleId',
+        selected.vehicle?.id ||
+          selected.vehicleId,
+      );
+
+      formData.append(
+        'serviceOrderId',
+        selected.id,
+      );
+
+      formData.append(
+        'description',
+        `${photoTypes.find(([value]) => value === photoType)?.[1] || 'Servis'} fotoğrafı - mobil`,
+      );
+
+      await api.post(
+        '/media/upload',
+        formData,
+        {
+          headers: {
+            'Content-Type':
+              'multipart/form-data',
+          },
+        },
+      );
+
+      setMessage(
+        'Fotoğraf iş emrine eklendi.',
+      );
+
+      await refreshSelected();
+    } catch (err) {
+      setError(
+        apiMessage(
+          err,
+          'Fotoğraf yüklenemedi.',
+        ),
       );
     } finally {
       setBusy(false);
@@ -193,6 +430,10 @@ export default function WorkOrdersScreen() {
 
     try {
       await load();
+
+      if (selected) {
+        await refreshSelected();
+      }
     } finally {
       setRefreshing(false);
     }
@@ -219,7 +460,7 @@ export default function WorkOrdersScreen() {
               ? 'Atanan İşlerim'
               : 'İş Emirleri'
           }
-          subtitle="Plaka veya müşteri ile arayın, iş detayını açın ve yetkiniz varsa durumunu güncelleyin."
+          subtitle="İş emrini açın; servis durumunu, yapılan işlemleri, kullanılan parçaları ve fotoğrafları yönetin."
         />
 
         <Field
@@ -240,8 +481,8 @@ export default function WorkOrdersScreen() {
               <Pressable
                 key={order.id}
                 onPress={() =>
-                  setSelected(
-                    order,
+                  openOrder(
+                    order.id,
                   )
                 }
               >
@@ -337,6 +578,12 @@ export default function WorkOrdersScreen() {
                 </Pressable>
               </View>
 
+              {detailBusy ? (
+                <Text style={styles.loadingText}>
+                  Detay yükleniyor...
+                </Text>
+              ) : null}
+
               <Card>
                 <Text style={styles.detailLabel}>
                   Müşteri
@@ -376,8 +623,8 @@ export default function WorkOrdersScreen() {
               </Card>
 
               {canChangeStatus ? (
-                <View style={styles.statusSection}>
-                  <Text style={styles.statusTitle}>
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>
                     Servis Durumu
                   </Text>
 
@@ -418,6 +665,233 @@ export default function WorkOrdersScreen() {
                 </View>
               ) : null}
 
+              {canWriteWorkLog ? (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>
+                    Teknik Kayıt
+                  </Text>
+
+                  <View style={styles.segment}>
+                    {[
+                      ['NOTE', 'İşlem Notu'],
+                      ['PART_USED', 'Kullanılan Parça'],
+                    ].map(
+                      ([value, label]) => (
+                        <Pressable
+                          key={value}
+                          onPress={() =>
+                            setWorkMode(
+                              value,
+                            )
+                          }
+                          style={[
+                            styles.segmentItem,
+                            workMode ===
+                              value &&
+                              styles.segmentItemActive,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.segmentText,
+                              workMode ===
+                                value &&
+                                styles.segmentTextActive,
+                            ]}
+                          >
+                            {label}
+                          </Text>
+                        </Pressable>
+                      ),
+                    )}
+                  </View>
+
+                  {workMode ===
+                  'PART_USED' ? (
+                    <>
+                      <Field
+                        label="Parça adı *"
+                        placeholder="Örn. Yağ filtresi"
+                        value={partName}
+                        onChangeText={setPartName}
+                      />
+
+                      <Field
+                        label="Miktar *"
+                        keyboardType="decimal-pad"
+                        value={partQuantity}
+                        onChangeText={setPartQuantity}
+                      />
+                    </>
+                  ) : null}
+
+                  <Field
+                    label={
+                      workMode ===
+                      'PART_USED'
+                        ? 'Açıklama'
+                        : 'Yapılan işlem *'
+                    }
+                    multiline
+                    placeholder={
+                      workMode ===
+                      'PART_USED'
+                        ? 'Parça kullanım notu'
+                        : 'Yapılan teknik işlemi yazın'
+                    }
+                    value={workNote}
+                    onChangeText={setWorkNote}
+                  />
+
+                  <Button
+                    title={
+                      busy
+                        ? 'Kaydediliyor...'
+                        : 'Teknik Kaydı Ekle'
+                    }
+                    disabled={
+                      busy ||
+                      (
+                        workMode ===
+                          'NOTE' &&
+                        !workNote.trim()
+                      ) ||
+                      (
+                        workMode ===
+                          'PART_USED' &&
+                        (
+                          !partName.trim() ||
+                          Number(
+                            partQuantity,
+                          ) <= 0
+                        )
+                      )
+                    }
+                    onPress={addWorkLog}
+                  />
+                </View>
+              ) : null}
+
+              {canUploadMedia ? (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>
+                    Servis Fotoğrafı
+                  </Text>
+
+                  <View style={styles.statusGrid}>
+                    {photoTypes.map(
+                      ([value, label]) => (
+                        <Pressable
+                          key={value}
+                          onPress={() =>
+                            setPhotoType(
+                              value,
+                            )
+                          }
+                          style={[
+                            styles.statusOption,
+                            photoType ===
+                              value &&
+                              styles.statusOptionActive,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.statusOptionText,
+                              photoType ===
+                                value &&
+                                styles.statusOptionTextActive,
+                            ]}
+                          >
+                            {label}
+                          </Text>
+                        </Pressable>
+                      ),
+                    )}
+                  </View>
+
+                  <View style={styles.photoButton}>
+                    <Button
+                      title={
+                        busy
+                          ? 'Yükleniyor...'
+                          : 'Kamera ile Fotoğraf Çek'
+                      }
+                      disabled={busy}
+                      onPress={takePhoto}
+                    />
+                  </View>
+
+                  <Text style={styles.mediaCount}>
+                    İş emrindeki medya:{' '}
+                    {selected?.media?.length || 0}
+                  </Text>
+                </View>
+              ) : null}
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  İşlem Geçmişi
+                </Text>
+
+                <View style={styles.timeline}>
+                  {(selected?.workLogs || []).map(
+                    (log) => (
+                      <Card
+                        key={log.id}
+                        style={styles.logCard}
+                      >
+                        <View style={styles.logTop}>
+                          <Text style={styles.logType}>
+                            {log.type ===
+                            'PART_USED'
+                              ? 'KULLANILAN PARÇA'
+                              : 'İŞLEM NOTU'}
+                          </Text>
+
+                          <Text style={styles.logDate}>
+                            {new Date(
+                              log.createdAt,
+                            ).toLocaleString(
+                              'tr-TR',
+                            )}
+                          </Text>
+                        </View>
+
+                        {log.type ===
+                        'PART_USED' ? (
+                          <Text style={styles.logTitle}>
+                            {log.part?.name ||
+                              log.partName ||
+                              'Parça'}{' '}
+                            ×{' '}
+                            {Number(
+                              log.quantity ||
+                                0,
+                            )}
+                          </Text>
+                        ) : null}
+
+                        {log.note ? (
+                          <Text style={styles.logNote}>
+                            {log.note}
+                          </Text>
+                        ) : null}
+
+                        <Text style={styles.logUser}>
+                          {log.user?.firstName}{' '}
+                          {log.user?.lastName}
+                        </Text>
+                      </Card>
+                    ),
+                  )}
+
+                  {!selected?.workLogs?.length ? (
+                    <Empty text="Henüz teknik işlem kaydı yok." />
+                  ) : null}
+                </View>
+              </View>
+
               <Button
                 title="Kapat"
                 tone="ghost"
@@ -455,7 +929,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
     color: colors.text,
     fontSize: 18,
-    fontWeight: '950',
+    fontWeight: '900',
   },
   statusBadge: {
     alignSelf: 'flex-start',
@@ -494,7 +968,7 @@ const styles = StyleSheet.create({
       'rgba(0,0,0,.62)',
   },
   sheet: {
-    maxHeight: '88%',
+    maxHeight: '92%',
     borderTopLeftRadius:
       radius.lg,
     borderTopRightRadius:
@@ -528,12 +1002,17 @@ const styles = StyleSheet.create({
     marginTop: 3,
     color: colors.text,
     fontSize: 24,
-    fontWeight: '950',
+    fontWeight: '900',
   },
   close: {
     color: colors.accent,
     fontSize: 12,
     fontWeight: '900',
+  },
+  loadingText: {
+    marginBottom: 10,
+    color: colors.muted,
+    fontSize: 10,
   },
   detailLabel: {
     marginTop: 12,
@@ -547,10 +1026,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
-  statusSection: {
+  section: {
     marginVertical: 14,
   },
-  statusTitle: {
+  sectionTitle: {
     marginBottom: 8,
     color: colors.text,
     fontSize: 13,
@@ -582,5 +1061,79 @@ const styles = StyleSheet.create({
   },
   statusOptionTextActive: {
     color: colors.accent,
+  },
+  segment: {
+    marginBottom: 10,
+    flexDirection: 'row',
+    gap: 7,
+  },
+  segmentItem: {
+    flex: 1,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 9,
+    backgroundColor: colors.panel,
+  },
+  segmentItemActive: {
+    borderColor: '#7a551a',
+    backgroundColor:
+      colors.accentSoft,
+  },
+  segmentText: {
+    color: colors.muted,
+    textAlign: 'center',
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  segmentTextActive: {
+    color: colors.accent,
+  },
+  photoButton: {
+    marginTop: 10,
+  },
+  mediaCount: {
+    marginTop: 8,
+    color: colors.muted,
+    fontSize: 9,
+  },
+  timeline: {
+    gap: 7,
+  },
+  logCard: {
+    padding: 12,
+  },
+  logTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent:
+      'space-between',
+    gap: 8,
+  },
+  logType: {
+    color: colors.accent,
+    fontSize: 8,
+    fontWeight: '900',
+  },
+  logDate: {
+    color: '#67727c',
+    fontSize: 7,
+  },
+  logTitle: {
+    marginTop: 7,
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  logNote: {
+    marginTop: 5,
+    color: colors.muted,
+    fontSize: 10,
+    lineHeight: 15,
+  },
+  logUser: {
+    marginTop: 7,
+    color: '#69747e',
+    fontSize: 8,
   },
 });
