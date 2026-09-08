@@ -8,7 +8,9 @@ import {
   useParams,
 } from 'react-router-dom';
 
-import api from '../api/client';
+import api, {
+  API_URL,
+} from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { statusLabel } from '../utils/status';
 
@@ -47,6 +49,53 @@ function money(value) {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     },
+  );
+}
+
+function vehicleMediaUrl(
+  media,
+) {
+  const key =
+    media?.storageKey;
+
+  if (!key) {
+    return '';
+  }
+
+  if (
+    /^https?:\/\//i.test(
+      key,
+    )
+  ) {
+    return key;
+  }
+
+  return (
+    `${API_URL}/` +
+    key.replace(
+      /^\/+/, 
+      '',
+    )
+  );
+}
+
+function mediaLabel(
+  type,
+) {
+  const labels = {
+    VEHICLE: 'Araç',
+    ACCEPTANCE: 'Kabul',
+    DAMAGE: 'Hasar',
+    ENGINE: 'Motor',
+    BEFORE: 'Öncesi',
+    AFTER: 'Sonrası',
+    ODOMETER: 'Kilometre',
+  };
+
+  return (
+    labels[type] ||
+    type ||
+    'Fotoğraf'
   );
 }
 
@@ -1379,6 +1428,61 @@ export default function CustomerDetail() {
                         </strong>
                       </div>
                     </Link>
+
+                    {vehicle.media?.length ? (
+                      <div className="customer-vehicle-photo-strip">
+                        {vehicle.media
+                          .slice(
+                            0,
+                            6,
+                          )
+                          .map(
+                            (media) => (
+                              <a
+                                key={media.id}
+                                className="customer-vehicle-photo"
+                                href={
+                                  vehicleMediaUrl(
+                                    media,
+                                  )
+                                }
+                                target="_blank"
+                                rel="noreferrer"
+                                title={
+                                  media.description ||
+                                  mediaLabel(
+                                    media.type,
+                                  )
+                                }
+                              >
+                                <img
+                                  src={
+                                    vehicleMediaUrl(
+                                      media,
+                                    )
+                                  }
+                                  alt={
+                                    media.description ||
+                                    `${vehicle.plate} ${mediaLabel(
+                                      media.type,
+                                    )}`
+                                  }
+                                />
+
+                                <span>
+                                  {mediaLabel(
+                                    media.type,
+                                  )}
+                                </span>
+                              </a>
+                            ),
+                          )}
+                      </div>
+                    ) : (
+                      <div className="customer-vehicle-no-photo">
+                        Mobil araç kabulünden eklenen fotoğraflar burada görünür.
+                      </div>
+                    )}
 
                     <a
                       className="small-button customer-qr-button"
