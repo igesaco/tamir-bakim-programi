@@ -78,9 +78,20 @@ for (
           target.cwd,
         stdio:
           'inherit',
-        shell: false,
+        shell:
+          process.platform ===
+          'win32',
       },
     );
+
+  if (
+    result.error
+  ) {
+    console.error(
+      `\n[SETUP] ${target.name} başlatılamadı: ${result.error.message}`,
+    );
+    process.exit(1);
+  }
 
   if (
     result.status !== 0
