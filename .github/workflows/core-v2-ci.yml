@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/core-workflow-v2
+      - workflowA
   workflow_dispatch:
 
 jobs:
