@@ -7,11 +7,15 @@ import {
   Post,
   Req,
   UseGuards,
-} from '@nestjs/common';
+  } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { FeatureKey, UserRole } from '@prisma/client';
+import { FeatureKey,
+  UserRole,
+  PermissionKey,
+} from '@prisma/client';
 
 import { Feature } from '../entitlements/feature.decorator';
+import { Permission } from '../permissions/permission.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreateNotificationDto } from './dto/create-notification.dto';
@@ -31,6 +35,7 @@ export class NotificationsController {
     private readonly notificationsService: NotificationsService,
   ) {}
 
+@Permission(PermissionKey.NOTIFICATION_MANAGE)
   @Post()
   create(
     @Req() req: any,
@@ -44,6 +49,7 @@ export class NotificationsController {
     );
   }
 
+@Permission(PermissionKey.NOTIFICATION_VIEW)
   @Get()
   findAll(@Req() req: any) {
     return this.notificationsService.findAll(
@@ -53,6 +59,7 @@ export class NotificationsController {
     );
   }
 
+@Permission(PermissionKey.NOTIFICATION_VIEW)
   @Patch(':id/read')
   markRead(
     @Req() req: any,
