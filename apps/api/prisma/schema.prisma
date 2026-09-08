@@ -1050,7 +1050,9 @@ model AuditLog {
   oldData Json?
   newData Json?
 
-  ipAddress String?
+  ipAddress      String?
+  actorType      String?
+  platformUserId String?
 
   createdAt DateTime @default(now())
 
