@@ -20,6 +20,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreatePlatformLedgerEntryDto } from './dto/create-platform-ledger-entry.dto';
 import { UpdateOrganizationBrandingDto } from './dto/update-organization-branding.dto';
 import { UpdateOrganizationCommercialDto } from './dto/update-organization-commercial.dto';
+import { UpdateTenantOwnerDto } from './dto/update-tenant-owner.dto';
 
 @Injectable()
 export class PlatformService
@@ -599,6 +600,91 @@ export class PlatformService
           organizationId,
         ),
     };
+  }
+
+  async updateTenantOwnerProfile(
+    organizationId: string,
+    userId: string,
+    dto: UpdateTenantOwnerDto,
+  ) {
+    const target =
+      await this.prisma.user.findFirst({
+        where: {
+          id: userId,
+          organizationId,
+          role: UserRole.OWNER,
+        },
+      });
+
+    if (!target) {
+      throw new BadRequestException(
+        'Kurucu hesabı bulunamadı.',
+      );
+    }
+
+    const email =
+      dto.email
+        ?.trim()
+        .toLowerCase();
+
+    if (
+      email &&
+      email !== target.email
+    ) {
+      const duplicate =
+        await this.prisma.user.findUnique({
+          where: {
+            email,
+          },
+        });
+
+      if (
+        duplicate &&
+        duplicate.id !== target.id
+      ) {
+        throw new BadRequestException(
+          'Bu e-posta adresi başka bir panel hesabında kullanılıyor.',
+        );
+      }
+    }
+
+    const emailChanged =
+      Boolean(
+        email &&
+        email !== target.email,
+      );
+
+    return this.prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        firstName:
+          dto.firstName?.trim(),
+        lastName:
+          dto.lastName?.trim(),
+        email,
+        phone:
+          dto.phone?.trim(),
+        ...(emailChanged
+          ? {
+              tokenVersion: {
+                increment: 1,
+              },
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        role: true,
+        active: true,
+        createdAt: true,
+      },
+    });
   }
 
   async setTenantUserActive(
