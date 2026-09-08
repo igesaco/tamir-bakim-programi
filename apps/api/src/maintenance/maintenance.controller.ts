@@ -8,11 +8,15 @@ import {
   Query,
   Req,
   UseGuards,
-} from '@nestjs/common';
+  } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { FeatureKey, UserRole } from '@prisma/client';
+import { FeatureKey,
+  UserRole,
+  PermissionKey,
+} from '@prisma/client';
 
 import { Feature } from '../entitlements/feature.decorator';
+import { Permission } from '../permissions/permission.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreateMaintenancePackageDto } from './dto/create-maintenance-package.dto';
@@ -34,6 +38,7 @@ export class MaintenanceController {
     private readonly maintenanceService: MaintenanceService,
   ) {}
 
+@Permission(PermissionKey.MAINTENANCE_MANAGE)
   @Post('records')
   createRecord(
     @Req() req: any,
@@ -47,6 +52,7 @@ export class MaintenanceController {
     );
   }
 
+@Permission(PermissionKey.MAINTENANCE_MANAGE)
   @Post('plans')
   createPlan(
     @Req() req: any,
@@ -60,6 +66,7 @@ export class MaintenanceController {
     );
   }
 
+@Permission(PermissionKey.MAINTENANCE_VIEW)
   @Get('alerts')
   alerts(@Req() req: any) {
     return this.maintenanceService.alerts(
@@ -69,6 +76,7 @@ export class MaintenanceController {
     );
   }
 
+@Permission(PermissionKey.MAINTENANCE_VIEW)
   @Get('records')
   findRecords(
     @Req() req: any,
@@ -82,6 +90,7 @@ export class MaintenanceController {
     );
   }
 
+@Permission(PermissionKey.MAINTENANCE_VIEW)
   @Get('plans')
   findPlans(
     @Req() req: any,
@@ -95,6 +104,7 @@ export class MaintenanceController {
     );
   }
 
+@Permission(PermissionKey.MAINTENANCE_MANAGE)
   @Patch('plans/:id/complete')
   completePlan(
     @Req() req: any,
@@ -108,6 +118,7 @@ export class MaintenanceController {
     );
   }
 
+@Permission(PermissionKey.MAINTENANCE_VIEW)
   @Get('packages')
   findPackages(@Req() req: any) {
     return this.maintenanceService.findPackages(
@@ -115,6 +126,7 @@ export class MaintenanceController {
     );
   }
 
+@Permission(PermissionKey.MAINTENANCE_MANAGE)
   @Post('packages')
   @Roles(UserRole.OWNER, UserRole.MANAGER)
   @UseGuards(RolesGuard)
@@ -128,6 +140,7 @@ export class MaintenanceController {
     );
   }
 
+@Permission(PermissionKey.MAINTENANCE_MANAGE)
   @Patch('packages/:id/active')
   @Roles(UserRole.OWNER, UserRole.MANAGER)
   @UseGuards(RolesGuard)
