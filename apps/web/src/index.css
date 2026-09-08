@@ -4533,3 +4533,263 @@ html[data-theme="dark"] body {
     height: 32px;
   }
 }
+
+
+/* === DESKTOP WALLPAPERS V5 === */
+.desktop-wallpaper-switch {
+  display: flex;
+  gap: 3px;
+  height: 38px;
+  padding: 3px;
+  border: 1px solid
+    rgba(255, 255, 255, .10);
+  border-radius: 9px;
+  background:
+    rgba(8, 12, 16, .42);
+}
+
+.desktop-wallpaper-button {
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #8f9aa4;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.desktop-wallpaper-button:hover {
+  background:
+    rgba(255, 255, 255, .07);
+  color: #fff;
+}
+
+.desktop-wallpaper-button.active {
+  background:
+    rgba(245, 158, 11, .16);
+  color: #f6b43e;
+}
+
+/* Wallpaper 1 — clean premium */
+.desktop-wallpaper.wallpaper-soft {
+  background:
+    radial-gradient(
+      circle at 16% 14%,
+      rgba(245, 158, 11, .16),
+      transparent 23%
+    ),
+    radial-gradient(
+      circle at 83% 12%,
+      rgba(74, 118, 160, .22),
+      transparent 28%
+    ),
+    linear-gradient(
+      145deg,
+      #18232d 0%,
+      #0d141b 48%,
+      #131c25 100%
+    );
+}
+
+/* Wallpaper 2 — workshop / technical drawing */
+.desktop-wallpaper.wallpaper-technical {
+  background:
+    linear-gradient(
+      rgba(255, 255, 255, .028) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, .028) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      rgba(255, 255, 255, .012) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, .012) 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 72% 16%,
+      rgba(245, 158, 11, .13),
+      transparent 24%
+    ),
+    linear-gradient(
+      145deg,
+      #10202b,
+      #09131a 54%,
+      #111c24
+    );
+  background-size:
+    48px 48px,
+    48px 48px,
+    12px 12px,
+    12px 12px,
+    auto,
+    auto;
+}
+
+/* Wallpaper 3 — dark graphite */
+.desktop-wallpaper.wallpaper-graphite {
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgba(245, 158, 11, .09),
+      transparent 34%
+    ),
+    radial-gradient(
+      ellipse at 8% 90%,
+      rgba(66, 87, 105, .18),
+      transparent 30%
+    ),
+    linear-gradient(
+      135deg,
+      #191b1e,
+      #0c0e10 55%,
+      #17191c
+    );
+}
+
+.desktop-wallpaper.wallpaper-technical::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  right: 5vw;
+  bottom: 11vh;
+  width: min(420px, 35vw);
+  aspect-ratio: 1;
+  pointer-events: none;
+  opacity: .055;
+  border:
+    2px solid #d5e4ef;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 24px
+      rgba(213, 228, 239, .14),
+    inset 0 0 0 72px
+      rgba(213, 228, 239, .06);
+}
+
+/* Light variants */
+.theme-light
+  .desktop-wallpaper-switch {
+  border-color:
+    rgba(67, 84, 98, .16);
+  background:
+    rgba(236, 241, 245, .88);
+}
+
+.theme-light
+  .desktop-wallpaper-button {
+  color: #65737e;
+}
+
+.theme-light
+  .desktop-wallpaper-button:hover {
+  background: #dfe6eb;
+  color: #202a32;
+}
+
+.theme-light
+  .desktop-wallpaper-button.active {
+  background: #fff1d5;
+  color: #a76700;
+}
+
+.theme-light
+  .desktop-wallpaper.wallpaper-soft {
+  background:
+    radial-gradient(
+      circle at 16% 14%,
+      rgba(245, 158, 11, .16),
+      transparent 23%
+    ),
+    radial-gradient(
+      circle at 83% 12%,
+      rgba(88, 137, 181, .19),
+      transparent 29%
+    ),
+    linear-gradient(
+      145deg,
+      #edf2f6 0%,
+      #e4ecf2 48%,
+      #eef3f6 100%
+    );
+}
+
+.theme-light
+  .desktop-wallpaper.wallpaper-technical {
+  background:
+    linear-gradient(
+      rgba(43, 75, 101, .055) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(43, 75, 101, .055) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      rgba(43, 75, 101, .022) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(43, 75, 101, .022) 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 72% 16%,
+      rgba(245, 158, 11, .15),
+      transparent 24%
+    ),
+    linear-gradient(
+      145deg,
+      #e9f1f6,
+      #f5f8fa 54%,
+      #e9f0f5
+    );
+  background-size:
+    48px 48px,
+    48px 48px,
+    12px 12px,
+    12px 12px,
+    auto,
+    auto;
+}
+
+.theme-light
+  .desktop-wallpaper.wallpaper-graphite {
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgba(245, 158, 11, .10),
+      transparent 34%
+    ),
+    linear-gradient(
+      135deg,
+      #d7dde2,
+      #eef1f4 55%,
+      #d8dee3
+    );
+}
+
+.theme-light
+  .desktop-wallpaper.wallpaper-technical::after {
+  border-color: #587086;
+  opacity: .045;
+  box-shadow:
+    inset 0 0 0 24px
+      rgba(74, 98, 120, .10),
+    inset 0 0 0 72px
+      rgba(74, 98, 120, .05);
+}
+
+@media (max-width: 1100px) {
+  .desktop-wallpaper-switch {
+    display: none;
+  }
+}
