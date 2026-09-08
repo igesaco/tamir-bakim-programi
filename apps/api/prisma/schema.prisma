@@ -234,6 +234,14 @@ model Organization {
   email         String?
   active        Boolean  @default(true)
 
+  // Tenant / white-label panel branding
+  logoUrl          String?
+  panelTitle       String?
+  primaryColor     String @default("#F59E0B")
+  secondaryColor   String @default("#E9EDF2")
+  sidebarColor     String @default("#111419")
+  defaultPanelMode String @default("classic")
+
   packageId String?
   package   ServicePackage? @relation(fields: [packageId], references: [id])
 
