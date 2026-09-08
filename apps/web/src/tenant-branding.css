@@ -673,3 +673,351 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* =========================================================
+   PLATFORM CRM / CUSTOMER / CARI
+   ========================================================= */
+.platform-summary-finance {
+  grid-template-columns:
+    repeat(5, minmax(0, 1fr));
+}
+
+.platform-summary-card
+  .platform-money {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.platform-summary-card
+  .platform-money.warning {
+  color: #f4b347;
+}
+
+.platform-section-tabs-wide {
+  flex-wrap: wrap;
+}
+
+.platform-section-tabs-wide button {
+  min-width: 140px;
+}
+
+.platform-customer-status {
+  padding: 8px 10px;
+  border: 1px solid #39434c;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .7px;
+}
+
+.platform-customer-status.active {
+  border-color: #315f46;
+  background: #122219;
+  color: #8fd2aa;
+}
+
+.platform-customer-status.passive {
+  border-color: #683b3b;
+  background: #291717;
+  color: #e99b9b;
+}
+
+.platform-customer-layout {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) 340px;
+  gap: 14px;
+}
+
+.platform-customer-form {
+  padding: 16px;
+  border: 1px solid #28313a;
+  border-radius: 13px;
+  background: #0f1419;
+}
+
+.platform-customer-form
+  textarea {
+  min-height: 88px;
+}
+
+.platform-money-input,
+.platform-active-field {
+  display: grid;
+  gap: 7px;
+}
+
+.platform-money-input > span,
+.platform-active-field > span {
+  margin: 0;
+  color: #7e8993;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.platform-active-button {
+  min-height: 42px;
+  border: 1px solid #5a3939;
+  border-radius: 9px;
+  background: #251818;
+  color: #d89393;
+  font-weight: 900;
+}
+
+.platform-active-button.active {
+  border-color: #315f46;
+  background: #14241a;
+  color: #8ed3a9;
+}
+
+.platform-account-side {
+  padding: 16px;
+  border: 1px solid #28313a;
+  border-radius: 13px;
+  background: #0f1419;
+}
+
+.platform-account-side h4 {
+  margin: 6px 0 12px;
+  font-size: 14px;
+}
+
+.platform-owner-card {
+  padding: 12px;
+  display: flex;
+  gap: 10px;
+  border: 1px solid #28323b;
+  border-radius: 11px;
+  background: #13191e;
+}
+
+.platform-owner-avatar {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: #f59e0b;
+  color: #15110a;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.platform-owner-card
+  strong,
+.platform-owner-card
+  span,
+.platform-owner-card
+  small {
+  display: block;
+}
+
+.platform-owner-card strong {
+  font-size: 10px;
+}
+
+.platform-owner-card span {
+  margin-top: 4px;
+  color: #8c969f;
+  font-size: 8px;
+}
+
+.platform-owner-card small {
+  margin-top: 4px;
+  color: #69747e;
+  font-size: 7px;
+}
+
+.platform-customer-metrics {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.platform-customer-metrics > div {
+  padding: 11px;
+  border: 1px solid #273039;
+  border-radius: 9px;
+  background: #12181d;
+}
+
+.platform-customer-metrics
+  span,
+.platform-customer-metrics
+  strong {
+  display: block;
+}
+
+.platform-customer-metrics span {
+  color: #707b85;
+  font-size: 7px;
+}
+
+.platform-customer-metrics strong {
+  margin-top: 4px;
+  color: #e4e9ed;
+  font-size: 15px;
+}
+
+.platform-cari-summary {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.platform-cari-summary > div {
+  padding: 15px;
+  border: 1px solid #29323a;
+  border-radius: 12px;
+  background: #11171c;
+}
+
+.platform-cari-summary > div.warning {
+  border-color: #60471f;
+  background: #1d180f;
+}
+
+.platform-cari-summary > div.success {
+  border-color: #2d5941;
+  background: #111d16;
+}
+
+.platform-cari-summary
+  span,
+.platform-cari-summary
+  strong {
+  display: block;
+}
+
+.platform-cari-summary span {
+  color: #79848e;
+  font-size: 8px;
+}
+
+.platform-cari-summary strong {
+  margin-top: 6px;
+  font-size: 16px;
+}
+
+.platform-ledger-form {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns:
+    150px 150px minmax(220px, 1fr)
+    150px 130px;
+  gap: 8px;
+}
+
+.platform-ledger-form
+  input,
+.platform-ledger-form
+  select {
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid #303943;
+  border-radius: 9px;
+  outline: none;
+  background: #0d1217;
+  color: #e6ebef;
+}
+
+.platform-ledger-form
+  input:focus,
+.platform-ledger-form
+  select:focus {
+  border-color: #f59e0b;
+}
+
+.platform-ledger-table-wrap {
+  margin-top: 14px;
+  overflow-x: auto;
+}
+
+.platform-ledger-table {
+  min-width: 720px;
+}
+
+.platform-ledger-table th {
+  color: #727d87;
+  font-size: 8px;
+}
+
+.platform-ledger-table td {
+  color: #cbd2d8;
+  font-size: 9px;
+}
+
+.platform-ledger-type {
+  display: inline-flex;
+  padding: 5px 7px;
+  border-radius: 999px;
+  font-size: 7px;
+  font-weight: 900;
+}
+
+.platform-ledger-type.debit {
+  border: 1px solid #66481e;
+  background: #211a0f;
+  color: #eab258;
+}
+
+.platform-ledger-type.credit {
+  border: 1px solid #2f5c43;
+  background: #122017;
+  color: #8fd2aa;
+}
+
+.platform-ledger-amount {
+  font-weight: 900;
+}
+
+.platform-ledger-amount.debit {
+  color: #e8ad4e;
+}
+
+.platform-ledger-amount.credit {
+  color: #84cda1;
+}
+
+.platform-ledger-empty {
+  padding: 24px !important;
+  color: #67727c !important;
+  text-align: center;
+}
+
+@media (max-width: 1250px) {
+  .platform-summary-finance {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .platform-customer-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-ledger-form {
+    grid-template-columns:
+      1fr 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .platform-summary-finance,
+  .platform-cari-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-ledger-form {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-section-tabs-wide button {
+    min-width: 100%;
+  }
+}
