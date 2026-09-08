@@ -32,6 +32,10 @@ export class CreateCustomerDto {
 
   @IsOptional()
   @IsString()
+  nationalId?: string;
+
+  @IsOptional()
+  @IsString()
   address?: string;
 
   @IsOptional()
