@@ -655,11 +655,17 @@ export class CustomerPortalService {
       },
     });
 
+    const mobileSession =
+      dto.client ===
+      'MOBILE';
+
     const token =
       await this.jwtService.signAsync(
         {
           actorType:
-            'CUSTOMER_PORTAL',
+            mobileSession
+              ? 'CUSTOMER_APP'
+              : 'CUSTOMER_PORTAL',
           customerId:
             challenge.customerId,
           vehicleId:
@@ -671,14 +677,19 @@ export class CustomerPortalService {
           secret:
             process.env.CUSTOMER_PORTAL_JWT_SECRET ||
             process.env.JWT_SECRET,
-          expiresIn: '30m',
+          expiresIn:
+            mobileSession
+              ? '30d'
+              : '30m',
         },
       );
 
     return {
       token,
       expiresInSeconds:
-        1800,
+        mobileSession
+          ? 2592000
+          : 1800,
     };
   }
 
