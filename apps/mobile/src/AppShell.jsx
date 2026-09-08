@@ -172,6 +172,14 @@ export default function AppShell() {
   const [screen, setScreen] =
     useState(defaultScreen);
 
+  const [
+    intakeSeed,
+    setIntakeSeed,
+  ] = useState({
+    customerId: '',
+    vehicleId: '',
+  });
+
   function open(
     target,
   ) {
@@ -182,6 +190,21 @@ export default function AppShell() {
     }
   }
 
+  function startIntake(
+    seed = {},
+  ) {
+    setIntakeSeed({
+      customerId:
+        seed.customerId || '',
+      vehicleId:
+        seed.vehicleId || '',
+    });
+
+    setScreen(
+      'inspections',
+    );
+  }
+
   let content = (
     <HomeScreen
       onOpen={open}
@@ -189,8 +212,13 @@ export default function AppShell() {
   );
 
   if (screen === 'customers') {
-    content =
-      <CustomersScreen />;
+    content = (
+      <CustomersScreen
+        onStartIntake={
+          startIntake
+        }
+      />
+    );
   }
 
   if (screen === 'orders') {
@@ -209,8 +237,22 @@ export default function AppShell() {
   }
 
   if (screen === 'inspections') {
-    content =
-      <InspectionsScreen />;
+    content = (
+      <InspectionsScreen
+        initialCustomerId={
+          intakeSeed.customerId
+        }
+        initialVehicleId={
+          intakeSeed.vehicleId
+        }
+        onSeedConsumed={() =>
+          setIntakeSeed({
+            customerId: '',
+            vehicleId: '',
+          })
+        }
+      />
+    );
   }
 
   if (screen === 'notifications') {
