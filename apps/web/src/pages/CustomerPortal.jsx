@@ -1,6 +1,9 @@
 ﻿import {
   useState,
 } from 'react';
+import {
+  useSearchParams,
+} from 'react-router-dom';
 
 const API_URL = (
   import.meta.env.VITE_API_URL ||
@@ -75,6 +78,17 @@ async function portalRequest(
 }
 
 export default function CustomerPortal() {
+  const [searchParams] =
+    useSearchParams();
+
+  const qrToken =
+    searchParams
+      .get('qr')
+      ?.trim() || '';
+
+  const fromMaintenanceCard =
+    Boolean(qrToken);
+
   const [step, setStep] =
     useState('identity');
 
@@ -109,10 +123,19 @@ export default function CustomerPortal() {
     try {
       const result =
         await portalRequest(
-          '/customer-portal/access/start',
+          fromMaintenanceCard
+            ? '/customer-portal/access/qr/start'
+            : '/customer-portal/access/start',
           {
             method: 'POST',
-            body: identity,
+            body:
+              fromMaintenanceCard
+                ? {
+                    nationalId:
+                      identity.nationalId,
+                    qrToken,
+                  }
+                : identity,
           },
         );
 
@@ -201,9 +224,9 @@ export default function CustomerPortal() {
             </h1>
 
             <p>
-              T.C. kimlik numaranız
-              ve araç plakanız ile
-              doğrulama başlatın.
+              {fromMaintenanceCard
+                ? 'Bakım kartındaki araca ait müşteri bilgilerini açmak için T.C. kimlik numaranızla doğrulama başlatın.'
+                : 'T.C. kimlik numaranız ve araç plakanız ile doğrulama başlatın.'}
             </p>
 
             <form
@@ -233,23 +256,25 @@ export default function CustomerPortal() {
                 />
               </label>
 
-              <label>
-                Plaka
-                <input
-                  value={
-                    identity.plate
-                  }
-                  onChange={(event) =>
-                    setIdentity({
-                      ...identity,
-                      plate:
-                        event.target.value
-                          .toUpperCase(),
-                    })
-                  }
-                  required
-                />
-              </label>
+              {!fromMaintenanceCard && (
+                <label>
+                  Plaka
+                  <input
+                    value={
+                      identity.plate
+                    }
+                    onChange={(event) =>
+                      setIdentity({
+                        ...identity,
+                        plate:
+                          event.target.value
+                            .toUpperCase(),
+                      })
+                    }
+                    required
+                  />
+                </label>
+              )}
 
               {error && (
                 <div className="page-message error-message">
@@ -268,9 +293,9 @@ export default function CustomerPortal() {
             </form>
 
             <div className="customer-portal-security">
-              Cari ve ödeme bilgileri
-              yalnızca SMS doğrulaması
-              sonrasında gösterilir.
+              {fromMaintenanceCard
+                ? 'QR kod yalnızca dijital bakım kartını açar. Kişisel ve finansal bilgiler SMS doğrulaması sonrasında gösterilir.'
+                : 'Cari ve ödeme bilgileri yalnızca SMS doğrulaması sonrasında gösterilir.'}
             </div>
           </section>
         )}
