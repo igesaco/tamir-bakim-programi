@@ -52,6 +52,12 @@ export class MediaController {
 
 @Permission(PermissionKey.MEDIA_UPLOAD)
   @Post('upload')
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+    UserRole.TECHNICIAN,
+  )
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -157,6 +163,11 @@ export class MediaController {
 
 @Permission(PermissionKey.MEDIA_VIEW)
   @Get()
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+  )
   findAll(@Req() req: any) {
     return this.mediaService.findAll(
       req.user.organizationId,
@@ -167,6 +178,11 @@ export class MediaController {
 
 @Permission(PermissionKey.MEDIA_VIEW)
   @Get(':id')
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+  )
   findOne(
     @Req() req: any,
     @Param('id') id: string,
