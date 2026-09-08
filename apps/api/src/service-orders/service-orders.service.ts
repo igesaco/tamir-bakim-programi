@@ -8,12 +8,14 @@ import {
   InventoryMovementType,
   ServiceItemType,
   ServiceOrderStatus,
+  ServiceOrderWorkLogType,
   UserRole,
 } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateServiceOrderDto } from './dto/create-service-order.dto';
 import { CreateServiceOrderItemDto } from './dto/create-service-order-item.dto';
+import { CreateServiceOrderWorkLogDto } from './dto/create-service-order-work-log.dto';
 
 function money(value: number) {
   return (
@@ -349,6 +351,34 @@ export class ServiceOrdersService {
                 lastName: true,
               },
             },
+            media: {
+              orderBy: {
+                createdAt: 'desc',
+              },
+            },
+            workLogs: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    role: true,
+                  },
+                },
+                part: {
+                  select: {
+                    id: true,
+                    name: true,
+                    brand: true,
+                    unit: true,
+                  },
+                },
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
+            },
           },
         });
 
@@ -381,6 +411,22 @@ export class ServiceOrdersService {
             },
           },
           media: true,
+          workLogs: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  role: true,
+                },
+              },
+              part: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
           payments: true,
         },
       });
@@ -392,6 +438,210 @@ export class ServiceOrdersService {
     }
 
     return order;
+  }
+
+  async findWorkLogs(
+    organizationId: string,
+    id: string,
+    actorRole: UserRole,
+    actorId: string,
+    actorBranchId: string | null,
+  ) {
+    const order =
+      await this.prisma.serviceOrder.findFirst({
+        where: {
+          id,
+          ...this.buildAccessWhere(
+            organizationId,
+            actorRole,
+            actorId,
+            actorBranchId,
+          ),
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (!order) {
+      throw new NotFoundException(
+        'İş emri bulunamadı veya bu iş emrine erişim yetkiniz yok.',
+      );
+    }
+
+    return this.prisma.serviceOrderWorkLog.findMany({
+      where: {
+        organizationId,
+        serviceOrderId: id,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+          },
+        },
+        part: {
+          select: {
+            id: true,
+            name: true,
+            brand: true,
+            unit: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async addWorkLog(
+    organizationId: string,
+    id: string,
+    actorRole: UserRole,
+    actorId: string,
+    actorBranchId: string | null,
+    dto: CreateServiceOrderWorkLogDto,
+  ) {
+    const order =
+      await this.prisma.serviceOrder.findFirst({
+        where: {
+          id,
+          ...this.buildAccessWhere(
+            organizationId,
+            actorRole,
+            actorId,
+            actorBranchId,
+          ),
+        },
+        select: {
+          id: true,
+          branchId: true,
+        },
+      });
+
+    if (!order) {
+      throw new NotFoundException(
+        'İş emri bulunamadı veya bu iş emrine erişim yetkiniz yok.',
+      );
+    }
+
+    const note =
+      dto.note?.trim() ||
+      null;
+
+    const partNameInput =
+      dto.partName?.trim() ||
+      null;
+
+    if (
+      dto.type ===
+        ServiceOrderWorkLogType.NOTE &&
+      !note
+    ) {
+      throw new BadRequestException(
+        'Teknik işlem notu gerekli.',
+      );
+    }
+
+    let partId:
+      | string
+      | null =
+      dto.partId ?? null;
+
+    let partName:
+      | string
+      | null =
+      partNameInput;
+
+    if (
+      dto.type ===
+      ServiceOrderWorkLogType.PART_USED
+    ) {
+      if (
+        !partId &&
+        !partName
+      ) {
+        throw new BadRequestException(
+          'Kullanılan parça için parça seçimi veya parça adı gerekli.',
+        );
+      }
+
+      if (
+        !dto.quantity ||
+        Number(dto.quantity) <= 0
+      ) {
+        throw new BadRequestException(
+          'Kullanılan parça miktarı gerekli.',
+        );
+      }
+
+      if (partId) {
+        const part =
+          await this.prisma.part.findFirst({
+            where: {
+              id: partId,
+              organizationId,
+              active: true,
+            },
+            select: {
+              id: true,
+              name: true,
+            },
+          });
+
+        if (!part) {
+          throw new BadRequestException(
+            'Kullanılan parça bulunamadı.',
+          );
+        }
+
+        partName =
+          part.name;
+      }
+    } else {
+      partId = null;
+      partName = null;
+    }
+
+    return this.prisma.serviceOrderWorkLog.create({
+      data: {
+        organizationId,
+        serviceOrderId: id,
+        userId: actorId,
+        type: dto.type,
+        note,
+        partId,
+        partName,
+        quantity:
+          dto.quantity === undefined
+            ? null
+            : Number(
+                dto.quantity,
+              ),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+          },
+        },
+        part: {
+          select: {
+            id: true,
+            name: true,
+            brand: true,
+            unit: true,
+          },
+        },
+      },
+    });
   }
 
   async assignTechnician(
