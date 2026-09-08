@@ -13,8 +13,11 @@ import { AuthGuard } from '@nestjs/passport';
 import {
   AppointmentStatus,
   UserRole,
+
+  FeatureKey,
 } from '@prisma/client';
 
+import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { AppointmentsService } from './appointments.service';
@@ -27,6 +30,7 @@ import { CreateAppointmentDto } from './dto/create-appointment.dto';
   UserRole.SERVICE_ADVISOR,
 )
 
+@Feature(FeatureKey.APPOINTMENTS)
 @Controller('appointments')
 export class AppointmentsController {
   constructor(
