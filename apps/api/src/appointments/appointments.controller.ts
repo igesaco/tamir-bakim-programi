@@ -8,16 +8,17 @@ import {
   Post,
   Req,
   UseGuards,
-} from '@nestjs/common';
+  } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
   AppointmentStatus,
   UserRole,
-
   FeatureKey,
+  PermissionKey,
 } from '@prisma/client';
 
 import { Feature } from '../entitlements/feature.decorator';
+import { Permission } from '../permissions/permission.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { AppointmentsService } from './appointments.service';
@@ -37,6 +38,7 @@ export class AppointmentsController {
     private readonly appointmentsService: AppointmentsService,
   ) {}
 
+@Permission(PermissionKey.APPOINTMENT_MANAGE)
   @Post()
   create(
     @Req() req: any,
@@ -51,6 +53,7 @@ export class AppointmentsController {
     );
   }
 
+@Permission(PermissionKey.APPOINTMENT_VIEW)
   @Get()
   findAll(@Req() req: any) {
     return this.appointmentsService.findAll(
@@ -60,6 +63,7 @@ export class AppointmentsController {
     );
   }
 
+@Permission(PermissionKey.APPOINTMENT_MANAGE)
   @Patch(':id/status')
   updateStatus(
     @Req() req: any,
