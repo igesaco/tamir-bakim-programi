@@ -103,6 +103,29 @@ jobs:
           cat /tmp/tamir-bakim-api.log
           exit 1
 
+      - name: Access control runtime smoke test
+        working-directory: apps/api
+        shell: bash
+        run: |
+          PORT=3100 NODE_ENV=test node dist/main.js > /tmp/tamir-bakim-access.log 2>&1 &
+          API_PID=$!
+          trap 'kill $API_PID || true' EXIT
+
+          for i in {1..40}; do
+            if curl --fail --silent http://127.0.0.1:3100/health > /dev/null; then
+              break
+            fi
+
+            if ! kill -0 $API_PID 2>/dev/null; then
+              cat /tmp/tamir-bakim-access.log
+              exit 1
+            fi
+
+            sleep 1
+          done
+
+          BASE_URL=http://127.0.0.1:3100 node access-smoke.mjs
+
       - name: Web install
         working-directory: apps/web
         run: npm ci
