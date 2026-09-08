@@ -40,6 +40,8 @@ export default function Settings() {
           organization.address || undefined,
         phone:
           organization.phone || undefined,
+        whatsappPhone:
+          organization.whatsappPhone || undefined,
         email:
           organization.email || undefined,
       },
@@ -146,6 +148,18 @@ export default function Settings() {
                 setOrganization({
                   ...organization,
                   phone: e.target.value,
+                })
+              }
+            />
+
+            <input
+              placeholder="WhatsApp numarası"
+              value={organization.whatsappPhone || ''}
+              onChange={(e) =>
+                setOrganization({
+                  ...organization,
+                  whatsappPhone:
+                    e.target.value,
                 })
               }
             />
