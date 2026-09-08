@@ -84,13 +84,12 @@ export default function LoginScreen({
       </Text>
 
       <Text style={styles.title}>
-        Mobil Servis
+        Personel Girişi
       </Text>
 
       <Text style={styles.subtitle}>
-        Yetkinize göre müşteri,
-        iş emri, stok ve kasa
-        işlemlerine erişin.
+        Servis operasyonlarını yetkinize
+        göre güvenli şekilde yönetin.
       </Text>
 
       <View style={styles.card}>
