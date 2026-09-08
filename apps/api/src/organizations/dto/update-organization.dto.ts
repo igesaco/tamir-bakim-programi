@@ -28,6 +28,10 @@ export class UpdateOrganizationDto {
   phone?: string;
 
   @IsOptional()
+  @IsString()
+  whatsappPhone?: string;
+
+  @IsOptional()
   @IsEmail()
   email?: string;
 }
