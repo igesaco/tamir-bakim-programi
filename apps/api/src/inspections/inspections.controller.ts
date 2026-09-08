@@ -9,8 +9,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { UserRole } from '@prisma/client';
+import { UserRole 
+  FeatureKey,
+} from '@prisma/client';
 
+import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreateInspectionDto } from './dto/create-inspection.dto';
@@ -24,6 +27,7 @@ import { InspectionsService } from './inspections.service';
   UserRole.SERVICE_ADVISOR,
 )
 
+@Feature(FeatureKey.INSPECTIONS)
 @Controller('inspections')
 export class InspectionsController {
   constructor(
