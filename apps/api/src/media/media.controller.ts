@@ -12,13 +12,16 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { UserRole } from '@prisma/client';
+import { UserRole 
+  FeatureKey,
+} from '@prisma/client';
 import { diskStorage } from 'multer';
 import {
   extname,
   resolve,
 } from 'path';
 
+import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UploadMediaDto } from './dto/upload-media.dto';
@@ -37,6 +40,7 @@ const mediaStorageDir =
   UserRole.SERVICE_ADVISOR,
 )
 
+@Feature(FeatureKey.MEDIA)
 @Controller('media')
 export class MediaController {
   constructor(
