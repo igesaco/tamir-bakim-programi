@@ -96,6 +96,7 @@ export default function VehicleQrPrint() {
 
   const whatsapp =
     whatsappUrl(
+      organization?.whatsappPhone ||
       organization?.phone,
     );
 
@@ -311,7 +312,8 @@ export default function VehicleQrPrint() {
                   <div>
                     <strong>WhatsApp</strong>
                     <span>
-                      {organization.phone}
+                      {organization.whatsappPhone ||
+                        organization.phone}
                     </span>
                   </div>
                 )}
