@@ -548,7 +548,8 @@ export class InspectionsService {
           await tx.inspection.create({
             data: {
               organizationId,
-              branchId,
+              branchId:
+                resolvedBranchId,
               vehicleId:
                 vehicle.id,
               serviceOrderId:
