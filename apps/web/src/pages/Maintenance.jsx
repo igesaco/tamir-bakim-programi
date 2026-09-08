@@ -12,6 +12,12 @@ export default function Maintenance() {
   const [vehicles, setVehicles] = useState([]);
   const [packages, setPackages] = useState([]);
   const [alerts, setAlerts] = useState([]);
+  const [maintenanceBusyId, setMaintenanceBusyId] =
+    useState('');
+  const [maintenanceMessage, setMaintenanceMessage] =
+    useState('');
+  const [maintenanceError, setMaintenanceError] =
+    useState('');
 
   const [form, setForm] = useState({
     vehicleId: '',
@@ -97,6 +103,93 @@ export default function Maintenance() {
     user?.role === 'OWNER' ||
     user?.role === 'MANAGER';
 
+  const canManageMaintenance =
+    user?.features?.includes(
+      'MAINTENANCE',
+    ) &&
+    user?.permissions?.includes(
+      'MAINTENANCE_MANAGE',
+    ) &&
+    [
+      'OWNER',
+      'MANAGER',
+      'SERVICE_ADVISOR',
+    ].includes(user?.role);
+
+  const activePlans =
+    plans.filter(
+      (plan) =>
+        plan.status === 'ACTIVE',
+    );
+
+  async function completePlan(plan) {
+    const approved =
+      window.confirm(
+        `${plan.vehicle?.plate || 'Araç'} - ${plan.title} bakımı tamamlandı olarak işaretlensin mi?`,
+      );
+
+    if (!approved) {
+      return;
+    }
+
+    setMaintenanceBusyId(
+      plan.id,
+    );
+    setMaintenanceMessage('');
+    setMaintenanceError('');
+
+    try {
+      const response =
+        await api.patch(
+          `/maintenance/plans/${plan.id}/complete`,
+        );
+
+      const nextPlan =
+        response.data?.nextPlan;
+
+      if (nextPlan) {
+        const nextParts = [
+          nextPlan.nextDueKm
+            ? `${Number(
+                nextPlan.nextDueKm,
+              ).toLocaleString(
+                'tr-TR',
+              )} KM`
+            : '',
+          nextPlan.nextDueDate
+            ? new Date(
+                nextPlan.nextDueDate,
+              ).toLocaleDateString(
+                'tr-TR',
+              )
+            : '',
+        ].filter(Boolean);
+
+        setMaintenanceMessage(
+          `Bakım tamamlandı. Sonraki bakım otomatik oluşturuldu${nextParts.length ? `: ${nextParts.join(' / ')}` : ''}.`,
+        );
+      } else {
+        setMaintenanceMessage(
+          'Bakım tamamlandı. Bu plan periyodik olmadığı için yeni bakım oluşturulmadı.',
+        );
+      }
+
+      await load();
+    } catch (err) {
+      const detail =
+        err?.response?.data?.message;
+
+      setMaintenanceError(
+        Array.isArray(detail)
+          ? detail.join(', ')
+          : detail ||
+              'Bakım planı tamamlanamadı.',
+      );
+    } finally {
+      setMaintenanceBusyId('');
+    }
+  }
+
   async function togglePackage(
     maintenancePackage,
   ) {
@@ -149,7 +242,7 @@ export default function Maintenance() {
 
         <div className="stat-card">
           <span>Aktif Plan</span>
-          <strong>{plans.length}</strong>
+          <strong>{activePlans.length}</strong>
         </div>
 
         <div className="stat-card">
@@ -157,6 +250,18 @@ export default function Maintenance() {
           <strong>{records.length}</strong>
         </div>
       </div>
+
+      {maintenanceMessage && (
+        <div className="page-message success-message">
+          {maintenanceMessage}
+        </div>
+      )}
+
+      {maintenanceError && (
+        <div className="page-message error-message">
+          {maintenanceError}
+        </div>
+      )}
 
       <div className="panel-card spaced-card">
         <div className="card-title-row">
@@ -415,11 +520,14 @@ export default function Maintenance() {
                     <th>Sonraki KM</th>
                     <th>Tarih</th>
                     <th>Durum</th>
+                    {canManageMaintenance && (
+                      <th>İşlem</th>
+                    )}
                   </tr>
                 </thead>
 
                 <tbody>
-                  {plans.map((p) => (
+                  {activePlans.map((p) => (
                     <tr key={p.id}>
                       <td>{p.vehicle?.plate}</td>
                       <td>{p.title}</td>
@@ -436,8 +544,43 @@ export default function Maintenance() {
                       <td>
                         {statusLabel(p.status)}
                       </td>
+
+                      {canManageMaintenance && (
+                        <td>
+                          <button
+                            type="button"
+                            className="small-button"
+                            disabled={
+                              maintenanceBusyId ===
+                              p.id
+                            }
+                            onClick={() =>
+                              completePlan(p)
+                            }
+                          >
+                            {maintenanceBusyId ===
+                            p.id
+                              ? 'Tamamlanıyor...'
+                              : 'Bakımı Tamamla'}
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
+
+                  {!activePlans.length && (
+                    <tr>
+                      <td
+                        colSpan={
+                          canManageMaintenance
+                            ? 6
+                            : 5
+                        }
+                      >
+                        Aktif bakım planı bulunmuyor.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
