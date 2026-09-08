@@ -456,6 +456,74 @@ export class VehiclesService {
       ...publicVehicle
     } = vehicle;
 
+    const now =
+      new Date();
+
+    const dueSoonAt =
+      new Date(
+        now.getTime() +
+          30 *
+            24 *
+            60 *
+            60 *
+            1000,
+      );
+
+    const enrichedPlans =
+      maintenancePlans.map(
+        (plan) => {
+          const kmRemaining =
+            plan.nextDueKm ===
+              null ||
+            plan.nextDueKm ===
+              undefined
+              ? null
+              : plan.nextDueKm -
+                publicVehicle.mileage;
+
+          const kmOverdue =
+            kmRemaining !== null &&
+            kmRemaining <= 0;
+
+          const dateOverdue =
+            Boolean(
+              plan.nextDueDate &&
+                plan.nextDueDate <
+                  now,
+            );
+
+          const kmDueSoon =
+            kmRemaining !== null &&
+            kmRemaining > 0 &&
+            kmRemaining <= 1000;
+
+          const dateDueSoon =
+            Boolean(
+              plan.nextDueDate &&
+                plan.nextDueDate >=
+                  now &&
+                plan.nextDueDate <=
+                  dueSoonAt,
+            );
+
+          const alertStatus =
+            kmOverdue ||
+            dateOverdue
+              ? 'OVERDUE'
+              : kmDueSoon ||
+                  dateDueSoon
+                ? 'DUE_SOON'
+                : 'UPCOMING';
+
+          return {
+            ...plan,
+            alertStatus,
+            remainingKm:
+              kmRemaining,
+          };
+        },
+      );
+
     return {
       vehicle: publicVehicle,
       lastMaintenanceRecord:
@@ -463,7 +531,8 @@ export class VehiclesService {
         null,
       maintenanceHistory:
         maintenanceRecords,
-      maintenancePlans,
+      maintenancePlans:
+        enrichedPlans,
     };
   }
 }
