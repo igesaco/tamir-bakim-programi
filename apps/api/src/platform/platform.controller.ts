@@ -27,6 +27,7 @@ import { ReplaceRolePermissionsDto } from './dto/replace-role-permissions.dto';
 import { SetFeatureOverrideDto } from './dto/set-feature-override.dto';
 import { SetRolePermissionDto } from './dto/set-role-permission.dto';
 import { UpdateOrganizationPackageDto } from './dto/update-organization-package.dto';
+import { UpdateOrganizationDto } from '../organizations/dto/update-organization.dto';
 
 class PlatformLoginDto {
   @IsEmail()
@@ -79,6 +80,21 @@ export class PlatformController {
   )
   organizations() {
     return this.platformService.listOrganizations();
+  }
+
+  @Patch('organizations/:id/branding')
+  @UseGuards(
+    AuthGuard('jwt'),
+    PlatformGuard,
+  )
+  updateBranding(
+    @Param('id') id: string,
+    @Body() dto: UpdateOrganizationDto,
+  ) {
+    return this.platformService.updateOrganizationBranding(
+      id,
+      dto,
+    );
   }
 
   @Patch('organizations/:id/package')
