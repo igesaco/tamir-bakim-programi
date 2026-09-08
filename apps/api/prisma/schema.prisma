@@ -229,9 +229,10 @@ model Organization {
   taxNumber String?
   taxOffice String?
   address   String?
-  phone     String?
-  email     String?
-  active    Boolean  @default(true)
+  phone         String?
+  whatsappPhone String?
+  email         String?
+  active        Boolean  @default(true)
 
   packageId String?
   package   ServicePackage? @relation(fields: [packageId], references: [id])
