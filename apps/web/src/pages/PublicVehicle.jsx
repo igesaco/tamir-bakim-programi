@@ -294,6 +294,29 @@ export default function PublicVehicle() {
           )}
         </div>
 
+        <div className="public-section">
+          <h2>Araç Sahibine Özel</h2>
+
+          <p className="muted-text">
+            Bu QR kod bir dijital bakım kartıdır.
+            Bakım geçmişi ve yaklaşan bakım bilgileri
+            açık kartta görüntülenir. Kişisel, finansal
+            ve özel servis bilgileri için güvenli müşteri
+            doğrulaması gerekir.
+          </p>
+
+          <div className="action-row">
+            <a
+              className="primary-link-button"
+              href={`/musteri?qr=${encodeURIComponent(
+                token,
+              )}`}
+            >
+              Müşteri Paneline Güvenli Giriş
+            </a>
+          </div>
+        </div>
+
         <div className="public-footer">
           Araç bakım bilgileri servis
           kayıtlarından otomatik
