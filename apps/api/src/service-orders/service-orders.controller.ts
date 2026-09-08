@@ -9,15 +9,16 @@ import {
   Post,
   Req,
   UseGuards,
-} from '@nestjs/common';
+  } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
   ServiceOrderStatus,
   UserRole,
-
   FeatureKey,
+  PermissionKey,
 } from '@prisma/client';
 
+import { Permission } from '../permissions/permission.decorator';
 import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -34,6 +35,7 @@ export class ServiceOrdersController {
     private readonly serviceOrdersService: ServiceOrdersService,
   ) {}
 
+@Permission(PermissionKey.SERVICE_ORDER_CREATE)
   @Post()
   @Roles(
     UserRole.OWNER,
@@ -53,6 +55,7 @@ export class ServiceOrdersController {
     );
   }
 
+@Permission(PermissionKey.SERVICE_ORDER_VIEW)
   @Get()
   @Roles(
     UserRole.OWNER,
@@ -70,6 +73,7 @@ export class ServiceOrdersController {
     );
   }
 
+@Permission(PermissionKey.SERVICE_ORDER_VIEW)
   @Get(':id/available-parts')
   @Roles(
     UserRole.OWNER,
@@ -89,6 +93,7 @@ export class ServiceOrdersController {
     );
   }
 
+@Permission(PermissionKey.SERVICE_ORDER_ITEM_MANAGE)
   @Post(':id/items')
   @Roles(
     UserRole.OWNER,
@@ -111,6 +116,7 @@ export class ServiceOrdersController {
     );
   }
 
+@Permission(PermissionKey.SERVICE_ORDER_ITEM_MANAGE)
   @Patch(':id/items/:itemId/complete')
   @Roles(
     UserRole.OWNER,
@@ -134,6 +140,7 @@ export class ServiceOrdersController {
     );
   }
 
+@Permission(PermissionKey.SERVICE_ORDER_ITEM_MANAGE)
   @Delete(':id/items/:itemId')
   @Roles(
     UserRole.OWNER,
@@ -156,6 +163,7 @@ export class ServiceOrdersController {
     );
   }
 
+@Permission(PermissionKey.SERVICE_ORDER_VIEW)
   @Get(':id')
   @Roles(
     UserRole.OWNER,
@@ -177,6 +185,7 @@ export class ServiceOrdersController {
     );
   }
 
+@Permission(PermissionKey.SERVICE_ORDER_ASSIGN)
   @Patch(':id/assign-technician')
   @Roles(
     UserRole.OWNER,
@@ -198,6 +207,7 @@ export class ServiceOrdersController {
     );
   }
 
+@Permission(PermissionKey.SERVICE_ORDER_STATUS)
   @Patch(':id/status')
   @Roles(
     UserRole.OWNER,
