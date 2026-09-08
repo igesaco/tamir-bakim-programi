@@ -219,7 +219,46 @@ export class CustomersService {
         },
         include: {
           branch: true,
-          vehicles: true,
+          vehicles: {
+            include: {
+              media: {
+                where: {
+                  type: {
+                    in: [
+                      'VEHICLE',
+                      'ACCEPTANCE',
+                      'DAMAGE',
+                      'ENGINE',
+                      'BEFORE',
+                      'AFTER',
+                      'ODOMETER',
+                    ],
+                  },
+                },
+                orderBy: {
+                  createdAt: 'desc',
+                },
+                take: 12,
+              },
+              serviceOrders: {
+                select: {
+                  id: true,
+                  orderNumber: true,
+                  status: true,
+                  mileage: true,
+                  complaint: true,
+                  createdAt: true,
+                },
+                orderBy: {
+                  createdAt: 'desc',
+                },
+                take: 5,
+              },
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
         },
       });
 
