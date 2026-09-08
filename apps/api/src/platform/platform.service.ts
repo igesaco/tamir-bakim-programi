@@ -17,6 +17,7 @@ import { EntitlementsService } from '../entitlements/entitlements.service';
 import { defaultPermissionsForRole } from '../permissions/default-role-permissions';
 import { PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { UpdateOrganizationDto } from '../organizations/dto/update-organization.dto';
 
 @Injectable()
 export class PlatformService
@@ -229,6 +230,31 @@ export class PlatformService
         }),
       ),
     );
+  }
+
+  async updateOrganizationBranding(
+    organizationId: string,
+    dto: UpdateOrganizationDto,
+  ) {
+    return this.prisma.organization.update({
+      where: {
+        id: organizationId,
+      },
+      data: {
+        logoUrl:
+          dto.logoUrl,
+        panelTitle:
+          dto.panelTitle,
+        primaryColor:
+          dto.primaryColor,
+        secondaryColor:
+          dto.secondaryColor,
+        sidebarColor:
+          dto.sidebarColor,
+        defaultPanelMode:
+          dto.defaultPanelMode,
+      },
+    });
   }
 
   async setPackage(
