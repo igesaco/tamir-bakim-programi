@@ -3,3 +3,7 @@
   --tenant-secondary: #e9edf2;
   --tenant-sidebar: #111419;
 }
+
+.app-shell .sidebar {
+  background: var(--tenant-sidebar);
+}
