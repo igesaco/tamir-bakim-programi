@@ -4388,3 +4388,148 @@ html[data-theme="dark"] body {
     bottom: 6px;
   }
 }
+
+
+/* === DESKTOP ICON POLISH V4 === */
+/* Bigger, clearer desktop shortcuts */
+.desktop-app-icon {
+  width: 108px;
+  min-height: 116px;
+  gap: 10px;
+}
+
+.desktop-app-glyph {
+  width: 70px;
+  height: 70px;
+  border-radius: 18px;
+}
+
+.desktop-app-glyph svg {
+  width: 40px;
+  height: 40px;
+}
+
+.desktop-app-label {
+  max-width: 104px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+/* Keep dark desktop shortcuts consistent */
+.ui-mode-desktop.theme-dark
+  .desktop-app-glyph,
+.ui-mode-desktop.theme-dark
+  .desktop-app-icon:nth-child(2n)
+  .desktop-app-glyph,
+.ui-mode-desktop.theme-dark
+  .desktop-app-icon:nth-child(3n)
+  .desktop-app-glyph {
+  border-color:
+    rgba(255, 255, 255, .12);
+  background:
+    linear-gradient(
+      145deg,
+      #2d3a46,
+      #18222b
+    );
+  color: #eef4f8;
+}
+
+.ui-mode-desktop.theme-dark
+  .desktop-app-icon.active
+  .desktop-app-glyph {
+  border-color: #f59e0b;
+  background:
+    linear-gradient(
+      145deg,
+      #3a3528,
+      #211a11
+    );
+  color: #f6b53b;
+}
+
+/* Fix all dark shortcut tiles in light desktop mode */
+.ui-mode-desktop.theme-light
+  .desktop-app-glyph,
+.ui-mode-desktop.theme-light
+  .desktop-app-icon:nth-child(2n)
+  .desktop-app-glyph,
+.ui-mode-desktop.theme-light
+  .desktop-app-icon:nth-child(3n)
+  .desktop-app-glyph {
+  border-color: #cbd6df;
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff,
+      #e8eff5
+    );
+  color: #2c3a45;
+  box-shadow:
+    0 12px 24px
+    rgba(64, 82, 98, .13);
+}
+
+.ui-mode-desktop.theme-light
+  .desktop-app-icon:hover
+  .desktop-app-glyph {
+  border-color: #aebdca;
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff,
+      #dde7ee
+    );
+}
+
+.ui-mode-desktop.theme-light
+  .desktop-app-icon.active
+  .desktop-app-glyph {
+  border-color: #e0a33b;
+  background:
+    linear-gradient(
+      145deg,
+      #fff7e6,
+      #f7d99f
+    );
+  color: #aa6b00;
+  box-shadow:
+    0 0 0 3px
+      rgba(245, 158, 11, .10),
+    0 12px 24px
+      rgba(64, 82, 98, .13);
+}
+
+@media (max-width: 1100px) {
+  .desktop-app-icon {
+    width: 96px;
+    min-height: 104px;
+  }
+
+  .desktop-app-glyph {
+    width: 62px;
+    height: 62px;
+  }
+
+  .desktop-app-glyph svg {
+    width: 35px;
+    height: 35px;
+  }
+}
+
+@media (max-width: 760px) {
+  .desktop-app-icon {
+    width: 88px;
+    min-height: 96px;
+  }
+
+  .desktop-app-glyph {
+    width: 56px;
+    height: 56px;
+  }
+
+  .desktop-app-glyph svg {
+    width: 32px;
+    height: 32px;
+  }
+}
