@@ -6,8 +6,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { UserRole } from '@prisma/client';
+import { FeatureKey, UserRole } from '@prisma/client';
 
+import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { VehicleCatalogService } from './vehicle-catalog.service';
@@ -18,6 +19,7 @@ import { VehicleCatalogService } from './vehicle-catalog.service';
   UserRole.MANAGER,
   UserRole.SERVICE_ADVISOR,
 )
+@Feature(FeatureKey.VEHICLES_QR)
 @Controller('vehicle-catalog')
 export class VehicleCatalogController {
   constructor(
