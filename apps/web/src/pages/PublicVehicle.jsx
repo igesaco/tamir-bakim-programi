@@ -344,19 +344,19 @@ export default function PublicVehicle() {
           <p className="muted-text">
             Bu QR kod bir dijital bakım kartıdır.
             Bakım geçmişi ve yaklaşan bakım bilgileri
-            açık kartta görüntülenir. Kişisel, finansal
-            ve özel servis bilgileri için güvenli müşteri
-            doğrulaması gerekir.
+            açık kartta görüntülenir. Kişisel bilgiler,
+            servis takibi, uyarılar ve bildirimler için
+            Tamir Bakım müşteri uygulamasını kullanın.
           </p>
 
           <div className="action-row">
             <a
               className="primary-link-button"
-              href={`/musteri?qr=${encodeURIComponent(
+              href={`/uygulama?qr=${encodeURIComponent(
                 token,
               )}`}
             >
-              Müşteri Paneline Güvenli Giriş
+              Müşteri Uygulamasını Aç
             </a>
           </div>
         </div>
