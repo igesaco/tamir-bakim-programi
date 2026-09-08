@@ -16,6 +16,8 @@ const PANEL_USER_ROLES =
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
     UserRole.TECHNICIAN,
+    UserRole.WAREHOUSE,
+    UserRole.ACCOUNTING,
   ]);
 
 const BRANCH_REQUIRED_ROLES =
@@ -23,6 +25,8 @@ const BRANCH_REQUIRED_ROLES =
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
     UserRole.TECHNICIAN,
+    UserRole.WAREHOUSE,
+    UserRole.ACCOUNTING,
   ]);
 
 @Injectable()
@@ -166,7 +170,7 @@ export class UsersService {
       !dto.branchId
     ) {
       throw new BadRequestException(
-        'Yönetici, servis danışmanı ve teknisyen için şube seçimi zorunludur.',
+        'Yönetici, servis danışmanı, teknisyen, depo ve muhasebe personeli için şube seçimi zorunludur.',
       );
     }
 
