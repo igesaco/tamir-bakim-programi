@@ -310,6 +310,9 @@ export default function PlatformAdmin() {
   const [ownerPasswords, setOwnerPasswords] =
     useState({});
 
+  const [ownerProfiles, setOwnerProfiles] =
+    useState({});
+
   async function load() {
     const [
       packagesResponse,
@@ -754,6 +757,95 @@ export default function PlatformAdmin() {
       ledgerForm.type === 'DEBIT'
         ? 'Cari borç kaydı eklendi.'
         : 'Tahsilat kaydı eklendi.',
+    );
+  }
+
+  function setOwnerProfileField(
+    owner,
+    field,
+    value,
+  ) {
+    setOwnerProfiles(
+      (current) => ({
+        ...current,
+        [owner.id]: {
+          firstName:
+            current[owner.id]
+              ?.firstName ??
+            owner.firstName ??
+            '',
+          lastName:
+            current[owner.id]
+              ?.lastName ??
+            owner.lastName ??
+            '',
+          email:
+            current[owner.id]
+              ?.email ??
+            owner.email ??
+            '',
+          phone:
+            current[owner.id]
+              ?.phone ??
+            owner.phone ??
+            '',
+          [field]:
+            value,
+        },
+      }),
+    );
+  }
+
+  function saveOwnerProfile(
+    event,
+    owner,
+  ) {
+    event.preventDefault();
+
+    if (!selected) {
+      return;
+    }
+
+    const profile =
+      ownerProfiles[
+        owner.id
+      ] || {};
+
+    return run(
+      () =>
+        api.patch(
+          `/platform/organizations/${selected.id}/users/${owner.id}/profile`,
+          {
+            firstName:
+              profile.firstName ??
+              owner.firstName,
+            lastName:
+              profile.lastName ??
+              owner.lastName,
+            email:
+              profile.email ??
+              owner.email,
+            phone:
+              profile.phone ??
+              owner.phone ??
+              '',
+          },
+        ).then(() => {
+          setOwnerProfiles(
+            (current) => {
+              const next = {
+                ...current,
+              };
+
+              delete next[
+                owner.id
+              ];
+
+              return next;
+            },
+          );
+        }),
+      'Kurucu panel hesabı güncellendi.',
     );
   }
 
@@ -1569,6 +1661,104 @@ export default function PlatformAdmin() {
                                     ? 'Aktif'
                                     : 'Pasif'}
                                 </small>
+
+                                <form
+                                  className="platform-owner-profile-form"
+                                  onSubmit={(event) =>
+                                    saveOwnerProfile(
+                                      event,
+                                      owner,
+                                    )
+                                  }
+                                >
+                                  <div className="platform-owner-profile-grid">
+                                    <input
+                                      placeholder="Ad"
+                                      value={
+                                        ownerProfiles[
+                                          owner.id
+                                        ]?.firstName ??
+                                        owner.firstName ??
+                                        ''
+                                      }
+                                      onChange={(event) =>
+                                        setOwnerProfileField(
+                                          owner,
+                                          'firstName',
+                                          event.target.value,
+                                        )
+                                      }
+                                      required
+                                    />
+
+                                    <input
+                                      placeholder="Soyad"
+                                      value={
+                                        ownerProfiles[
+                                          owner.id
+                                        ]?.lastName ??
+                                        owner.lastName ??
+                                        ''
+                                      }
+                                      onChange={(event) =>
+                                        setOwnerProfileField(
+                                          owner,
+                                          'lastName',
+                                          event.target.value,
+                                        )
+                                      }
+                                      required
+                                    />
+
+                                    <input
+                                      className="full"
+                                      type="email"
+                                      placeholder="Panel e-posta"
+                                      value={
+                                        ownerProfiles[
+                                          owner.id
+                                        ]?.email ??
+                                        owner.email ??
+                                        ''
+                                      }
+                                      onChange={(event) =>
+                                        setOwnerProfileField(
+                                          owner,
+                                          'email',
+                                          event.target.value,
+                                        )
+                                      }
+                                      required
+                                    />
+
+                                    <input
+                                      className="full"
+                                      placeholder="Telefon"
+                                      value={
+                                        ownerProfiles[
+                                          owner.id
+                                        ]?.phone ??
+                                        owner.phone ??
+                                        ''
+                                      }
+                                      onChange={(event) =>
+                                        setOwnerProfileField(
+                                          owner,
+                                          'phone',
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
+                                  </div>
+
+                                  <button
+                                    type="submit"
+                                    className="platform-owner-save"
+                                    disabled={busy}
+                                  >
+                                    Kurucu Hesabını Kaydet
+                                  </button>
+                                </form>
 
                                 <div className="platform-owner-actions">
                                   <button
