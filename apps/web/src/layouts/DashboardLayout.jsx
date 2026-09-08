@@ -59,6 +59,7 @@ const menu = [
     roles: [
       'OWNER',
       'MANAGER',
+      'WAREHOUSE',
     ],
   },
   {
@@ -70,6 +71,7 @@ const menu = [
     roles: [
       'OWNER',
       'MANAGER',
+      'WAREHOUSE',
     ],
   },
   {
@@ -115,6 +117,7 @@ const menu = [
     roles: [
       'OWNER',
       'MANAGER',
+      'ACCOUNTING',
     ],
   },
   {
@@ -126,6 +129,7 @@ const menu = [
     roles: [
       'OWNER',
       'MANAGER',
+      'ACCOUNTING',
     ],
   },
   {
@@ -160,6 +164,10 @@ const roleLabels = {
     'Servis Danışmanı',
   TECHNICIAN:
     'Teknik Bakım Personeli',
+  WAREHOUSE:
+    'Depo / Stok Personeli',
+  ACCOUNTING:
+    'Muhasebe / Kasa',
 };
 
 const desktopWallpapers = [
