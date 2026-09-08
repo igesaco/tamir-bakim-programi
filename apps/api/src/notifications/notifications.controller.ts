@@ -26,6 +26,9 @@ import { NotificationsService } from './notifications.service';
   UserRole.OWNER,
   UserRole.MANAGER,
   UserRole.SERVICE_ADVISOR,
+  UserRole.TECHNICIAN,
+  UserRole.WAREHOUSE,
+  UserRole.ACCOUNTING,
 )
 
 @Feature(FeatureKey.NOTIFICATIONS)
@@ -56,6 +59,7 @@ export class NotificationsController {
       req.user.organizationId,
       req.user.role,
       req.user.branchId,
+      req.user.sub,
     );
   }
 
@@ -70,6 +74,7 @@ export class NotificationsController {
       id,
       req.user.role,
       req.user.branchId,
+      req.user.sub,
     );
   }
 }
