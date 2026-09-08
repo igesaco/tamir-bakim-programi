@@ -8,15 +8,16 @@ import {
   Post,
   Req,
   UseGuards,
-} from '@nestjs/common';
+  } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
   QuoteStatus,
   UserRole,
-
   FeatureKey,
+  PermissionKey,
 } from '@prisma/client';
 
+import { Permission } from '../permissions/permission.decorator';
 import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -37,6 +38,7 @@ export class QuotesController {
     private readonly quotesService: QuotesService,
   ) {}
 
+@Permission(PermissionKey.QUOTE_CREATE)
   @Post()
   create(
     @Req() req: any,
@@ -50,6 +52,7 @@ export class QuotesController {
     );
   }
 
+@Permission(PermissionKey.QUOTE_VIEW)
   @Get()
   findAll(@Req() req: any) {
     return this.quotesService.findAll(
@@ -59,6 +62,7 @@ export class QuotesController {
     );
   }
 
+@Permission(PermissionKey.QUOTE_VIEW)
   @Get(':id')
   findOne(
     @Req() req: any,
@@ -72,6 +76,7 @@ export class QuotesController {
     );
   }
 
+@Permission(PermissionKey.QUOTE_STATUS)
   @Patch(':id/status')
   updateStatus(
     @Req() req: any,
