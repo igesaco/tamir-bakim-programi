@@ -14,8 +14,11 @@ import { AuthGuard } from '@nestjs/passport';
 import {
   ServiceOrderStatus,
   UserRole,
+
+  FeatureKey,
 } from '@prisma/client';
 
+import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { AssignTechnicianDto } from './dto/assign-technician.dto';
@@ -24,6 +27,7 @@ import { CreateServiceOrderItemDto } from './dto/create-service-order-item.dto';
 import { ServiceOrdersService } from './service-orders.service';
 
 @UseGuards(AuthGuard('jwt'))
+@Feature(FeatureKey.SERVICE_ORDERS)
 @Controller('service-orders')
 export class ServiceOrdersController {
   constructor(
