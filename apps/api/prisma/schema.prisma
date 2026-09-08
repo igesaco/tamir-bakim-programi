@@ -47,6 +47,70 @@ enum FeatureKey {
   AUDIT
 }
 
+
+enum PermissionKey {
+  CUSTOMER_VIEW
+  CUSTOMER_CREATE
+  CUSTOMER_UPDATE
+  CUSTOMER_DELETE
+
+  VEHICLE_VIEW
+  VEHICLE_CREATE
+  VEHICLE_UPDATE
+  VEHICLE_DELETE
+  VEHICLE_QR
+
+  SERVICE_ORDER_VIEW
+  SERVICE_ORDER_CREATE
+  SERVICE_ORDER_EDIT
+  SERVICE_ORDER_ASSIGN
+  SERVICE_ORDER_STATUS
+  SERVICE_ORDER_ITEM_MANAGE
+
+  APPOINTMENT_VIEW
+  APPOINTMENT_MANAGE
+
+  QUOTE_VIEW
+  QUOTE_CREATE
+  QUOTE_STATUS
+
+  MAINTENANCE_VIEW
+  MAINTENANCE_MANAGE
+
+  INVENTORY_VIEW
+  INVENTORY_MANAGE
+
+  SUPPLIER_VIEW
+  SUPPLIER_MANAGE
+
+  STAFF_VIEW
+  STAFF_CREATE
+  STAFF_UPDATE
+  STAFF_PASSWORD
+
+  BRANCH_VIEW
+  BRANCH_MANAGE
+
+  NOTIFICATION_VIEW
+  NOTIFICATION_MANAGE
+
+  CASHIER_VIEW
+  CASHIER_COLLECT
+  CASHIER_STATUS
+
+  REPORTS_VIEW
+
+  SETTINGS_VIEW
+  SETTINGS_MANAGE
+
+  INSPECTION_VIEW
+  INSPECTION_MANAGE
+
+  MEDIA_VIEW
+  MEDIA_UPLOAD
+  MEDIA_DELETE
+}
+
 enum AppointmentStatus {
   REQUESTED
   CONFIRMED
@@ -188,7 +252,8 @@ model Organization {
   notifications      Notification[]
   payments           Payment[]
   auditLogs          AuditLog[]
-  featureOverrides   OrganizationFeatureOverride[]
+  featureOverrides        OrganizationFeatureOverride[]
+  rolePermissionOverrides OrganizationRolePermissionOverride[]
 }
 
 model PlatformUser {
@@ -233,6 +298,23 @@ model OrganizationFeatureOverride {
 
   @@unique([organizationId, feature])
   @@index([organizationId])
+}
+
+
+model OrganizationRolePermissionOverride {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  role       UserRole
+  permission PermissionKey
+  allowed    Boolean
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, role, permission])
+  @@index([organizationId, role])
 }
 
 model Branch {
