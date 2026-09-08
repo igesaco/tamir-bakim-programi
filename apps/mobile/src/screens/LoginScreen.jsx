@@ -21,7 +21,9 @@ import {
   spacing,
 } from '../theme';
 
-export default function LoginScreen() {
+export default function LoginScreen({
+  onBack,
+}) {
   const {
     login,
   } = useAuth();
@@ -123,6 +125,16 @@ export default function LoginScreen() {
           onPress={submit}
         />
       </View>
+
+      {onBack ? (
+        <View style={styles.back}>
+          <Button
+            title="← Giriş Türüne Dön"
+            tone="ghost"
+            onPress={onBack}
+          />
+        </View>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
@@ -174,5 +186,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.lg,
     backgroundColor: colors.panel,
+  },
+  back: {
+    marginTop: 10,
   },
 });
