@@ -33,6 +33,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<
     PermissionKey.SERVICE_ORDER_EDIT,
     PermissionKey.SERVICE_ORDER_ASSIGN,
     PermissionKey.SERVICE_ORDER_STATUS,
+    PermissionKey.SERVICE_ORDER_WORKLOG,
     PermissionKey.SERVICE_ORDER_ITEM_MANAGE,
 
     PermissionKey.APPOINTMENT_VIEW,
@@ -57,6 +58,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<
   [UserRole.TECHNICIAN]: [
     PermissionKey.SERVICE_ORDER_VIEW,
     PermissionKey.SERVICE_ORDER_STATUS,
+    PermissionKey.SERVICE_ORDER_WORKLOG,
 
     PermissionKey.INSPECTION_VIEW,
 
