@@ -6114,3 +6114,140 @@ html[data-theme="dark"] body {
     font-size: 12px;
   }
 }
+
+
+/* === DIGITAL MAINTENANCE CARD SERVICE INFO === */
+.public-service-card {
+  margin-bottom: 12px;
+  padding: 15px;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 13px;
+  align-items: center;
+  border: 1px solid #2d3238;
+  border-radius: 14px;
+  background:
+    linear-gradient(
+      145deg,
+      #171a1e,
+      #111417
+    );
+}
+
+.public-service-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: #f59e0b;
+  color: #17120a;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.public-service-copy span,
+.public-service-copy strong,
+.public-service-copy small {
+  display: block;
+}
+
+.public-service-copy span {
+  margin-bottom: 4px;
+  color: #777f88;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .7px;
+}
+
+.public-service-copy strong {
+  font-size: 14px;
+}
+
+.public-service-copy small {
+  margin-top: 4px;
+  color: #747c84;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.public-service-actions {
+  display: flex;
+  gap: 7px;
+}
+
+.public-service-button {
+  padding: 8px 10px;
+  border: 1px solid #353b42;
+  border-radius: 9px;
+  background: #101317;
+  color: #d5d9dd;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.public-service-button:hover {
+  border-color: #f59e0b;
+}
+
+.public-service-button.whatsapp {
+  border-color: #315f46;
+  color: #93d9ae;
+}
+
+.public-store-row {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.public-store-link {
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid #30353b;
+  border-radius: 10px;
+  background: #0f1215;
+}
+
+.public-store-link:hover {
+  border-color: #f59e0b;
+}
+
+.public-store-link strong,
+.public-store-link span {
+  display: block;
+}
+
+.public-store-link strong {
+  color: #eef1f4;
+  font-size: 11px;
+}
+
+.public-store-link span {
+  margin: 0;
+  color: #727b84;
+  font-size: 9px;
+}
+
+@media (max-width: 620px) {
+  .public-service-card {
+    grid-template-columns: 48px 1fr;
+  }
+
+  .public-service-actions {
+    grid-column: 1 / -1;
+  }
+
+  .public-service-button {
+    flex: 1;
+    text-align: center;
+  }
+
+  .public-store-row {
+    grid-template-columns: 1fr;
+  }
+}
