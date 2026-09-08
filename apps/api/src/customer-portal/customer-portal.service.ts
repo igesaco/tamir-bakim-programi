@@ -7,7 +7,9 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import {
   FeatureKey,
+  MaintenancePlanStatus,
   PaymentStatus,
+  ServiceOrderStatus,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import {
@@ -524,6 +526,9 @@ export class CustomerPortalService {
     const [
       items,
       payments,
+      maintenanceHistory,
+      maintenancePlans,
+      activeServiceOrders,
     ] = await Promise.all([
       this.prisma.serviceOrderItem.findMany({
         where: {
@@ -578,6 +583,88 @@ export class CustomerPortalService {
         orderBy: {
           createdAt: 'desc',
         },
+      }),
+      this.prisma.maintenanceRecord.findMany({
+        where: {
+          organizationId,
+          vehicleId,
+        },
+        select: {
+          id: true,
+          mileage: true,
+          performedAt: true,
+          totalAmount: true,
+          notes: true,
+          items: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              quantity: true,
+            },
+          },
+        },
+        orderBy: {
+          performedAt: 'desc',
+        },
+        take: 20,
+      }),
+      this.prisma.maintenancePlan.findMany({
+        where: {
+          organizationId,
+          vehicleId,
+          status:
+            MaintenancePlanStatus.ACTIVE,
+        },
+        select: {
+          id: true,
+          title: true,
+          category: true,
+          description: true,
+          intervalKm: true,
+          intervalMonths: true,
+          lastKm: true,
+          lastDate: true,
+          nextDueKm: true,
+          nextDueDate: true,
+          estimatedPriceMin: true,
+          estimatedPriceMax: true,
+        },
+        orderBy: [
+          {
+            nextDueDate: 'asc',
+          },
+          {
+            nextDueKm: 'asc',
+          },
+        ],
+      }),
+      this.prisma.serviceOrder.findMany({
+        where: {
+          customerId,
+          organizationId,
+          vehicleId,
+          status: {
+            notIn: [
+              ServiceOrderStatus.DELIVERED,
+              ServiceOrderStatus.CANCELLED,
+            ],
+          },
+        },
+        select: {
+          id: true,
+          orderNumber: true,
+          status: true,
+          mileage: true,
+          complaint: true,
+          estimatedDeliveryAt: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 5,
       }),
     ]);
 
@@ -635,6 +722,12 @@ export class CustomerPortalService {
             billed - paid,
           ),
       },
+      currentServiceOrder:
+        activeServiceOrders[0] ??
+        null,
+      activeServiceOrders,
+      maintenanceHistory,
+      maintenancePlans,
       payments,
     };
   }
