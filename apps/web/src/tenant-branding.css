@@ -2,45 +2,530 @@
   --tenant-primary: #f59e0b;
   --tenant-secondary: #e9edf2;
   --tenant-sidebar: #111419;
+  --tenant-surface:
+    color-mix(
+      in srgb,
+      var(--tenant-sidebar) 56%,
+      #15191e
+    );
+  --tenant-surface-strong:
+    color-mix(
+      in srgb,
+      var(--tenant-sidebar) 68%,
+      #0f1318
+    );
+  --tenant-border:
+    color-mix(
+      in srgb,
+      var(--tenant-primary) 18%,
+      #2b3239
+    );
+  --tenant-accent-soft:
+    color-mix(
+      in srgb,
+      var(--tenant-primary) 17%,
+      transparent
+    );
+}
+
+/* =========================================================
+   TENANT CHROME — DARK
+   ========================================================= */
+.app-shell.theme-dark {
+  background:
+    color-mix(
+      in srgb,
+      var(--tenant-sidebar) 34%,
+      #0a0d11
+    );
+}
+
+.app-shell.theme-dark .main-area {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(
+        in srgb,
+        var(--tenant-sidebar) 26%,
+        #0d1116
+      ),
+      #0b0f13
+    );
+}
+
+.app-shell.theme-dark .page-area {
+  background:
+    radial-gradient(
+      circle at top right,
+      var(--tenant-accent-soft),
+      transparent 34%
+    ),
+    color-mix(
+      in srgb,
+      var(--tenant-sidebar) 18%,
+      #0d1115
+    );
 }
 
 .app-shell .sidebar {
-  background: var(--tenant-sidebar);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(
+        in srgb,
+        var(--tenant-sidebar) 88%,
+        #07090c
+      ),
+      var(--tenant-sidebar)
+    );
+  border-right-color:
+    var(--tenant-border);
+}
+
+.app-shell .brand {
+  border-bottom-color:
+    var(--tenant-border);
 }
 
 .app-shell .brand-mark {
-  background: var(--tenant-primary);
-}
-
-.app-shell .nav-item.active {
-  border-left-color: var(--tenant-primary);
-}
-
-.app-shell .primary-button {
-  background: var(--tenant-primary);
-}
-
-.app-shell .table-link {
-  color: var(--tenant-primary);
+  background:
+    var(--tenant-primary);
+  color: #111;
 }
 
 .app-shell .brand-mark-image {
   padding: 4px;
-  background: #ffffff;
   overflow: hidden;
+  background: #fff;
 }
 
 .app-shell .brand-mark img {
   width: 100%;
   height: 100%;
+  display: block;
+  object-fit: contain;
 }
 
-.app-shell .topbar-identity h2,
 .app-shell .brand-copy strong,
 .app-shell .sidebar-user strong {
-  color: var(--tenant-secondary);
+  color:
+    var(--tenant-secondary);
 }
 
+.app-shell .sidebar-user {
+  border-top-color:
+    var(--tenant-border);
+}
+
+.app-shell .nav-item:hover {
+  background:
+    color-mix(
+      in srgb,
+      var(--tenant-primary) 10%,
+      var(--tenant-sidebar)
+    );
+}
+
+.app-shell .nav-item.active {
+  background:
+    color-mix(
+      in srgb,
+      var(--tenant-primary) 18%,
+      var(--tenant-sidebar)
+    );
+  box-shadow:
+    inset 3px 0
+      var(--tenant-primary);
+}
+
+.app-shell.theme-dark .topbar {
+  background:
+    color-mix(
+      in srgb,
+      var(--tenant-sidebar) 72%,
+      #0d1116
+    );
+  border-bottom-color:
+    var(--tenant-border);
+}
+
+.app-shell .topbar-identity h2 {
+  color:
+    var(--tenant-secondary);
+}
+
+.app-shell.theme-dark .stat-card,
+.app-shell.theme-dark .panel-card,
+.app-shell.theme-dark .notification-item,
+.app-shell.theme-dark .public-section {
+  border-color:
+    var(--tenant-border);
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(
+        in srgb,
+        var(--tenant-sidebar) 48%,
+        #171c21
+      ),
+      color-mix(
+        in srgb,
+        var(--tenant-sidebar) 26%,
+        #12161b
+      )
+    );
+}
+
+.app-shell.theme-dark
+  .form-grid input,
+.app-shell.theme-dark
+  .form-grid select,
+.app-shell.theme-dark
+  .form-grid textarea,
+.app-shell.theme-dark
+  .search-input,
+.app-shell.theme-dark
+  .filter-select {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--tenant-primary) 14%,
+      #30363d
+    );
+  background:
+    color-mix(
+      in srgb,
+      var(--tenant-sidebar) 42%,
+      #0e1216
+    );
+}
+
+.app-shell
+  .form-grid input:focus,
+.app-shell
+  .form-grid select:focus,
+.app-shell
+  .form-grid textarea:focus,
+.app-shell
+  .search-input:focus,
+.app-shell
+  .filter-select:focus,
+.app-shell
+  .small-button:hover {
+  border-color:
+    var(--tenant-primary);
+}
+
+.app-shell .primary-button {
+  background:
+    var(--tenant-primary);
+}
+
+.app-shell .table-link,
+.app-shell .table-action:hover,
+.app-shell .public-plan-km,
+.app-shell .public-km strong {
+  color:
+    var(--tenant-primary);
+}
+
+.app-shell .notification-item.unread {
+  border-left-color:
+    var(--tenant-primary);
+}
+
+.app-shell.theme-dark th,
+.app-shell.theme-dark td {
+  border-bottom-color:
+    var(--tenant-border);
+}
+
+.app-shell.theme-dark .status-badge {
+  border-color:
+    var(--tenant-border);
+  background:
+    color-mix(
+      in srgb,
+      var(--tenant-primary) 8%,
+      var(--tenant-surface)
+    );
+}
+
+/* =========================================================
+   TENANT CHROME — LIGHT
+   ========================================================= */
+.app-shell.theme-light {
+  color: #202830;
+  background: #edf1f4;
+}
+
+.app-shell.theme-light .main-area,
+.app-shell.theme-light .page-area {
+  background:
+    radial-gradient(
+      circle at top right,
+      color-mix(
+        in srgb,
+        var(--tenant-primary) 10%,
+        transparent
+      ),
+      transparent 34%
+    ),
+    #f3f6f8;
+}
+
+.app-shell.theme-light .topbar {
+  border-bottom-color:
+    color-mix(
+      in srgb,
+      var(--tenant-primary) 16%,
+      #d8e0e6
+    );
+  background: #fff;
+}
+
+.app-shell.theme-light .stat-card,
+.app-shell.theme-light .panel-card,
+.app-shell.theme-light .notification-item {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--tenant-primary) 14%,
+      #d8e0e6
+    );
+  background: #fff;
+  color: #202830;
+}
+
+.app-shell.theme-light
+  .form-grid input,
+.app-shell.theme-light
+  .form-grid select,
+.app-shell.theme-light
+  .form-grid textarea,
+.app-shell.theme-light
+  .search-input,
+.app-shell.theme-light
+  .filter-select {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--tenant-primary) 15%,
+      #ccd6de
+    );
+  background: #fff;
+  color: #202830;
+}
+
+/* =========================================================
+   DESKTOP MODE — ORGANIZATION CONTROLLED
+   ========================================================= */
+.app-shell.theme-dark
+  .desktop-wallpaper.wallpaper-soft {
+  background:
+    radial-gradient(
+      circle at 16% 14%,
+      color-mix(
+        in srgb,
+        var(--tenant-primary) 22%,
+        transparent
+      ),
+      transparent 24%
+    ),
+    radial-gradient(
+      circle at 84% 10%,
+      color-mix(
+        in srgb,
+        var(--tenant-sidebar) 65%,
+        #31516e
+      ),
+      transparent 31%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(
+        in srgb,
+        var(--tenant-sidebar) 70%,
+        #18232d
+      ),
+      #0b1117 52%,
+      color-mix(
+        in srgb,
+        var(--tenant-sidebar) 64%,
+        #101820
+      )
+    );
+}
+
+.app-shell.theme-dark
+  .desktop-wallpaper.wallpaper-technical {
+  background:
+    linear-gradient(
+      rgba(255, 255, 255, .028) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, .028) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      rgba(255, 255, 255, .012) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, .012) 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 72% 16%,
+      color-mix(
+        in srgb,
+        var(--tenant-primary) 18%,
+        transparent
+      ),
+      transparent 24%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(
+        in srgb,
+        var(--tenant-sidebar) 74%,
+        #10202b
+      ),
+      #081117 54%,
+      color-mix(
+        in srgb,
+        var(--tenant-sidebar) 70%,
+        #111c24
+      )
+    );
+  background-size:
+    48px 48px,
+    48px 48px,
+    12px 12px,
+    12px 12px,
+    auto,
+    auto;
+}
+
+.app-shell.theme-dark
+  .desktop-wallpaper.wallpaper-graphite {
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      color-mix(
+        in srgb,
+        var(--tenant-primary) 14%,
+        transparent
+      ),
+      transparent 35%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(
+        in srgb,
+        var(--tenant-sidebar) 45%,
+        #191b1e
+      ),
+      #090b0d 55%,
+      color-mix(
+        in srgb,
+        var(--tenant-sidebar) 40%,
+        #17191c
+      )
+    );
+}
+
+.app-shell.theme-dark
+  .desktop-folder-window {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--tenant-primary) 25%,
+      #3a4651
+    );
+  background:
+    color-mix(
+      in srgb,
+      var(--tenant-sidebar) 42%,
+      #0d1217
+    );
+}
+
+.app-shell.theme-dark
+  .desktop-folder-titlebar,
+.app-shell.theme-dark
+  .desktop-folder-toolbar,
+.app-shell.theme-dark
+  .desktop-folder-window
+  .desktop-tabs {
+  border-color:
+    var(--tenant-border);
+  background:
+    color-mix(
+      in srgb,
+      var(--tenant-sidebar) 58%,
+      #151b21
+    );
+}
+
+.app-shell
+  .desktop-folder-icon,
+.app-shell
+  .desktop-app-icon.active
+  .desktop-app-glyph,
+.app-shell
+  .desktop-task-app.active {
+  border-color:
+    var(--tenant-primary);
+  color:
+    var(--tenant-primary);
+}
+
+.app-shell
+  .desktop-start-button {
+  background:
+    var(--tenant-primary);
+  color: #111;
+}
+
+.app-shell.theme-dark
+  .desktop-taskbar {
+  border-color:
+    var(--tenant-border);
+  background:
+    color-mix(
+      in srgb,
+      var(--tenant-sidebar) 78%,
+      rgba(10, 14, 18, .9)
+    );
+}
+
+.app-shell.theme-dark
+  .desktop-app-glyph {
+  border-color:
+    var(--tenant-border);
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(
+        in srgb,
+        var(--tenant-primary) 12%,
+        #344657
+      ),
+      color-mix(
+        in srgb,
+        var(--tenant-sidebar) 65%,
+        #17212b
+      )
+    );
+}
+
+/* =========================================================
+   PLATFORM BRANDING CONTROLS / PREVIEW
+   ========================================================= */
 .branding-settings-card {
   grid-column: 1 / -1;
 }
@@ -50,14 +535,15 @@
   height: 58px;
   display: grid;
   place-items: center;
-  border-radius: 14px;
   overflow: hidden;
+  border-radius: 14px;
   font-weight: 900;
 }
 
 .branding-preview-mark img {
   width: 100%;
   height: 100%;
+  object-fit: contain;
 }
 
 .branding-color-field,
@@ -70,13 +556,22 @@
   background: #0f1216;
 }
 
+.branding-color-field > span,
+.branding-mode-field > span {
+  margin: 0;
+  color: #87919b;
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .branding-color-field > div {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.branding-color-field input[type="color"] {
+.branding-color-field
+  input[type="color"] {
   width: 44px;
   height: 34px;
   padding: 2px;
@@ -95,7 +590,8 @@
   padding: 20px;
   display: flex;
   flex-direction: column;
-  background: var(--preview-sidebar);
+  background:
+    var(--preview-sidebar);
 }
 
 .branding-preview main {
@@ -104,6 +600,76 @@
 }
 
 .branding-preview main > span {
-  color: var(--preview-secondary);
+  color:
+    var(--preview-secondary);
   font-weight: 800;
+}
+
+.branding-preview-logo {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+  overflow: hidden;
+  border-radius: 10px;
+  color: #111;
+  font-weight: 900;
+}
+
+.branding-preview-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #fff;
+}
+
+.branding-preview aside strong {
+  color:
+    var(--preview-secondary);
+}
+
+.branding-preview aside span {
+  margin-top: 4px;
+  color: #87919b;
+  font-size: 9px;
+}
+
+.branding-preview main > div {
+  height: 42px;
+  margin-top: 12px;
+  border: 1px solid #2c343c;
+  border-left: 3px solid
+    var(--preview-primary);
+  border-radius: 9px;
+  background: #171c21;
+}
+
+.branding-preview-technical main {
+  background-image:
+    linear-gradient(
+      rgba(255, 255, 255, .035) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, .035) 1px,
+      transparent 1px
+    );
+  background-size: 18px 18px;
+}
+
+.branding-preview-graphite main {
+  background:
+    linear-gradient(
+      135deg,
+      #1d2023,
+      #0d0f11
+    );
+}
+
+@media (max-width: 760px) {
+  .branding-preview {
+    grid-template-columns: 1fr;
+  }
 }
