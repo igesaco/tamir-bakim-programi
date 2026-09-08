@@ -7,12 +7,15 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import {
   FeatureKey,
+  PermissionKey,
   PlatformRole,
   UserRole,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 import { EntitlementsService } from '../entitlements/entitlements.service';
+import { defaultPermissionsForRole } from '../permissions/default-role-permissions';
+import { PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -23,6 +26,7 @@ export class PlatformService
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly entitlementsService: EntitlementsService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   async onModuleInit() {
@@ -194,6 +198,7 @@ export class PlatformService
         include: {
           package: true,
           featureOverrides: true,
+          rolePermissionOverrides: true,
           _count: {
             select: {
               branches: true,
@@ -215,6 +220,10 @@ export class PlatformService
           ...organization,
           effectiveFeatures:
             await this.entitlementsService.getEffectiveFeatures(
+              organization.id,
+            ),
+          effectiveRolePermissions:
+            await this.permissionsService.getRolePermissionMatrix(
               organization.id,
             ),
         }),
@@ -302,6 +311,122 @@ export class PlatformService
     return this.entitlementsService.getOrganizationAccess(
       organizationId,
     );
+  }
+
+  async setRolePermission(
+    organizationId: string,
+    role: UserRole,
+    permission: PermissionKey,
+    allowed: boolean,
+  ) {
+    await this.prisma.organization.findUniqueOrThrow({
+      where: {
+        id: organizationId,
+      },
+    });
+
+    await this.prisma.organizationRolePermissionOverride.upsert({
+      where: {
+        organizationId_role_permission: {
+          organizationId,
+          role,
+          permission,
+        },
+      },
+      create: {
+        organizationId,
+        role,
+        permission,
+        allowed,
+      },
+      update: {
+        allowed,
+      },
+    });
+
+    return this.permissionsService.getRolePermissionMatrix(
+      organizationId,
+    );
+  }
+
+  async replaceRolePermissions(
+    organizationId: string,
+    role: UserRole,
+    permissions: PermissionKey[],
+  ) {
+    await this.prisma.organization.findUniqueOrThrow({
+      where: {
+        id: organizationId,
+      },
+    });
+
+    const allowed =
+      new Set(
+        permissions,
+      );
+
+    const allPermissions =
+      Object.values(
+        PermissionKey,
+      );
+
+    await this.prisma.$transaction(
+      allPermissions.map(
+        (permission) =>
+          this.prisma.organizationRolePermissionOverride.upsert({
+            where: {
+              organizationId_role_permission: {
+                organizationId,
+                role,
+                permission,
+              },
+            },
+            create: {
+              organizationId,
+              role,
+              permission,
+              allowed:
+                allowed.has(
+                  permission,
+                ),
+            },
+            update: {
+              allowed:
+                allowed.has(
+                  permission,
+                ),
+            },
+          }),
+      ),
+    );
+
+    return this.permissionsService.getRolePermissionMatrix(
+      organizationId,
+    );
+  }
+
+  async resetRolePermissions(
+    organizationId: string,
+    role: UserRole,
+  ) {
+    await this.prisma.organizationRolePermissionOverride.deleteMany({
+      where: {
+        organizationId,
+        role,
+      },
+    });
+
+    return {
+      role,
+      defaults:
+        defaultPermissionsForRole(
+          role,
+        ),
+      matrix:
+        await this.permissionsService.getRolePermissionMatrix(
+          organizationId,
+        ),
+    };
   }
 
   async impersonateOrganization(
