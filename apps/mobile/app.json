@@ -7,11 +7,13 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "android": {
-      "package": "com.igesa.tamirbakim"
+      "package": "com.igesa.tamirbakim",
+      "versionCode": 1
     },
     "ios": {
       "bundleIdentifier": "com.igesa.tamirbakim",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "buildNumber": "1"
     },
     "plugins": [
       "expo-secure-store",
