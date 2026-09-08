@@ -7,11 +7,15 @@ import {
   Post,
   Req,
   UseGuards,
-} from '@nestjs/common';
+  } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { FeatureKey, UserRole } from '@prisma/client';
+import { FeatureKey,
+  UserRole,
+  PermissionKey,
+} from '@prisma/client';
 
 import { Feature } from '../entitlements/feature.decorator';
+import { Permission } from '../permissions/permission.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { BranchesService } from './branches.service';
@@ -26,6 +30,7 @@ export class BranchesController {
     private readonly branchesService: BranchesService,
   ) {}
 
+@Permission(PermissionKey.BRANCH_VIEW)
   @Get()
   findAll(@Req() req: any) {
     return this.branchesService.findAll(
@@ -34,6 +39,7 @@ export class BranchesController {
   }
 
   @Feature(FeatureKey.BRANCHES)
+@Permission(PermissionKey.BRANCH_MANAGE)
   @Post()
   create(
     @Req() req: any,
@@ -46,6 +52,7 @@ export class BranchesController {
   }
 
   @Feature(FeatureKey.BRANCHES)
+@Permission(PermissionKey.BRANCH_MANAGE)
   @Patch(':id/active')
   setActive(
     @Req() req: any,
