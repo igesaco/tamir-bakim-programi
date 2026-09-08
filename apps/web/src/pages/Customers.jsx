@@ -43,6 +43,7 @@ export default function Customers() {
     phone: '',
     email: '',
     taxNumber: '',
+    nationalId: '',
     address: '',
     branchId: user?.branchId || '',
   });
@@ -148,6 +149,9 @@ export default function Customers() {
           taxNumber:
             form.taxNumber ||
             undefined,
+          nationalId:
+            form.nationalId ||
+            undefined,
           address:
             form.address ||
             undefined,
@@ -165,6 +169,7 @@ export default function Customers() {
         phone: '',
         email: '',
         taxNumber: '',
+        nationalId: '',
         address: '',
         branchId:
           user?.branchId || '',
@@ -201,6 +206,10 @@ export default function Customers() {
         customer.email || '',
       taxNumber:
         customer.taxNumber || '',
+      nationalId: '',
+      nationalIdLast4:
+        customer.nationalIdLast4 ||
+        '',
       address:
         customer.address || '',
       notes:
@@ -234,6 +243,9 @@ export default function Customers() {
             undefined,
           taxNumber:
             editing.taxNumber ||
+            undefined,
+          nationalId:
+            editing.nationalId ||
             undefined,
           address:
             editing.address ||
@@ -423,6 +435,24 @@ export default function Customers() {
                   ...form,
                   taxNumber:
                     e.target.value,
+                })
+              }
+            />
+
+            <input
+              inputMode="numeric"
+              maxLength="11"
+              placeholder="T.C. Kimlik No (portal için)"
+              value={form.nationalId}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  nationalId:
+                    e.target.value
+                      .replace(
+                        /\D/g,
+                        '',
+                      ),
                 })
               }
             />
@@ -722,6 +752,34 @@ export default function Customers() {
                   })
                 }
               />
+
+              <div>
+                <input
+                  inputMode="numeric"
+                  maxLength="11"
+                  placeholder="T.C. Kimlik No (değiştirmek için)"
+                  value={
+                    editing.nationalId
+                  }
+                  onChange={(e) =>
+                    setEditing({
+                      ...editing,
+                      nationalId:
+                        e.target.value
+                          .replace(
+                            /\D/g,
+                            '',
+                          ),
+                    })
+                  }
+                />
+
+                <div className="sub-text">
+                  {editing.nationalIdLast4
+                    ? `Kayıtlı T.C. son 4 hane: ${editing.nationalIdLast4}`
+                    : 'Müşteri portalı için T.C. kimlik numarası tanımlayın.'}
+                </div>
+              </div>
 
               <input
                 className="full"
