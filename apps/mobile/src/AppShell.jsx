@@ -19,6 +19,8 @@ import CustomersScreen from './screens/CustomersScreen';
 import WorkOrdersScreen from './screens/WorkOrdersScreen';
 import InventoryScreen from './screens/InventoryScreen';
 import CashierScreen from './screens/CashierScreen';
+import InspectionsScreen from './screens/InspectionsScreen';
+import NotificationsScreen from './screens/NotificationsScreen';
 import AccountScreen from './screens/AccountScreen';
 import {
   colors,
@@ -44,6 +46,14 @@ const screenConfig = {
   cashier: {
     label: 'Kasa',
     glyph: '₺',
+  },
+  inspections: {
+    label: 'Kabul',
+    glyph: 'K',
+  },
+  notifications: {
+    label: 'Bildirim',
+    glyph: 'B',
   },
   account: {
     label: 'Hesabım',
@@ -95,6 +105,32 @@ export default function AppShell() {
       ) {
         result.push(
           'inventory',
+        );
+      }
+
+      if (
+        canUse(user, {
+          feature:
+            'INSPECTIONS',
+          permission:
+            'INSPECTION_VIEW',
+        })
+      ) {
+        result.push(
+          'inspections',
+        );
+      }
+
+      if (
+        canUse(user, {
+          feature:
+            'NOTIFICATIONS',
+          permission:
+            'NOTIFICATION_VIEW',
+        })
+      ) {
+        result.push(
+          'notifications',
         );
       }
 
@@ -172,10 +208,61 @@ export default function AppShell() {
       <CashierScreen />;
   }
 
+  if (screen === 'inspections') {
+    content =
+      <InspectionsScreen />;
+  }
+
+  if (screen === 'notifications') {
+    content =
+      <NotificationsScreen />;
+  }
+
   if (screen === 'account') {
     content =
       <AccountScreen />;
   }
+
+  const navTabs =
+    (() => {
+      const preferred =
+        user?.role === 'TECHNICIAN'
+          ? [
+              'home',
+              'orders',
+              'notifications',
+              'account',
+            ]
+          : user?.role === 'WAREHOUSE'
+            ? [
+                'home',
+                'inventory',
+                'notifications',
+                'account',
+              ]
+            : user?.role === 'ACCOUNTING'
+              ? [
+                  'home',
+                  'cashier',
+                  'notifications',
+                  'account',
+                ]
+              : [
+                  'home',
+                  'customers',
+                  'orders',
+                  'inspections',
+                  'notifications',
+                  'account',
+                ];
+
+      return preferred.filter(
+        (key) =>
+          tabs.includes(
+            key,
+          ),
+      );
+    })();
 
   return (
     <SafeAreaView style={styles.page}>
@@ -184,7 +271,7 @@ export default function AppShell() {
       </View>
 
       <View style={styles.nav}>
-        {tabs.map(
+        {navTabs.map(
           (key) => {
             const item =
               screenConfig[key];
