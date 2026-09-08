@@ -9,8 +9,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { UserRole } from '@prisma/client';
+import { FeatureKey, UserRole } from '@prisma/client';
 
+import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { BranchesService } from './branches.service';
@@ -32,6 +33,7 @@ export class BranchesController {
     );
   }
 
+  @Feature(FeatureKey.BRANCHES)
   @Post()
   create(
     @Req() req: any,
@@ -43,6 +45,7 @@ export class BranchesController {
     );
   }
 
+  @Feature(FeatureKey.BRANCHES)
   @Patch(':id/active')
   setActive(
     @Req() req: any,
