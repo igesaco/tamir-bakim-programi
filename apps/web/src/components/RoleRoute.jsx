@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 export default function RoleRoute({
   roles,
   feature,
+  permission,
   children,
 }) {
   const { user, loading } = useAuth();
@@ -30,6 +31,20 @@ export default function RoleRoute({
     feature &&
     !user.features?.includes(
       feature,
+    )
+  ) {
+    return (
+      <Navigate
+        to="/account"
+        replace
+      />
+    );
+  }
+
+  if (
+    permission &&
+    !user.permissions?.includes(
+      permission,
     )
   ) {
     return (
