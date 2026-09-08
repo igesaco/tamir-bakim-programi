@@ -1,4 +1,5 @@
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,9 @@ import {
 import {
   useAuth,
 } from '../auth/AuthContext';
+import {
+  mediaUrl,
+} from '../media';
 import {
   Empty,
   Loading,
@@ -88,7 +92,25 @@ export default function CustomerVehiclesScreen({
                     styles.pressed,
                 ]}
               >
-                <View>
+                {vehicle.media?.[0] ? (
+                  <Image
+                    source={{
+                      uri:
+                        mediaUrl(
+                          vehicle.media[0],
+                        ),
+                    }}
+                    style={styles.thumb}
+                  />
+                ) : (
+                  <View style={styles.thumbPlaceholder}>
+                    <Text style={styles.thumbPlaceholderText}>
+                      TB
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.flex}>
                   <Text style={styles.plate}>
                     {vehicle.plate}
                   </Text>
@@ -155,6 +177,32 @@ const styles =
     },
     pressed: {
       opacity: .8,
+    },
+    thumb: {
+      width: 68,
+      height: 68,
+      borderRadius: 11,
+      backgroundColor:
+        colors.panel2,
+    },
+    thumbPlaceholder: {
+      width: 68,
+      height: 68,
+      alignItems: 'center',
+      justifyContent:
+        'center',
+      borderRadius: 11,
+      backgroundColor:
+        colors.accentSoft,
+    },
+    thumbPlaceholderText: {
+      color:
+        colors.accent,
+      fontSize: 13,
+      fontWeight: '900',
+    },
+    flex: {
+      flex: 1,
     },
     plate: {
       color: colors.text,
