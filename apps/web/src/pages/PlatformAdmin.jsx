@@ -541,6 +541,65 @@ export default function PlatformAdmin() {
     );
   }
 
+  function setBrandingField(
+    field,
+    value,
+  ) {
+    if (!selected) {
+      return;
+    }
+
+    setOrganizations(
+      (current) =>
+        current.map(
+          (organization) =>
+            organization.id ===
+            selected.id
+              ? {
+                  ...organization,
+                  [field]: value,
+                }
+              : organization,
+        ),
+    );
+  }
+
+  function saveBranding(
+    event,
+  ) {
+    event.preventDefault();
+
+    if (!selected) {
+      return;
+    }
+
+    return run(
+      () =>
+        api.patch(
+          `/platform/organizations/${selected.id}/branding`,
+          {
+            logoUrl:
+              selected.logoUrl || '',
+            panelTitle:
+              selected.panelTitle || '',
+            primaryColor:
+              selected.primaryColor ||
+              '#F59E0B',
+            secondaryColor:
+              selected.secondaryColor ||
+              '#E9EDF2',
+            sidebarColor:
+              selected.sidebarColor ||
+              '#111419',
+            defaultPanelMode:
+              selected.defaultPanelMode ||
+              'classic',
+          },
+        ),
+      'Panel tasarımı güncellendi.',
+    );
+  }
+
   async function enter() {
     if (!selected) {
       return;
@@ -934,6 +993,23 @@ export default function PlatformAdmin() {
                 >
                   Personel Yetkileri
                 </button>
+
+                <button
+                  type="button"
+                  className={
+                    activeSection ===
+                    'branding'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() =>
+                    setActiveSection(
+                      'branding',
+                    )
+                  }
+                >
+                  Panel Tasarımı
+                </button>
               </div>
 
               {activeSection ===
@@ -1162,6 +1238,222 @@ export default function PlatformAdmin() {
                     </div>
                   </section>
                 </>
+              )}
+
+              {activeSection ===
+                'branding' && (
+                <section className="platform-card">
+                  <div className="platform-card-head">
+                    <div>
+                      <span className="platform-kicker">
+                        PLATFORM GÖRÜNÜMÜ
+                      </span>
+
+                      <h3>
+                        İşletmeye Özel Panel
+                      </h3>
+
+                      <p>
+                        Giriş ekranı ortak kalır. İşletme personeli
+                        giriş yaptıktan sonra bu logo, renkler ve
+                        varsayılan panel düzeni otomatik uygulanır.
+                      </p>
+                    </div>
+                  </div>
+
+                  <form
+                    className="form-grid platform-branding-form"
+                    onSubmit={saveBranding}
+                  >
+                    <input
+                      className="full"
+                      placeholder="Logo URL (https://...)"
+                      value={
+                        selected.logoUrl ||
+                        ''
+                      }
+                      onChange={(event) =>
+                        setBrandingField(
+                          'logoUrl',
+                          event.target.value,
+                        )
+                      }
+                    />
+
+                    <input
+                      className="full"
+                      placeholder="Panel başlığı"
+                      value={
+                        selected.panelTitle ||
+                        ''
+                      }
+                      onChange={(event) =>
+                        setBrandingField(
+                          'panelTitle',
+                          event.target.value,
+                        )
+                      }
+                    />
+
+                    <label className="branding-color-field">
+                      <span>Ana renk</span>
+                      <div>
+                        <input
+                          type="color"
+                          value={
+                            selected.primaryColor ||
+                            '#F59E0B'
+                          }
+                          onChange={(event) =>
+                            setBrandingField(
+                              'primaryColor',
+                              event.target.value,
+                            )
+                          }
+                        />
+                        <strong>
+                          {selected.primaryColor ||
+                            '#F59E0B'}
+                        </strong>
+                      </div>
+                    </label>
+
+                    <label className="branding-color-field">
+                      <span>Yazı / vurgu rengi</span>
+                      <div>
+                        <input
+                          type="color"
+                          value={
+                            selected.secondaryColor ||
+                            '#E9EDF2'
+                          }
+                          onChange={(event) =>
+                            setBrandingField(
+                              'secondaryColor',
+                              event.target.value,
+                            )
+                          }
+                        />
+                        <strong>
+                          {selected.secondaryColor ||
+                            '#E9EDF2'}
+                        </strong>
+                      </div>
+                    </label>
+
+                    <label className="branding-color-field">
+                      <span>Sol menü rengi</span>
+                      <div>
+                        <input
+                          type="color"
+                          value={
+                            selected.sidebarColor ||
+                            '#111419'
+                          }
+                          onChange={(event) =>
+                            setBrandingField(
+                              'sidebarColor',
+                              event.target.value,
+                            )
+                          }
+                        />
+                        <strong>
+                          {selected.sidebarColor ||
+                            '#111419'}
+                        </strong>
+                      </div>
+                    </label>
+
+                    <label className="branding-mode-field">
+                      <span>Varsayılan panel düzeni</span>
+                      <select
+                        value={
+                          selected.defaultPanelMode ||
+                          'classic'
+                        }
+                        onChange={(event) =>
+                          setBrandingField(
+                            'defaultPanelMode',
+                            event.target.value,
+                          )
+                        }
+                      >
+                        <option value="classic">
+                          Klasik
+                        </option>
+                        <option value="desktop">
+                          Masaüstü
+                        </option>
+                        <option value="focus">
+                          Çalışma Alanı
+                        </option>
+                      </select>
+                    </label>
+
+                    <div
+                      className="branding-preview full"
+                      style={{
+                        '--preview-primary':
+                          selected.primaryColor ||
+                          '#F59E0B',
+                        '--preview-secondary':
+                          selected.secondaryColor ||
+                          '#E9EDF2',
+                        '--preview-sidebar':
+                          selected.sidebarColor ||
+                          '#111419',
+                      }}
+                    >
+                      <aside>
+                        <div
+                          className="branding-preview-logo"
+                          style={{
+                            background:
+                              selected.primaryColor ||
+                              '#F59E0B',
+                          }}
+                        >
+                          {selected.logoUrl ? (
+                            <img
+                              src={selected.logoUrl}
+                              alt=""
+                            />
+                          ) : (
+                            selected.name
+                              ?.charAt(0)
+                              .toLocaleUpperCase(
+                                'tr-TR',
+                              ) || 'T'
+                          )}
+                        </div>
+
+                        <strong>
+                          {selected.name}
+                        </strong>
+
+                        <span>
+                          {selected.panelTitle ||
+                            'Yönetim Paneli'}
+                        </span>
+                      </aside>
+
+                      <main>
+                        <span>
+                          Dashboard
+                        </span>
+                        <div />
+                        <div />
+                      </main>
+                    </div>
+
+                    <button
+                      className="primary-button full"
+                      disabled={busy}
+                    >
+                      Panel Tasarımını Kaydet
+                    </button>
+                  </form>
+                </section>
               )}
 
               {activeSection ===
