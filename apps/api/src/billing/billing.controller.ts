@@ -28,6 +28,7 @@ import { UpdatePaymentStatusDto } from './dto/update-payment-status.dto';
 @Roles(
   UserRole.OWNER,
   UserRole.MANAGER,
+  UserRole.ACCOUNTING,
 )
 
 export class BillingController {
