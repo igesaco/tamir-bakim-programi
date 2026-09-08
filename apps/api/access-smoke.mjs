@@ -167,6 +167,15 @@ async function main() {
   const organizationId =
     register.data.organization.id;
 
+  const branchId =
+    register.data.branch.id;
+
+  const advisorEmail =
+    `advisor-${Date.now()}@ci.example.com`;
+
+  const advisorPassword =
+    'AdvisorPassword_123!';
+
   assert(
     tenantToken,
     'tenant registration must return a token',
@@ -208,6 +217,79 @@ async function main() {
       token:
         tenantToken,
       expectedStatus: 200,
+    },
+  );
+
+  await request(
+    '/users',
+    {
+      method: 'POST',
+      token:
+        tenantToken,
+      body: {
+        firstName:
+          'CI',
+        lastName:
+          'Advisor',
+        email:
+          advisorEmail,
+        password:
+          advisorPassword,
+        role:
+          'SERVICE_ADVISOR',
+        branchId,
+      },
+    },
+  );
+
+  const advisorLogin =
+    await request(
+      '/auth/login',
+      {
+        method: 'POST',
+        body: {
+          email:
+            advisorEmail,
+          password:
+            advisorPassword,
+        },
+      },
+    );
+
+  const advisorToken =
+    advisorLogin.data.token;
+
+  const advisorMe =
+    await request(
+      '/users/me',
+      {
+        token:
+          advisorToken,
+      },
+    );
+
+  assert(
+    advisorMe.data.permissions.includes(
+      'CUSTOMER_CREATE',
+    ),
+    'service advisor must have CUSTOMER_CREATE by default',
+  );
+
+  await request(
+    '/customers',
+    {
+      method: 'POST',
+      token:
+        advisorToken,
+      body: {
+        firstName:
+          'Advisor',
+        lastName:
+          'Allowed',
+        phone:
+          '5552223344',
+      },
+      expectedStatus: 201,
     },
   );
 
@@ -309,6 +391,73 @@ async function main() {
     organization.package?.code ===
       'STARTER',
     'new tenant must start on STARTER',
+  );
+
+  assert(
+    organization.effectiveRolePermissions
+      ?.SERVICE_ADVISOR
+      ?.effective
+      ?.includes(
+        'CUSTOMER_CREATE',
+      ),
+    'platform matrix must expose effective service advisor permissions',
+  );
+
+  await request(
+    `/platform/organizations/${organizationId}/roles/SERVICE_ADVISOR/permissions/CUSTOMER_CREATE`,
+    {
+      method: 'PUT',
+      token:
+        platformToken,
+      body: {
+        allowed: false,
+      },
+    },
+  );
+
+  await request(
+    '/customers',
+    {
+      method: 'POST',
+      token:
+        advisorToken,
+      body: {
+        firstName:
+          'Advisor',
+        lastName:
+          'Blocked',
+        phone:
+          '5552223355',
+      },
+      expectedStatus: 403,
+    },
+  );
+
+  await request(
+    `/platform/organizations/${organizationId}/roles/SERVICE_ADVISOR/permissions`,
+    {
+      method: 'DELETE',
+      token:
+        platformToken,
+    },
+  );
+
+  await request(
+    '/customers',
+    {
+      method: 'POST',
+      token:
+        advisorToken,
+      body: {
+        firstName:
+          'Advisor',
+        lastName:
+          'Restored',
+        phone:
+          '5552223366',
+      },
+      expectedStatus: 201,
+    },
   );
 
   const impersonation =
