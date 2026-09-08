@@ -6,11 +6,15 @@ import {
   Query,
   Req,
   UseGuards,
-} from '@nestjs/common';
+  } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { FeatureKey, UserRole } from '@prisma/client';
+import { FeatureKey,
+  UserRole,
+  PermissionKey,
+} from '@prisma/client';
 
 import { Feature } from '../entitlements/feature.decorator';
+import { Permission } from '../permissions/permission.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreatePartDto } from './dto/create-part.dto';
@@ -23,6 +27,7 @@ import { InventoryService } from './inventory.service';
 @Roles(
   UserRole.OWNER,
   UserRole.MANAGER,
+  UserRole.WAREHOUSE,
 )
 
 export class InventoryController {
@@ -30,6 +35,7 @@ export class InventoryController {
     private readonly inventoryService: InventoryService,
   ) {}
 
+@Permission(PermissionKey.INVENTORY_MANAGE)
   @Post('parts')
   createPart(
     @Req() req: any,
@@ -41,6 +47,7 @@ export class InventoryController {
     );
   }
 
+@Permission(PermissionKey.INVENTORY_VIEW)
   @Get('parts')
   findParts(@Req() req: any) {
     return this.inventoryService.findParts(
@@ -48,6 +55,7 @@ export class InventoryController {
     );
   }
 
+@Permission(PermissionKey.INVENTORY_VIEW)
   @Get('stock')
   findStock(
     @Req() req: any,
@@ -60,6 +68,7 @@ export class InventoryController {
     );
   }
 
+@Permission(PermissionKey.INVENTORY_VIEW)
   @Get('low-stock')
   findLowStock(
     @Req() req: any,
@@ -72,6 +81,7 @@ export class InventoryController {
     );
   }
 
+@Permission(PermissionKey.INVENTORY_MANAGE)
   @Post('in')
   stockIn(
     @Req() req: any,
@@ -86,6 +96,7 @@ export class InventoryController {
     );
   }
 
+@Permission(PermissionKey.INVENTORY_MANAGE)
   @Post('out')
   stockOut(
     @Req() req: any,
@@ -100,6 +111,7 @@ export class InventoryController {
     );
   }
 
+@Permission(PermissionKey.INVENTORY_VIEW)
   @Get('movements')
   findMovements(
     @Req() req: any,
