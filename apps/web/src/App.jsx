@@ -71,10 +71,14 @@ function ProtectedLayout() {
 
 function ForRoles({
   roles,
+  feature,
   children,
 }) {
   return (
-    <RoleRoute roles={roles}>
+    <RoleRoute
+      roles={roles}
+      feature={feature}
+    >
       {children}
     </RoleRoute>
   );
@@ -120,6 +124,7 @@ export default function App() {
               <ProtectedRoute>
                 <ForRoles
                   roles={SERVICE_ROLES}
+                  feature="VEHICLES_QR"
                 >
                   <VehicleQrPrint />
                 </ForRoles>
@@ -133,6 +138,7 @@ export default function App() {
               <ProtectedRoute>
                 <ForRoles
                   roles={SERVICE_ROLES}
+                  feature="SERVICE_ORDERS"
                 >
                   <DeliveryReport />
                 </ForRoles>
@@ -146,6 +152,7 @@ export default function App() {
               <ProtectedRoute>
                 <ForRoles
                   roles={SERVICE_ROLES}
+                  feature="QUOTES"
                 >
                   <QuoteProforma />
                 </ForRoles>
@@ -156,7 +163,14 @@ export default function App() {
           <Route element={<ProtectedLayout />}>
             <Route
               index
-              element={<Dashboard />}
+              element={
+                <ForRoles
+                  roles={SERVICE_ROLES}
+                  feature="DASHBOARD"
+                >
+                  <Dashboard />
+                </ForRoles>
+              }
             />
 
             <Route
@@ -164,6 +178,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={SERVICE_ROLES}
+                  feature="CUSTOMERS"
                 >
                   <Customers />
                 </ForRoles>
@@ -175,6 +190,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={SERVICE_ROLES}
+                  feature="CUSTOMERS"
                 >
                   <CustomerDetail />
                 </ForRoles>
@@ -186,6 +202,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={SERVICE_ROLES}
+                  feature="VEHICLES_QR"
                 >
                   <Vehicles />
                 </ForRoles>
@@ -197,6 +214,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={SERVICE_ROLES}
+                  feature="VEHICLES_QR"
                 >
                   <VehicleDetail />
                 </ForRoles>
@@ -208,6 +226,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={SERVICE_ROLES}
+                  feature="APPOINTMENTS"
                 >
                   <Appointments />
                 </ForRoles>
@@ -219,6 +238,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={SERVICE_ORDER_ROLES}
+                  feature="SERVICE_ORDERS"
                 >
                   <ServiceOrders />
                 </ForRoles>
@@ -230,6 +250,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={SERVICE_ORDER_ROLES}
+                  feature="SERVICE_ORDERS"
                 >
                   <ServiceOrderDetail />
                 </ForRoles>
@@ -241,6 +262,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={SERVICE_ROLES}
+                  feature="QUOTES"
                 >
                   <Quotes />
                 </ForRoles>
@@ -252,6 +274,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={SERVICE_ROLES}
+                  feature="MAINTENANCE"
                 >
                   <Maintenance />
                 </ForRoles>
@@ -263,6 +286,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={MANAGEMENT_ROLES}
+                  feature="INVENTORY"
                 >
                   <Inventory />
                 </ForRoles>
@@ -274,6 +298,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={MANAGEMENT_ROLES}
+                  feature="SUPPLIERS"
                 >
                   <Suppliers />
                 </ForRoles>
@@ -285,6 +310,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={MANAGEMENT_ROLES}
+                  feature="STAFF"
                 >
                   <Users />
                 </ForRoles>
@@ -296,6 +322,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={MANAGEMENT_ROLES}
+                  feature="BRANCHES"
                 >
                   <Branches />
                 </ForRoles>
@@ -307,6 +334,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={SERVICE_ROLES}
+                  feature="NOTIFICATIONS"
                 >
                   <Notifications />
                 </ForRoles>
@@ -318,6 +346,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={MANAGEMENT_ROLES}
+                  feature="CASHIER"
                 >
                   <Cashier />
                 </ForRoles>
@@ -329,6 +358,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={MANAGEMENT_ROLES}
+                  feature="REPORTS"
                 >
                   <Reports />
                 </ForRoles>
@@ -345,6 +375,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={MANAGEMENT_ROLES}
+                  feature="SETTINGS"
                 >
                   <Settings />
                 </ForRoles>
