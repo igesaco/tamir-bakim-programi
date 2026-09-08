@@ -139,6 +139,7 @@ const permissionGroups = [
       ['SERVICE_ORDER_ASSIGN', 'Personel / teknisyen ata'],
       ['SERVICE_ORDER_STATUS', 'İş emri durumunu değiştir'],
       ['SERVICE_ORDER_ITEM_MANAGE', 'İşçilik / parça kalemi yönet'],
+      ['SERVICE_ORDER_WORKLOG', 'Teknik işlem notu / kullanılan parça kaydı'],
     ],
   },
   {
