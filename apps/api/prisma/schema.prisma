@@ -19,6 +19,34 @@ enum UserRole {
   ACCOUNTING
 }
 
+enum PlatformRole {
+  FOUNDER
+  ADMIN
+  SUPPORT
+}
+
+enum FeatureKey {
+  DASHBOARD
+  CUSTOMERS
+  VEHICLES_QR
+  SERVICE_ORDERS
+  APPOINTMENTS
+  MAINTENANCE
+  QUOTES
+  INVENTORY
+  SUPPLIERS
+  STAFF
+  BRANCHES
+  NOTIFICATIONS
+  CASHIER
+  REPORTS
+  SETTINGS
+  INSPECTIONS
+  MEDIA
+  CUSTOMER_PORTAL
+  AUDIT
+}
+
 enum AppointmentStatus {
   REQUESTED
   CONFIRMED
@@ -135,6 +163,9 @@ model Organization {
   email     String?
   active    Boolean  @default(true)
 
+  packageId String?
+  package   ServicePackage? @relation(fields: [packageId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -157,6 +188,51 @@ model Organization {
   notifications      Notification[]
   payments           Payment[]
   auditLogs          AuditLog[]
+  featureOverrides   OrganizationFeatureOverride[]
+}
+
+model PlatformUser {
+  id           String       @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String       @unique
+  passwordHash String
+  role         PlatformRole @default(ADMIN)
+  active       Boolean      @default(true)
+  tokenVersion Int          @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ServicePackage {
+  id          String      @id
+  code        String      @unique
+  name        String
+  description String?
+  features    FeatureKey[]
+  active      Boolean     @default(true)
+  sortOrder   Int         @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organizations Organization[]
+}
+
+model OrganizationFeatureOverride {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  feature FeatureKey
+  enabled Boolean
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, feature])
+  @@index([organizationId])
 }
 
 model Branch {
@@ -240,10 +316,13 @@ model Customer {
   firstName String
   lastName  String?
   phone     String?
-  email     String?
-  taxNumber String?
-  address   String?
-  notes     String?
+  email           String?
+  taxNumber       String?
+  nationalIdHash  String?
+  nationalIdLast4 String?
+  portalEnabled   Boolean @default(true)
+  address         String?
+  notes           String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -252,12 +331,14 @@ model Customer {
   appointments  Appointment[]
   serviceOrders ServiceOrder[]
   quotes        Quote[]
-  notifications Notification[]
-  payments      Payment[]
+  notifications   Notification[]
+  payments         Payment[]
+  portalChallenges CustomerPortalChallenge[]
 
   @@index([organizationId])
   @@index([branchId])
   @@index([phone])
+  @@index([nationalIdHash])
 }
 
 model Vehicle {
@@ -304,11 +385,32 @@ model Vehicle {
   maintenanceRecords MaintenanceRecord[]
   maintenancePlans   MaintenancePlan[]
   media              Media[]
+  portalChallenges   CustomerPortalChallenge[]
 
   @@unique([organizationId, plate])
   @@unique([organizationId, vin])
   @@index([customerId])
   @@index([branchId])
+}
+
+model CustomerPortalChallenge {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  vehicleId String
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  verifiedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([customerId])
+  @@index([vehicleId])
+  @@index([expiresAt])
 }
 
 /* =========================================================
