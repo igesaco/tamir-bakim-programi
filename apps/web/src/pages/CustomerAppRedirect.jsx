@@ -54,7 +54,7 @@ export default function CustomerAppRedirect() {
   const appScheme = (
     import.meta.env
       .VITE_CUSTOMER_APP_SCHEME ||
-    'tamirbakimcustomer'
+    'tamirbakim'
   ).replace(
     /:\/\/$/,
     '',
