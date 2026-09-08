@@ -11,6 +11,8 @@ const roleLabels = {
   MANAGER: 'Yönetici',
   SERVICE_ADVISOR: 'Servis Danışmanı',
   TECHNICIAN: 'Teknik Bakım Personeli',
+  WAREHOUSE: 'Depo / Stok Personeli',
+  ACCOUNTING: 'Muhasebe / Kasa',
 };
 
 export default function Users() {
@@ -49,6 +51,8 @@ export default function Users() {
     'MANAGER',
     'SERVICE_ADVISOR',
     'TECHNICIAN',
+    'WAREHOUSE',
+    'ACCOUNTING',
   ].includes(form.role);
 
   async function submit(e) {
@@ -316,6 +320,14 @@ export default function Users() {
                 Teknik Bakım Personeli
               </option>
 
+              <option value="WAREHOUSE">
+                Depo / Stok Personeli
+              </option>
+
+              <option value="ACCOUNTING">
+                Muhasebe / Kasa
+              </option>
+
               {currentUser?.role ===
                 'OWNER' && (
                 <option value="OWNER">
@@ -416,6 +428,14 @@ export default function Users() {
 
                         <option value="TECHNICIAN">
                           Teknik Bakım Personeli
+                        </option>
+
+                        <option value="WAREHOUSE">
+                          Depo / Stok Personeli
+                        </option>
+
+                        <option value="ACCOUNTING">
+                          Muhasebe / Kasa
                         </option>
 
                         {currentUser?.role ===
