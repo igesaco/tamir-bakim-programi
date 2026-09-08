@@ -10,6 +10,7 @@ import { AuthGuard } from '@nestjs/passport';
 
 import { CustomerPortalService } from './customer-portal.service';
 import { StartPortalAccessDto } from './dto/start-portal-access.dto';
+import { StartPortalQrAccessDto } from './dto/start-portal-qr-access.dto';
 import { VerifyPortalAccessDto } from './dto/verify-portal-access.dto';
 
 @Controller('customer-portal')
@@ -23,6 +24,15 @@ export class CustomerPortalController {
     @Body() dto: StartPortalAccessDto,
   ) {
     return this.customerPortalService.start(
+      dto,
+    );
+  }
+
+  @Post('access/qr/start')
+  startFromQr(
+    @Body() dto: StartPortalQrAccessDto,
+  ) {
+    return this.customerPortalService.startFromQr(
       dto,
     );
   }
