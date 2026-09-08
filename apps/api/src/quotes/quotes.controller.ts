@@ -13,8 +13,11 @@ import { AuthGuard } from '@nestjs/passport';
 import {
   QuoteStatus,
   UserRole,
+
+  FeatureKey,
 } from '@prisma/client';
 
+import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreateQuoteDto } from './dto/create-quote.dto';
@@ -27,6 +30,7 @@ import { QuotesService } from './quotes.service';
   UserRole.SERVICE_ADVISOR,
 )
 
+@Feature(FeatureKey.QUOTES)
 @Controller('quotes')
 export class QuotesController {
   constructor(
