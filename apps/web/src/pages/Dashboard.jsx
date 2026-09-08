@@ -13,11 +13,17 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [orders, setOrders] = useState([]);
 
-  useEffect(() => {
-    if (
+  const canUseReports =
+    (
       user?.role === 'OWNER' ||
       user?.role === 'MANAGER'
-    ) {
+    ) &&
+    user?.features?.includes(
+      'REPORTS',
+    );
+
+  useEffect(() => {
+    if (canUseReports) {
       api.get('/reports/dashboard')
         .then((response) => {
           setData(response.data);
@@ -30,12 +36,12 @@ export default function Dashboard() {
       .then((response) => {
         setOrders(response.data);
       });
-  }, [user?.role]);
+  }, [
+    user?.role,
+    canUseReports,
+  ]);
 
-  if (
-    user?.role !== 'OWNER' &&
-    user?.role !== 'MANAGER'
-  ) {
+  if (!canUseReports) {
     const active = orders.filter(
       (order) =>
         !['DELIVERED', 'CANCELLED'].includes(
