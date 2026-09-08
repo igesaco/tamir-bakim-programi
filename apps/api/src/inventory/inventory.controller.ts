@@ -8,8 +8,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { UserRole } from '@prisma/client';
+import { UserRole 
+  FeatureKey,
+} from '@prisma/client';
 
+import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreatePartDto } from './dto/create-part.dto';
@@ -17,6 +20,7 @@ import { StockMovementDto } from './dto/stock-movement.dto';
 import { InventoryService } from './inventory.service';
 
 @UseGuards(AuthGuard('jwt'), RolesGuard)
+@Feature(FeatureKey.INVENTORY)
 @Controller('inventory')
 @Roles(
   UserRole.OWNER,
