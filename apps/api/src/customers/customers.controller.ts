@@ -10,8 +10,11 @@
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { UserRole } from '@prisma/client';
+import { UserRole 
+  FeatureKey,
+} from '@prisma/client';
 
+import { Feature } from '../entitlements/feature.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CustomersService } from './customers.service';
@@ -25,6 +28,7 @@ import { UpdateCustomerDto } from './dto/update-customer.dto';
   UserRole.SERVICE_ADVISOR,
 )
 
+@Feature(FeatureKey.CUSTOMERS)
 @Controller('customers')
 export class CustomersController {
   constructor(
