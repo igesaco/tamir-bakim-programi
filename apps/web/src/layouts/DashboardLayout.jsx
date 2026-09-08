@@ -31,6 +31,7 @@ const menu = [
     short: 'MŞ',
     icon: 'customers',
     feature: 'CUSTOMERS',
+    permission: 'CUSTOMER_VIEW',
     roles: [
       'OWNER',
       'MANAGER',
@@ -43,6 +44,7 @@ const menu = [
     short: 'İE',
     icon: 'service',
     feature: 'SERVICE_ORDERS',
+    permission: 'SERVICE_ORDER_VIEW',
     roles: [
       'OWNER',
       'MANAGER',
@@ -56,6 +58,7 @@ const menu = [
     short: 'ST',
     icon: 'inventory',
     feature: 'INVENTORY',
+    permission: 'INVENTORY_VIEW',
     roles: [
       'OWNER',
       'MANAGER',
@@ -68,6 +71,7 @@ const menu = [
     short: 'TD',
     icon: 'supplier',
     feature: 'SUPPLIERS',
+    permission: 'SUPPLIER_VIEW',
     roles: [
       'OWNER',
       'MANAGER',
@@ -80,6 +84,7 @@ const menu = [
     short: 'PN',
     icon: 'staff',
     feature: 'STAFF',
+    permission: 'STAFF_VIEW',
     roles: [
       'OWNER',
       'MANAGER',
@@ -91,6 +96,7 @@ const menu = [
     short: 'ŞB',
     icon: 'branch',
     feature: 'BRANCHES',
+    permission: 'BRANCH_VIEW',
     roles: [
       'OWNER',
       'MANAGER',
@@ -102,6 +108,7 @@ const menu = [
     short: 'BL',
     icon: 'bell',
     feature: 'NOTIFICATIONS',
+    permission: 'NOTIFICATION_VIEW',
     roles: [
       'OWNER',
       'MANAGER',
@@ -114,6 +121,7 @@ const menu = [
     short: '₺',
     icon: 'cash',
     feature: 'CASHIER',
+    permission: 'CASHIER_VIEW',
     roles: [
       'OWNER',
       'MANAGER',
@@ -126,6 +134,7 @@ const menu = [
     short: 'RP',
     icon: 'reports',
     feature: 'REPORTS',
+    permission: 'REPORTS_VIEW',
     roles: [
       'OWNER',
       'MANAGER',
@@ -138,6 +147,7 @@ const menu = [
     short: 'AY',
     icon: 'settings',
     feature: 'SETTINGS',
+    permission: 'SETTINGS_VIEW',
     roles: [
       'OWNER',
       'MANAGER',
@@ -573,9 +583,19 @@ export default function DashboardLayout() {
               user?.features?.includes(
                 item.feature,
               )
+            ) &&
+            (
+              !item.permission ||
+              user?.permissions?.includes(
+                item.permission,
+              )
             ),
         ),
-      [user?.role],
+      [
+        user?.role,
+        user?.features,
+        user?.permissions,
+      ],
     );
 
   const currentMode =
