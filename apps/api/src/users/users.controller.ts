@@ -47,7 +47,17 @@ export class UsersController {
       ...safeUser
     } = user;
 
-    return safeUser;
+    return {
+      ...safeUser,
+      features:
+        req.user.features ?? [],
+      actorType:
+        req.user.actorType ??
+        'TENANT',
+      platformUserId:
+        req.user.platformUserId ??
+        null,
+    };
   }
 
   @Patch('me/password')
