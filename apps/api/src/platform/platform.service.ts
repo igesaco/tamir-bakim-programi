@@ -38,23 +38,17 @@ export class PlatformService
       return;
     }
 
-    const existing =
-      await this.prisma.platformUser.findUnique({
-        where: { email },
-      });
-
-    if (existing) {
-      return;
-    }
-
     const passwordHash =
       await bcrypt.hash(
         password,
         12,
       );
 
-    await this.prisma.platformUser.create({
-      data: {
+    await this.prisma.platformUser.upsert({
+      where: {
+        email,
+      },
+      create: {
         firstName:
           process.env.PLATFORM_FOUNDER_FIRST_NAME
             ?.trim() ||
@@ -67,6 +61,21 @@ export class PlatformService
         passwordHash,
         role:
           PlatformRole.FOUNDER,
+        active: true,
+      },
+      update: {
+        firstName:
+          process.env.PLATFORM_FOUNDER_FIRST_NAME
+            ?.trim() ||
+          'İGESA',
+        lastName:
+          process.env.PLATFORM_FOUNDER_LAST_NAME
+            ?.trim() ||
+          'Kurucu',
+        passwordHash,
+        role:
+          PlatformRole.FOUNDER,
+        active: true,
       },
     });
   }
