@@ -12,9 +12,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { UserRole 
-  FeatureKey,
-} from '@prisma/client';
+import { FeatureKey, UserRole } from '@prisma/client';
 import { diskStorage } from 'multer';
 import {
   extname,
