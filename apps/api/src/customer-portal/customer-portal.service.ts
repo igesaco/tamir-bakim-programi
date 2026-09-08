@@ -737,6 +737,33 @@ export class CustomerPortalService {
         transmission: true,
         mileage: true,
         qrActive: true,
+        media: {
+          where: {
+            type: {
+              in: [
+                'VEHICLE',
+                'ACCEPTANCE',
+                'DAMAGE',
+                'ENGINE',
+                'BEFORE',
+                'AFTER',
+                'ODOMETER',
+              ],
+            },
+          },
+          select: {
+            id: true,
+            type: true,
+            storageKey: true,
+            fileName: true,
+            description: true,
+            createdAt: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 6,
+        },
         maintenancePlans: {
           where: {
             status:
@@ -804,6 +831,33 @@ export class CustomerPortalService {
           fuelType: true,
           transmission: true,
           mileage: true,
+          media: {
+            where: {
+              type: {
+                in: [
+                  'VEHICLE',
+                  'ACCEPTANCE',
+                  'DAMAGE',
+                  'ENGINE',
+                  'BEFORE',
+                  'AFTER',
+                  'ODOMETER',
+                ],
+              },
+            },
+            select: {
+              id: true,
+              type: true,
+              storageKey: true,
+              fileName: true,
+              description: true,
+              createdAt: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 20,
+          },
         },
       });
 
