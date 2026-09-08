@@ -338,26 +338,50 @@ export default function PublicVehicle() {
           )}
         </div>
 
-        <div className="public-section">
-          <h2>Araç Sahibine Özel</h2>
+        <div className="public-app-cta">
+          <div className="public-app-cta-icon">
+            <span>TB</span>
+          </div>
 
-          <p className="muted-text">
-            Bu QR kod bir dijital bakım kartıdır.
-            Bakım geçmişi ve yaklaşan bakım bilgileri
-            açık kartta görüntülenir. Kişisel bilgiler,
-            servis takibi, uyarılar ve bildirimler için
-            Tamir Bakım müşteri uygulamasını kullanın.
-          </p>
+          <div className="public-app-cta-copy">
+            <span className="public-app-kicker">
+              ARACINIZ HEP YANINIZDA
+            </span>
 
-          <div className="action-row">
+            <h2>
+              Aracınızın tüm geçmişini
+              uygulamada görün
+            </h2>
+
+            <p>
+              Geçmiş bakımlarınızı, yaklaşan
+              bakım tarihlerini, servis sürecini
+              ve aracınıza özel bildirimleri tek
+              yerden takip edin.
+            </p>
+
+            <div className="public-app-benefits">
+              <span>✓ Bakım geçmişi</span>
+              <span>✓ Yaklaşan bakım uyarıları</span>
+              <span>✓ Servis durumu</span>
+              <span>✓ Anlık bildirimler</span>
+            </div>
+
             <a
-              className="primary-link-button"
+              className="public-app-cta-button"
               href={`/uygulama?qr=${encodeURIComponent(
                 token,
               )}`}
             >
-              Müşteri Uygulamasını Aç
+              Aracınızın Geçmişini Uygulamada Görün
+              <span aria-hidden="true">→</span>
             </a>
+
+            <small>
+              Uygulama yüklüyse açılır; yüklü
+              değilse Google Play veya App Store'a
+              yönlendirilirsiniz.
+            </small>
           </div>
         </div>
 
