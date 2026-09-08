@@ -881,16 +881,48 @@ export default function PlatformAdmin() {
         </div>
       </header>
 
-      <section className="platform-summary">
+      <section className="platform-summary platform-summary-finance">
         <div className="platform-summary-card">
           <span>
-            İşletme
+            Müşteri İşletme
           </span>
           <strong>
             {organizations.length}
           </strong>
           <small>
-            Platformdaki toplam müşteri işletme
+            Platformdaki toplam sanayici / servis hesabı
+          </small>
+        </div>
+
+        <div className="platform-summary-card accent">
+          <span>
+            Aylık Sözleşme
+          </span>
+          <strong className="platform-money">
+            {formatMoney(
+              totalMonthlyFee,
+            )}
+          </strong>
+          <small>
+            Kayıtlı aylık hizmet bedelleri toplamı
+          </small>
+        </div>
+
+        <div className="platform-summary-card">
+          <span>
+            Cari Alacak
+          </span>
+          <strong className={
+            totalLedgerBalance > 0
+              ? 'platform-money warning'
+              : 'platform-money'
+          }>
+            {formatMoney(
+              totalLedgerBalance,
+            )}
+          </strong>
+          <small>
+            Borç hareketleri eksi tahsilatlar
           </small>
         </div>
 
@@ -902,7 +934,7 @@ export default function PlatformAdmin() {
             {totalUsers}
           </strong>
           <small>
-            Tüm işletmelerdeki aktif kullanıcı havuzu
+            Tüm işletmelerdeki panel kullanıcıları
           </small>
         </div>
 
@@ -915,18 +947,6 @@ export default function PlatformAdmin() {
           </strong>
           <small>
             Sistemde kayıtlı toplam araç
-          </small>
-        </div>
-
-        <div className="platform-summary-card accent">
-          <span>
-            Hazır Paket
-          </span>
-          <strong>
-            {packages.length}
-          </strong>
-          <small>
-            Başlangıç · Profesyonel · Servis 360
           </small>
         </div>
       </section>
@@ -1096,6 +1116,33 @@ export default function PlatformAdmin() {
                           0}
                       </strong>
                     </span>
+
+                    <span>
+                      Durum:{' '}
+                      <strong>
+                        {selected.active
+                          ? 'Aktif'
+                          : 'Pasif'}
+                      </strong>
+                    </span>
+
+                    <span>
+                      Aylık:{' '}
+                      <strong>
+                        {formatMoney(
+                          selected.monthlyFee,
+                        )}
+                      </strong>
+                    </span>
+
+                    <span>
+                      Cari:{' '}
+                      <strong>
+                        {formatMoney(
+                          selected.ledgerBalance,
+                        )}
+                      </strong>
+                    </span>
                   </div>
                 </div>
 
@@ -1113,7 +1160,58 @@ export default function PlatformAdmin() {
                 </button>
               </div>
 
-              <div className="platform-section-tabs">
+              <div className="platform-section-tabs platform-section-tabs-wide">
+                <button
+                  type="button"
+                  className={
+                    activeSection ===
+                    'customer'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() =>
+                    setActiveSection(
+                      'customer',
+                    )
+                  }
+                >
+                  Müşteri Bilgileri
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    activeSection ===
+                    'account'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() =>
+                    setActiveSection(
+                      'account',
+                    )
+                  }
+                >
+                  Cari Hesap
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    activeSection ===
+                    'branding'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() =>
+                    setActiveSection(
+                      'branding',
+                    )
+                  }
+                >
+                  Panel Tasarımı
+                </button>
+
                 <button
                   type="button"
                   className={
@@ -1146,23 +1244,6 @@ export default function PlatformAdmin() {
                   }
                 >
                   Personel Yetkileri
-                </button>
-
-                <button
-                  type="button"
-                  className={
-                    activeSection ===
-                    'branding'
-                      ? 'active'
-                      : ''
-                  }
-                  onClick={() =>
-                    setActiveSection(
-                      'branding',
-                    )
-                  }
-                >
-                  Panel Tasarımı
                 </button>
               </div>
 
