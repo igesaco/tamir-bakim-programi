@@ -285,6 +285,7 @@ export function AuthProvider({
           body: {
             challengeId,
             code,
+            client: 'MOBILE',
           },
         },
       );
