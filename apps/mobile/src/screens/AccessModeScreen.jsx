@@ -5,6 +5,8 @@ import {
   View,
 } from 'react-native';
 
+import BrandLogo from '../components/BrandLogo';
+
 import {
   colors,
   radius,
@@ -16,11 +18,7 @@ export default function AccessModeScreen({
 }) {
   return (
     <View style={styles.page}>
-      <View style={styles.logo}>
-        <Text style={styles.logoText}>
-          TB
-        </Text>
-      </View>
+      <BrandLogo size={66} />
 
       <Text style={styles.kicker}>
         TAMİR BAKIM
@@ -116,22 +114,6 @@ const styles =
         'center',
       backgroundColor:
         colors.bg,
-    },
-    logo: {
-      width: 66,
-      height: 66,
-      alignItems:
-        'center',
-      justifyContent:
-        'center',
-      borderRadius: 20,
-      backgroundColor:
-        colors.accent,
-    },
-    logoText: {
-      color: '#171108',
-      fontSize: 21,
-      fontWeight: '950',
     },
     kicker: {
       marginTop: 20,
