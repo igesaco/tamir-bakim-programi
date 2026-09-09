@@ -246,6 +246,7 @@ export class ServiceOrdersController {
     UserRole.OWNER,
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
+    UserRole.ACCOUNTING,
   )
   @UseGuards(RolesGuard)
   assignTechnician(
