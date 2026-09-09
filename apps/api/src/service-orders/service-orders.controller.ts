@@ -127,6 +127,7 @@ export class ServiceOrdersController {
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
     UserRole.ACCOUNTING,
+    UserRole.TECHNICIAN,
   )
   @UseGuards(RolesGuard)
   setItemComplete(
@@ -140,6 +141,7 @@ export class ServiceOrdersController {
       id,
       itemId,
       req.user.role,
+      req.user.sub,
       req.user.branchId,
       completed,
     );
