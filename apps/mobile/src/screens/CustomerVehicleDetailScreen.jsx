@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import {
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 
@@ -26,23 +27,47 @@ import {
 } from '../components/UI';
 import {
   colors,
+  radius,
   spacing,
 } from '../theme';
 
 const statusLabels = {
   APPOINTMENT: 'Randevu',
   ARRIVED: 'Araç Geldi',
-  ACCEPTED: 'Bakıma Alındı',
-  INSPECTION: 'Kontrol Ediliyor',
-  QUOTE_WAITING: 'Teklif Bekleniyor',
-  APPROVED: 'Onaylandı',
-  IN_PROGRESS: 'Bakım Devam Ediyor',
+  ACCEPTED: 'Araç Kabul Edildi',
+  INSPECTION: 'Teknik İnceleme',
+  QUOTE_WAITING: 'Fiyatlandırma Bekleniyor',
+  APPROVED: 'İş Emri Onaylandı',
+  IN_PROGRESS: 'Servis İşlemi Başladı',
   PART_WAITING: 'Parça Bekleniyor',
-  QUALITY_CONTROL: 'Kalite Kontrol',
+  QUALITY_CONTROL: 'Kalite Kontrol / Son Kontrol',
   READY: 'Teslimata Hazır',
   PAYMENT_WAITING: 'Ödeme Bekleniyor',
   DELIVERED: 'Teslim Edildi',
 };
+
+const progressStatuses = [
+  'ACCEPTED',
+  'QUOTE_WAITING',
+  'APPROVED',
+  'IN_PROGRESS',
+  'QUALITY_CONTROL',
+  'READY',
+];
+
+function money(
+  value,
+) {
+  return Number(
+    value || 0,
+  ).toLocaleString(
+    'tr-TR',
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    },
+  );
+}
 
 export default function CustomerVehicleDetailScreen({
   vehicleId,
@@ -61,11 +86,17 @@ export default function CustomerVehicleDetailScreen({
   const [error, setError] =
     useState('');
 
+  async function load() {
+    const result =
+      await customerRequest(
+        `/customer-portal/vehicles/${vehicleId}`,
+      );
+
+    setData(result);
+  }
+
   useEffect(() => {
-    customerRequest(
-      `/customer-portal/vehicles/${vehicleId}`,
-    )
-      .then(setData)
+    load()
       .catch((err) =>
         setError(
           err?.message ||
@@ -78,6 +109,34 @@ export default function CustomerVehicleDetailScreen({
   }, [
     vehicleId,
   ]);
+
+  const currentStatusIndex =
+    useMemo(() => {
+      const status =
+        data?.currentServiceOrder
+          ?.status;
+
+      if (
+        status ===
+        'PART_WAITING'
+      ) {
+        return 3;
+      }
+
+      if (
+        status ===
+        'PAYMENT_WAITING'
+      ) {
+        return 5;
+      }
+
+      return progressStatuses.indexOf(
+        status,
+      );
+    }, [
+      data?.currentServiceOrder
+        ?.status,
+    ]);
 
   if (loading) {
     return (
@@ -120,7 +179,28 @@ export default function CustomerVehicleDetailScreen({
     currentServiceOrder,
     maintenancePlans = [],
     maintenanceHistory = [],
+    payments = [],
+    currentAccount,
   } = data;
+
+  const currentQuote =
+    currentServiceOrder
+      ?.quotes?.[0];
+
+  const serviceMedia =
+    currentServiceOrder
+      ?.media || [];
+
+  const pendingPayments =
+    payments.filter(
+      (payment) =>
+        [
+          'PENDING',
+          'PARTIAL',
+        ].includes(
+          payment.status,
+        ),
+    );
 
   return (
     <ScrollView
@@ -156,12 +236,294 @@ export default function CustomerVehicleDetailScreen({
         </Text>
 
         <Text style={styles.note}>
-          Bu değer son servis kaydı veya
-          sizin son kilometre
-          bildiriminiz üzerinden
-          güncellenecektir.
+          Bu değer son kayıtlı servis
+          kilometre bilgisidir.
         </Text>
       </Card>
+
+      {currentServiceOrder ? (
+        <>
+          <Text style={styles.sectionTitle}>
+            Canlı Servis Takibi
+          </Text>
+
+          <Card style={styles.serviceCard}>
+            <View style={styles.statusTop}>
+              <View style={styles.flex}>
+                <Text style={styles.label}>
+                  GÜNCEL DURUM
+                </Text>
+
+                <Text style={styles.status}>
+                  {statusLabels[
+                    currentServiceOrder.status
+                  ] ||
+                    currentServiceOrder.status}
+                </Text>
+              </View>
+
+              <Text style={styles.orderNo}>
+                {currentServiceOrder.orderNumber}
+              </Text>
+            </View>
+
+            {currentServiceOrder.complaint ? (
+              <Text style={styles.note}>
+                Talebiniz: {' '}
+                {currentServiceOrder.complaint}
+              </Text>
+            ) : null}
+
+            <View style={styles.progressList}>
+              {progressStatuses.map(
+                (
+                  status,
+                  index,
+                ) => {
+                  const done =
+                    index <=
+                    currentStatusIndex;
+
+                  return (
+                    <View
+                      key={status}
+                      style={styles.progressRow}
+                    >
+                      <View
+                        style={[
+                          styles.progressDot,
+                          done &&
+                            styles.progressDotDone,
+                        ]}
+                      >
+                        <Text style={styles.progressCheck}>
+                          {done
+                            ? '✓'
+                            : ''}
+                        </Text>
+                      </View>
+
+                      <Text
+                        style={[
+                          styles.progressText,
+                          done &&
+                            styles.progressTextDone,
+                        ]}
+                      >
+                        {statusLabels[
+                          status
+                        ]}
+                      </Text>
+                    </View>
+                  );
+                },
+              )}
+            </View>
+
+            {currentServiceOrder.status ===
+            'PART_WAITING' ? (
+              <View style={styles.warningBox}>
+                <Text style={styles.warningTitle}>
+                  Parça tedariki bekleniyor
+                </Text>
+
+                <Text style={styles.warningText}>
+                  Servis işlemi gerekli
+                  parça veya malzeme
+                  tedarik edildiğinde
+                  devam edecektir.
+                </Text>
+              </View>
+            ) : null}
+          </Card>
+
+          <Text style={styles.sectionTitle}>
+            Yapılan / Planlanan İşlemler
+          </Text>
+
+          {currentServiceOrder.items
+            ?.length ? (
+            <View style={styles.list}>
+              {currentServiceOrder.items.map(
+                (item) => (
+                  <Card key={item.id}>
+                    <View style={styles.taskRow}>
+                      <View
+                        style={[
+                          styles.taskDot,
+                          item.completed &&
+                            styles.taskDotDone,
+                        ]}
+                      >
+                        <Text style={styles.progressCheck}>
+                          {item.completed
+                            ? '✓'
+                            : ''}
+                        </Text>
+                      </View>
+
+                      <View style={styles.flex}>
+                        <Text style={styles.itemTitle}>
+                          {item.name}
+                        </Text>
+
+                        <Text style={styles.itemText}>
+                          {item.completed
+                            ? 'Tamamlandı'
+                            : 'Bekliyor / işlemde'}
+                        </Text>
+                      </View>
+                    </View>
+                  </Card>
+                ),
+              )}
+            </View>
+          ) : (
+            <Empty text="İşlem listesi henüz oluşturulmadı." />
+          )}
+
+          {currentQuote ? (
+            <>
+              <Text style={styles.sectionTitle}>
+                Teklif / Proforma
+              </Text>
+
+              <Card>
+                <View style={styles.statusTop}>
+                  <View>
+                    <Text style={styles.itemTitle}>
+                      {currentQuote.quoteNumber}
+                    </Text>
+
+                    <Text style={styles.itemText}>
+                      {currentQuote.status ===
+                      'APPROVED'
+                        ? 'Onaylandı'
+                        : 'Teklif hazır'}
+                    </Text>
+                  </View>
+
+                  <Text style={styles.quoteTotal}>
+                    {money(
+                      currentQuote.total,
+                    )}{' '}
+                    ₺
+                  </Text>
+                </View>
+
+                {currentQuote.items?.map(
+                  (item) => (
+                    <View
+                      key={item.id}
+                      style={styles.quoteRow}
+                    >
+                      <Text style={styles.quoteName}>
+                        {item.name}
+                      </Text>
+
+                      <Text style={styles.quotePrice}>
+                        {money(
+                          item.grossTotal,
+                        )}{' '}
+                        ₺
+                      </Text>
+                    </View>
+                  ),
+                )}
+              </Card>
+            </>
+          ) : null}
+
+          {serviceMedia.length ? (
+            <>
+              <Text style={styles.sectionTitle}>
+                Servis Fotoğrafları
+              </Text>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={
+                  styles.photoRow
+                }
+              >
+                {serviceMedia.map(
+                  (media) => (
+                    <View
+                      key={media.id}
+                      style={styles.photoCard}
+                    >
+                      <Image
+                        source={{
+                          uri:
+                            mediaUrl(
+                              media,
+                            ),
+                        }}
+                        style={styles.photo}
+                      />
+
+                      <Text
+                        numberOfLines={1}
+                        style={styles.photoLabel}
+                      >
+                        {photoLabel(
+                          media.type,
+                        )}
+                      </Text>
+                    </View>
+                  ),
+                )}
+              </ScrollView>
+            </>
+          ) : null}
+        </>
+      ) : null}
+
+      {pendingPayments.length ||
+      Number(
+        currentAccount?.openBalance ||
+          0,
+      ) > 0 ? (
+        <>
+          <Text style={styles.sectionTitle}>
+            Ödeme Durumu
+          </Text>
+
+          <Card style={styles.paymentCard}>
+            <Text style={styles.label}>
+              BEKLEYEN TUTAR
+            </Text>
+
+            <Text style={styles.paymentValue}>
+              {money(
+                pendingPayments.length
+                  ? pendingPayments.reduce(
+                      (
+                        sum,
+                        payment,
+                      ) =>
+                        sum +
+                        Number(
+                          payment.amount ||
+                            0,
+                        ),
+                      0,
+                    )
+                  : currentAccount?.openBalance,
+              )}{' '}
+              ₺
+            </Text>
+
+            <Text style={styles.note}>
+              Ödeme bilgisi servis
+              tarafından oluşturulan
+              cari/tahsilat kaydına
+              göre gösterilir.
+            </Text>
+          </Card>
+        </>
+      ) : null}
 
       {vehicle.media?.length ? (
         <>
@@ -205,28 +567,6 @@ export default function CustomerVehicleDetailScreen({
             )}
           </ScrollView>
         </>
-      ) : null}
-
-      {currentServiceOrder ? (
-        <Card style={styles.section}>
-          <Text style={styles.label}>
-            SERVİS DURUMU
-          </Text>
-
-          <Text style={styles.status}>
-            {statusLabels[
-              currentServiceOrder.status
-            ] ||
-              currentServiceOrder.status}
-          </Text>
-
-          <Text style={styles.note}>
-            İş Emri:{' '}
-            {
-              currentServiceOrder.orderNumber
-            }
-          </Text>
-        </Card>
       ) : null}
 
       <Text style={styles.sectionTitle}>
@@ -326,11 +666,11 @@ const styles =
       backgroundColor:
         colors.bg,
     },
+    flex: {
+      flex: 1,
+    },
     gap: {
       height: 12,
-    },
-    section: {
-      marginTop: 10,
     },
     label: {
       color: colors.muted,
@@ -349,7 +689,7 @@ const styles =
       marginTop: 6,
       color:
         colors.accent,
-      fontSize: 18,
+      fontSize: 17,
       fontWeight: '950',
     },
     note: {
@@ -357,6 +697,164 @@ const styles =
       color: colors.muted,
       fontSize: 10,
       lineHeight: 16,
+    },
+    sectionTitle: {
+      marginTop: 20,
+      marginBottom: 8,
+      color: colors.text,
+      fontSize: 12,
+      fontWeight: '900',
+    },
+    list: {
+      gap: 8,
+    },
+    itemTitle: {
+      color: colors.text,
+      fontSize: 12,
+      fontWeight: '900',
+    },
+    itemText: {
+      marginTop: 4,
+      color: colors.muted,
+      fontSize: 9,
+      lineHeight: 14,
+    },
+    serviceCard: {
+      borderColor:
+        '#5f471a',
+    },
+    statusTop: {
+      flexDirection: 'row',
+      justifyContent:
+        'space-between',
+      gap: 12,
+    },
+    orderNo: {
+      color: colors.muted,
+      fontSize: 8,
+      fontWeight: '800',
+    },
+    progressList: {
+      marginTop: 18,
+      gap: 9,
+    },
+    progressRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 9,
+    },
+    progressDot: {
+      width: 24,
+      height: 24,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor:
+        colors.panel2,
+    },
+    progressDotDone: {
+      borderColor:
+        colors.success,
+      backgroundColor:
+        '#173323',
+    },
+    progressCheck: {
+      color: colors.success,
+      fontSize: 12,
+      fontWeight: '950',
+    },
+    progressText: {
+      color: colors.muted,
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    progressTextDone: {
+      color: colors.text,
+    },
+    warningBox: {
+      marginTop: 14,
+      padding: 11,
+      borderWidth: 1,
+      borderColor:
+        '#6c5221',
+      borderRadius:
+        radius.sm,
+      backgroundColor:
+        '#1d180d',
+    },
+    warningTitle: {
+      color:
+        colors.warning,
+      fontSize: 10,
+      fontWeight: '900',
+    },
+    warningText: {
+      marginTop: 4,
+      color: colors.muted,
+      fontSize: 9,
+      lineHeight: 14,
+    },
+    taskRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    taskDot: {
+      width: 25,
+      height: 25,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 7,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    taskDotDone: {
+      borderColor:
+        colors.success,
+      backgroundColor:
+        '#173323',
+    },
+    quoteTotal: {
+      color:
+        colors.accent,
+      fontSize: 18,
+      fontWeight: '950',
+    },
+    quoteRow: {
+      marginTop: 10,
+      paddingTop: 10,
+      flexDirection: 'row',
+      justifyContent:
+        'space-between',
+      gap: 10,
+      borderTopWidth: 1,
+      borderTopColor:
+        colors.border,
+    },
+    quoteName: {
+      flex: 1,
+      color: colors.text,
+      fontSize: 9,
+    },
+    quotePrice: {
+      color: colors.text,
+      fontSize: 9,
+      fontWeight: '800',
+    },
+    paymentCard: {
+      borderColor:
+        '#664d18',
+      backgroundColor:
+        '#19150d',
+    },
+    paymentValue: {
+      marginTop: 6,
+      color:
+        colors.accent,
+      fontSize: 26,
+      fontWeight: '950',
     },
     photoRow: {
       gap: 9,
@@ -378,26 +876,5 @@ const styles =
         colors.muted,
       fontSize: 9,
       fontWeight: '700',
-    },
-    sectionTitle: {
-      marginTop: 20,
-      marginBottom: 8,
-      color: colors.text,
-      fontSize: 12,
-      fontWeight: '900',
-    },
-    list: {
-      gap: 8,
-    },
-    itemTitle: {
-      color: colors.text,
-      fontSize: 12,
-      fontWeight: '900',
-    },
-    itemText: {
-      marginTop: 5,
-      color: colors.muted,
-      fontSize: 10,
-      lineHeight: 16,
     },
   });
