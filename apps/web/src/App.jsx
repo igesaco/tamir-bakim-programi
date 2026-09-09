@@ -66,6 +66,15 @@ const PRICING_ROLES = [
   'ACCOUNTING',
 ];
 
+const NOTIFICATION_ROLES = [
+  'OWNER',
+  'MANAGER',
+  'SERVICE_ADVISOR',
+  'TECHNICIAN',
+  'WAREHOUSE',
+  'ACCOUNTING',
+];
+
 const MANAGEMENT_ROLES = [
   'OWNER',
   'MANAGER',
@@ -389,7 +398,7 @@ export default function App() {
               path="notifications"
               element={
                 <ForRoles
-                  roles={SERVICE_ROLES}
+                  roles={NOTIFICATION_ROLES}
                   feature="NOTIFICATIONS"
                   permission="NOTIFICATION_VIEW"
                 >
