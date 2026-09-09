@@ -608,6 +608,5 @@ export class QuotesService {
         return updatedQuote;
       },
     );
-  }}
-
+  }
 }
