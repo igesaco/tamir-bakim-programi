@@ -1130,14 +1130,17 @@ export class ServiceOrdersService {
       );
     }
 
+    const technicianItemStatuses:
+      ServiceOrderStatus[] = [
+      ServiceOrderStatus.IN_PROGRESS,
+      ServiceOrderStatus.PART_WAITING,
+      ServiceOrderStatus.QUALITY_CONTROL,
+    ];
+
     if (
       actorRole ===
         UserRole.TECHNICIAN &&
-      ![
-        ServiceOrderStatus.IN_PROGRESS,
-        ServiceOrderStatus.PART_WAITING,
-        ServiceOrderStatus.QUALITY_CONTROL,
-      ].includes(
+      !technicianItemStatuses.includes(
         order.status,
       )
     ) {
