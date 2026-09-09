@@ -333,6 +333,17 @@ export default function Quotes() {
     }
   }
 
+  async function sendQuote(id) {
+    await api.patch(
+      `/quotes/${id}/status`,
+      {
+        status: 'SENT',
+      },
+    );
+
+    await load();
+  }
+
   async function approve(id) {
     await api.patch(
       `/quotes/${id}/status`,
@@ -756,8 +767,26 @@ export default function Quotes() {
                         Proforma
                       </Link>
 
-                      {quote.status !==
-                        'APPROVED' && (
+                      {quote.status ===
+                        'DRAFT' && (
+                        <button
+                          className="small-button"
+                          onClick={() =>
+                            sendQuote(
+                              quote.id,
+                            )
+                          }
+                        >
+                          Müşteriye Gönder
+                        </button>
+                      )}
+
+                      {[
+                        'SENT',
+                        'PARTIALLY_APPROVED',
+                      ].includes(
+                        quote.status,
+                      ) && (
                         <button
                           className="small-button"
                           onClick={() =>
@@ -766,7 +795,7 @@ export default function Quotes() {
                             )
                           }
                         >
-                          Onayla
+                          Manuel Onayla
                         </button>
                       )}
                     </div>
