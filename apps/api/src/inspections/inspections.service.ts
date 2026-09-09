@@ -400,13 +400,10 @@ export class InspectionsService {
 
     if (
       !dto.customerId &&
-      (
-        !dto.customerFirstName?.trim() ||
-        !dto.customerPhone?.trim()
-      )
+      !dto.customerFirstName?.trim()
     ) {
       throw new BadRequestException(
-        'Yeni müşteri için ad ve telefon bilgisi gerekli.',
+        'Yeni müşteri için en az ad bilgisi gerekli.',
       );
     }
 
@@ -482,26 +479,28 @@ export class InspectionsService {
             );
 
           customer =
-            await tx.customer.findFirst({
-              where: {
-                organizationId,
-                phone: {
-                  in:
-                    phoneCandidates,
-                },
-                ...(actorRole ===
-                UserRole.SERVICE_ADVISOR
-                  ? {
-                      branchId:
-                        resolvedBranchId,
-                    }
-                  : {}),
-              },
-              orderBy: {
-                createdAt:
-                  'desc',
-              },
-            });
+            phoneCandidates.length
+              ? await tx.customer.findFirst({
+                  where: {
+                    organizationId,
+                    phone: {
+                      in:
+                        phoneCandidates,
+                    },
+                    ...(actorRole ===
+                    UserRole.SERVICE_ADVISOR
+                      ? {
+                          branchId:
+                            resolvedBranchId,
+                        }
+                      : {}),
+                  },
+                  orderBy: {
+                    createdAt:
+                      'desc',
+                  },
+                })
+              : null;
 
           if (!customer) {
             customer =
