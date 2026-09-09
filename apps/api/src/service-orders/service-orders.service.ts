@@ -695,18 +695,53 @@ export class ServiceOrdersService {
       );
     }
 
-    return this.prisma.serviceOrder.update({
-      where: { id },
-      data: {
-        assignedTechnicianId:
-          technicianId,
+    return this.prisma.$transaction(
+      async (tx) => {
+        const updated =
+          await tx.serviceOrder.update({
+            where: { id },
+            data: {
+              assignedTechnicianId:
+                technicianId,
+            },
+            include: {
+              customer: true,
+              vehicle: true,
+              assignedTechnician: true,
+            },
+          });
+
+        if (technicianId) {
+          await tx.notification.create({
+            data: {
+              organizationId,
+              branchId:
+                order.branchId,
+              userId:
+                technicianId,
+              serviceOrderId:
+                order.id,
+              channel:
+                NotificationChannel.IN_APP,
+              status:
+                NotificationStatus.PENDING,
+              title:
+                order.status ===
+                  ServiceOrderStatus.APPROVED
+                  ? 'Onaylı iş emri size atandı'
+                  : 'Yeni iş emri size atandı',
+              message:
+                order.status ===
+                  ServiceOrderStatus.APPROVED
+                  ? `${updated.vehicle.plate} plakalı ${order.orderNumber} iş emri onaylandı. İşleme başlayabilirsiniz.`
+                  : `${updated.vehicle.plate} plakalı ${order.orderNumber} iş emri size atandı.`,
+            },
+          });
+        }
+
+        return updated;
       },
-      include: {
-        customer: true,
-        vehicle: true,
-        assignedTechnician: true,
-      },
-    });
+    );
   }
 
   private async findOfficeOrder(
