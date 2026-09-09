@@ -85,6 +85,8 @@ export default function CustomerVehicleDetailScreen({
 
   const [error, setError] =
     useState('');
+  const [quoteBusy, setQuoteBusy] =
+    useState(false);
 
   async function load() {
     const result =
@@ -93,6 +95,31 @@ export default function CustomerVehicleDetailScreen({
       );
 
     setData(result);
+  }
+
+  async function approveQuote(
+    quoteId,
+  ) {
+    setQuoteBusy(true);
+    setError('');
+
+    try {
+      await customerRequest(
+        `/customer-portal/quotes/${quoteId}/approve`,
+        {
+          method: 'POST',
+        },
+      );
+
+      await load();
+    } catch (err) {
+      setError(
+        err?.message ||
+          'Teklif onaylanamadı.',
+      );
+    } finally {
+      setQuoteBusy(false);
+    }
   }
 
   useEffect(() => {
@@ -410,6 +437,31 @@ export default function CustomerVehicleDetailScreen({
                     ₺
                   </Text>
                 </View>
+
+                {currentQuote.status ===
+                'SENT' ? (
+                  <View style={styles.quoteApproval}>
+                    <Text style={styles.note}>
+                      Bu teklif servis tarafından onayınıza sunuldu. Onay verdiğinizde iş emri işleme hazır hale gelir ve bekleyen ödeme kaydı oluşturulur.
+                    </Text>
+
+                    <Button
+                      title={
+                        quoteBusy
+                          ? 'Onaylanıyor...'
+                          : 'Teklifi Onayla'
+                      }
+                      disabled={
+                        quoteBusy
+                      }
+                      onPress={() =>
+                        approveQuote(
+                          currentQuote.id,
+                        )
+                      }
+                    />
+                  </View>
+                ) : null}
 
                 {currentQuote.items?.map(
                   (item) => (
@@ -821,6 +873,10 @@ const styles =
         colors.accent,
       fontSize: 18,
       fontWeight: '950',
+    },
+    quoteApproval: {
+      marginTop: 14,
+      gap: 10,
     },
     quoteRow: {
       marginTop: 10,
