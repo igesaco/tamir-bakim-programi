@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 const root = path.resolve(__dirname, '..');
 const assetsDir = path.join(root, 'assets');
@@ -8,27 +9,892 @@ fs.mkdirSync(assetsDir, {
   recursive: true,
 });
 
-const pngBase64 = "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[... truncated for brevity ...]";
+function crc32(buffer) {
+  let crc = 0xffffffff;
 
-const png = Buffer.from(
-  pngBase64,
-  'base64',
-);
+  for (const byte of buffer) {
+    crc ^= byte;
 
-for (const name of [
-  'icon.png',
-  'splash.png',
-  'brand-logo.png',
-]) {
+    for (let i = 0; i < 8; i += 1) {
+      crc =
+        (crc >>> 1) ^
+        (
+          (crc & 1)
+            ? 0xedb88320
+            : 0
+        );
+    }
+  }
+
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function chunk(type, data) {
+  const typeBuffer =
+    Buffer.from(type);
+
+  const length =
+    Buffer.alloc(4);
+
+  length.writeUInt32BE(
+    data.length,
+    0,
+  );
+
+  const crc =
+    Buffer.alloc(4);
+
+  crc.writeUInt32BE(
+    crc32(
+      Buffer.concat([
+        typeBuffer,
+        data,
+      ]),
+    ),
+    0,
+  );
+
+  return Buffer.concat([
+    length,
+    typeBuffer,
+    data,
+    crc,
+  ]);
+}
+
+function createCanvas(
+  width,
+  height,
+  background,
+) {
+  const pixels =
+    Buffer.alloc(
+      width * height * 4,
+    );
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const i =
+        (y * width + x) * 4;
+
+      pixels[i] =
+        background[0];
+      pixels[i + 1] =
+        background[1];
+      pixels[i + 2] =
+        background[2];
+      pixels[i + 3] =
+        background[3];
+    }
+  }
+
+  return {
+    width,
+    height,
+    pixels,
+  };
+}
+
+function setPixel(
+  canvas,
+  x,
+  y,
+  color,
+) {
+  if (
+    x < 0 ||
+    y < 0 ||
+    x >= canvas.width ||
+    y >= canvas.height
+  ) {
+    return;
+  }
+
+  const i =
+    (y * canvas.width + x) * 4;
+
+  canvas.pixels[i] =
+    color[0];
+  canvas.pixels[i + 1] =
+    color[1];
+  canvas.pixels[i + 2] =
+    color[2];
+  canvas.pixels[i + 3] =
+    color[3] ?? 255;
+}
+
+function fillRect(
+  canvas,
+  x,
+  y,
+  width,
+  height,
+  color,
+) {
+  for (
+    let yy = Math.max(0, y);
+    yy < Math.min(
+      canvas.height,
+      y + height,
+    );
+    yy += 1
+  ) {
+    for (
+      let xx = Math.max(0, x);
+      xx < Math.min(
+        canvas.width,
+        x + width,
+      );
+      xx += 1
+    ) {
+      setPixel(
+        canvas,
+        xx,
+        yy,
+        color,
+      );
+    }
+  }
+}
+
+function fillRoundedRect(
+  canvas,
+  x,
+  y,
+  width,
+  height,
+  radius,
+  color,
+) {
+  const r2 =
+    radius * radius;
+
+  for (
+    let yy = y;
+    yy < y + height;
+    yy += 1
+  ) {
+    for (
+      let xx = x;
+      xx < x + width;
+      xx += 1
+    ) {
+      const left =
+        xx < x + radius;
+      const right =
+        xx >=
+        x + width - radius;
+      const top =
+        yy < y + radius;
+      const bottom =
+        yy >=
+        y + height - radius;
+
+      let inside = true;
+
+      if (left && top) {
+        const dx =
+          xx - (x + radius);
+        const dy =
+          yy - (y + radius);
+
+        inside =
+          dx * dx +
+            dy * dy <=
+          r2;
+      }
+
+      if (right && top) {
+        const dx =
+          xx -
+          (x + width - radius - 1);
+        const dy =
+          yy - (y + radius);
+
+        inside =
+          dx * dx +
+            dy * dy <=
+          r2;
+      }
+
+      if (left && bottom) {
+        const dx =
+          xx - (x + radius);
+        const dy =
+          yy -
+          (y + height - radius - 1);
+
+        inside =
+          dx * dx +
+            dy * dy <=
+          r2;
+      }
+
+      if (right && bottom) {
+        const dx =
+          xx -
+          (x + width - radius - 1);
+        const dy =
+          yy -
+          (y + height - radius - 1);
+
+        inside =
+          dx * dx +
+            dy * dy <=
+          r2;
+      }
+
+      if (inside) {
+        setPixel(
+          canvas,
+          xx,
+          yy,
+          color,
+        );
+      }
+    }
+  }
+}
+
+function drawLine(
+  canvas,
+  x0,
+  y0,
+  x1,
+  y1,
+  thickness,
+  color,
+) {
+  const dx =
+    Math.abs(x1 - x0);
+  const sx =
+    x0 < x1 ? 1 : -1;
+  const dy =
+    -Math.abs(y1 - y0);
+  const sy =
+    y0 < y1 ? 1 : -1;
+  let err =
+    dx + dy;
+
+  while (true) {
+    fillRect(
+      canvas,
+      x0 -
+        Math.floor(
+          thickness / 2,
+        ),
+      y0 -
+        Math.floor(
+          thickness / 2,
+        ),
+      thickness,
+      thickness,
+      color,
+    );
+
+    if (
+      x0 === x1 &&
+      y0 === y1
+    ) {
+      break;
+    }
+
+    const e2 =
+      2 * err;
+
+    if (e2 >= dy) {
+      err += dy;
+      x0 += sx;
+    }
+
+    if (e2 <= dx) {
+      err += dx;
+      y0 += sy;
+    }
+  }
+}
+
+function drawT(
+  canvas,
+  x,
+  y,
+  scale,
+  color,
+) {
+  fillRect(
+    canvas,
+    x,
+    y,
+    230 * scale,
+    52 * scale,
+    color,
+  );
+
+  fillRect(
+    canvas,
+    x +
+      88 * scale,
+    y,
+    55 * scale,
+    260 * scale,
+    color,
+  );
+}
+
+function drawB(
+  canvas,
+  x,
+  y,
+  scale,
+  color,
+) {
+  const s = scale;
+
+  fillRect(
+    canvas,
+    x,
+    y,
+    52 * s,
+    260 * s,
+    color,
+  );
+
+  fillRect(
+    canvas,
+    x,
+    y,
+    142 * s,
+    50 * s,
+    color,
+  );
+
+  fillRect(
+    canvas,
+    x,
+    y + 105 * s,
+    142 * s,
+    48 * s,
+    color,
+  );
+
+  fillRect(
+    canvas,
+    x,
+    y + 210 * s,
+    142 * s,
+    50 * s,
+    color,
+  );
+
+  fillRect(
+    canvas,
+    x + 112 * s,
+    y + 20 * s,
+    42 * s,
+    98 * s,
+    color,
+  );
+
+  fillRect(
+    canvas,
+    x + 112 * s,
+    y + 135 * s,
+    42 * s,
+    105 * s,
+    color,
+  );
+}
+
+function drawWrench(
+  canvas,
+  centerX,
+  topY,
+  scale,
+  color,
+) {
+  const s = scale;
+
+  fillRect(
+    canvas,
+    centerX -
+      22 * s,
+    topY + 75 * s,
+    44 * s,
+    190 * s,
+    color,
+  );
+
+  fillRect(
+    canvas,
+    centerX -
+      65 * s,
+    topY + 32 * s,
+    130 * s,
+    46 * s,
+    color,
+  );
+
+  fillRect(
+    canvas,
+    centerX -
+      65 * s,
+    topY,
+    38 * s,
+    78 * s,
+    color,
+  );
+
+  fillRect(
+    canvas,
+    centerX +
+      27 * s,
+    topY,
+    38 * s,
+    78 * s,
+    color,
+  );
+
+  fillRect(
+    canvas,
+    centerX -
+      19 * s,
+    topY + 18 * s,
+    38 * s,
+    52 * s,
+    [8, 13, 17, 255],
+  );
+}
+
+function drawBrand(
+  canvas,
+  {
+    compact = false,
+  } = {},
+) {
+  const w =
+    canvas.width;
+  const h =
+    canvas.height;
+
+  const orange =
+    [255, 151, 16, 255];
+
+  const silver =
+    [238, 242, 245, 255];
+
+  const panel =
+    [10, 15, 19, 255];
+
+  const border =
+    [56, 64, 70, 255];
+
+  const margin =
+    Math.round(
+      w * .055,
+    );
+
+  const radius =
+    Math.round(
+      w * .16,
+    );
+
+  fillRoundedRect(
+    canvas,
+    margin,
+    margin,
+    w - 2 * margin,
+    h - 2 * margin,
+    radius,
+    panel,
+  );
+
+  drawLine(
+    canvas,
+    margin +
+      radius / 2,
+    margin,
+    w - margin -
+      radius / 2,
+    margin,
+    Math.max(
+      3,
+      Math.round(
+        w * .005,
+      ),
+    ),
+    border,
+  );
+
+  drawLine(
+    canvas,
+    w - margin,
+    margin +
+      radius / 2,
+    w - margin,
+    h - margin -
+      radius / 2,
+    Math.max(
+      4,
+      Math.round(
+        w * .006,
+      ),
+    ),
+    orange,
+  );
+
+  const carY =
+    Math.round(
+      h * .27,
+    );
+
+  drawLine(
+    canvas,
+    Math.round(
+      w * .18,
+    ),
+    carY,
+    Math.round(
+      w * .36,
+    ),
+    Math.round(
+      h * .22,
+    ),
+    Math.max(
+      6,
+      Math.round(
+        w * .012,
+      ),
+    ),
+    orange,
+  );
+
+  drawLine(
+    canvas,
+    Math.round(
+      w * .34,
+    ),
+    Math.round(
+      h * .22,
+    ),
+    Math.round(
+      w * .47,
+    ),
+    Math.round(
+      h * .18,
+    ),
+    Math.max(
+      7,
+      Math.round(
+        w * .013,
+      ),
+    ),
+    silver,
+  );
+
+  drawLine(
+    canvas,
+    Math.round(
+      w * .47,
+    ),
+    Math.round(
+      h * .18,
+    ),
+    Math.round(
+      w * .62,
+    ),
+    Math.round(
+      h * .19,
+    ),
+    Math.max(
+      7,
+      Math.round(
+        w * .013,
+      ),
+    ),
+    silver,
+  );
+
+  drawLine(
+    canvas,
+    Math.round(
+      w * .62,
+    ),
+    Math.round(
+      h * .19,
+    ),
+    Math.round(
+      w * .82,
+    ),
+    Math.round(
+      h * .28,
+    ),
+    Math.max(
+      7,
+      Math.round(
+        w * .013,
+      ),
+    ),
+    silver,
+  );
+
+  const scale =
+    Math.max(
+      1,
+      Math.floor(
+        w / 1024,
+      ),
+    );
+
+  const markY =
+    Math.round(
+      h * .35,
+    );
+
+  drawT(
+    canvas,
+    Math.round(
+      w * .19,
+    ),
+    markY,
+    scale,
+    silver,
+  );
+
+  drawB(
+    canvas,
+    Math.round(
+      w * .61,
+    ),
+    markY,
+    scale,
+    silver,
+  );
+
+  drawWrench(
+    canvas,
+    Math.round(
+      w * .51,
+    ),
+    markY,
+    scale,
+    orange,
+  );
+
+  if (!compact) {
+    const barY =
+      Math.round(
+        h * .72,
+      );
+
+    fillRect(
+      canvas,
+      Math.round(
+        w * .19,
+      ),
+      barY,
+      Math.round(
+        w * .30,
+      ),
+      Math.max(
+        10,
+        Math.round(
+          h * .025,
+        ),
+      ),
+      silver,
+    );
+
+    fillRect(
+      canvas,
+      Math.round(
+        w * .52,
+      ),
+      barY,
+      Math.round(
+        w * .29,
+      ),
+      Math.max(
+        10,
+        Math.round(
+          h * .025,
+        ),
+      ),
+      orange,
+    );
+
+    const subY =
+      Math.round(
+        h * .80,
+      );
+
+    for (
+      let x =
+        Math.round(
+          w * .25,
+        );
+      x <
+      Math.round(
+        w * .77,
+      );
+      x +=
+        Math.round(
+          w * .045,
+        )
+    ) {
+      fillRect(
+        canvas,
+        x,
+        subY,
+        Math.max(
+          5,
+          Math.round(
+            w * .009,
+          ),
+        ),
+        Math.max(
+          5,
+          Math.round(
+            h * .012,
+          ),
+        ),
+        silver,
+      );
+    }
+  }
+}
+
+function encodePng(
+  canvas,
+) {
+  const {
+    width,
+    height,
+    pixels,
+  } = canvas;
+
+  const raw =
+    Buffer.alloc(
+      (width * 4 + 1) *
+        height,
+    );
+
+  for (
+    let y = 0;
+    y < height;
+    y += 1
+  ) {
+    const rowStart =
+      y *
+      (width * 4 + 1);
+
+    raw[rowStart] = 0;
+
+    pixels.copy(
+      raw,
+      rowStart + 1,
+      y * width * 4,
+      (y + 1) *
+        width *
+        4,
+    );
+  }
+
+  const ihdr =
+    Buffer.alloc(13);
+
+  ihdr.writeUInt32BE(
+    width,
+    0,
+  );
+
+  ihdr.writeUInt32BE(
+    height,
+    4,
+  );
+
+  ihdr[8] = 8;
+  ihdr[9] = 6;
+  ihdr[10] = 0;
+  ihdr[11] = 0;
+  ihdr[12] = 0;
+
+  return Buffer.concat([
+    Buffer.from([
+      137, 80, 78, 71,
+      13, 10, 26, 10,
+    ]),
+    chunk(
+      'IHDR',
+      ihdr,
+    ),
+    chunk(
+      'IDAT',
+      zlib.deflateSync(
+        raw,
+        {
+          level: 9,
+        },
+      ),
+    ),
+    chunk(
+      'IEND',
+      Buffer.alloc(0),
+    ),
+  ]);
+}
+
+function writeAsset(
+  name,
+  width,
+  height,
+  compact = false,
+) {
+  const canvas =
+    createCanvas(
+      width,
+      height,
+      [8, 13, 17, 255],
+    );
+
+  drawBrand(
+    canvas,
+    {
+      compact,
+    },
+  );
+
   fs.writeFileSync(
     path.join(
       assetsDir,
       name,
     ),
-    png,
+    encodePng(
+      canvas,
+    ),
   );
 }
 
+writeAsset(
+  'icon.png',
+  1024,
+  1024,
+  false,
+);
+
+writeAsset(
+  'brand-logo.png',
+  1024,
+  1024,
+  false,
+);
+
+writeAsset(
+  'splash.png',
+  1600,
+  1600,
+  false,
+);
+
 console.log(
-  '[brand] Tamir Bakım icon, splash and in-app logo generated without native build dependencies.',
+  '[brand] Tamir Bakım icon, splash and in-app logo generated as standards-compliant PNG files.',
 );
