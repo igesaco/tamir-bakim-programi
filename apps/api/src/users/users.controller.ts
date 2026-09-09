@@ -76,12 +76,13 @@ export class UsersController {
     );
   }
 
-@Permission(PermissionKey.STAFF_VIEW)
+@Permission(PermissionKey.SERVICE_ORDER_ASSIGN)
   @Get('technicians')
   @Roles(
     UserRole.OWNER,
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
+    UserRole.ACCOUNTING,
   )
   @UseGuards(RolesGuard)
   findTechnicians(@Req() req: any) {
