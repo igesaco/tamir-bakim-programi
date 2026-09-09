@@ -63,6 +63,7 @@ export class ServiceOrdersController {
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
     UserRole.TECHNICIAN,
+    UserRole.ACCOUNTING,
   )
   @UseGuards(RolesGuard)
   findAll(@Req() req: any) {
@@ -80,6 +81,7 @@ export class ServiceOrdersController {
     UserRole.OWNER,
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
+    UserRole.ACCOUNTING,
   )
   @UseGuards(RolesGuard)
   availableParts(
@@ -100,6 +102,7 @@ export class ServiceOrdersController {
     UserRole.OWNER,
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
+    UserRole.ACCOUNTING,
   )
   @UseGuards(RolesGuard)
   addItem(
@@ -123,6 +126,7 @@ export class ServiceOrdersController {
     UserRole.OWNER,
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
+    UserRole.ACCOUNTING,
   )
   @UseGuards(RolesGuard)
   setItemComplete(
@@ -147,6 +151,7 @@ export class ServiceOrdersController {
     UserRole.OWNER,
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
+    UserRole.ACCOUNTING,
   )
   @UseGuards(RolesGuard)
   removeItem(
@@ -217,6 +222,7 @@ export class ServiceOrdersController {
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
     UserRole.TECHNICIAN,
+    UserRole.ACCOUNTING,
   )
   @UseGuards(RolesGuard)
   findOne(
