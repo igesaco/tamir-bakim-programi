@@ -17,6 +17,8 @@ import {
 import {
   useAuth,
 } from '../auth/AuthContext';
+import BrandLogo from '../components/BrandLogo';
+
 import {
   colors,
   radius,
@@ -103,11 +105,7 @@ export default function CustomerLoginScreen({
       }
       style={styles.page}
     >
-      <View style={styles.logo}>
-        <Text style={styles.logoText}>
-          TB
-        </Text>
-      </View>
+      <BrandLogo size={66} />
 
       <Text style={styles.kicker}>
         MÜŞTERİ GİRİŞİ
@@ -238,22 +236,6 @@ const styles =
         'center',
       backgroundColor:
         colors.bg,
-    },
-    logo: {
-      width: 62,
-      height: 62,
-      alignItems:
-        'center',
-      justifyContent:
-        'center',
-      borderRadius: 18,
-      backgroundColor:
-        colors.accent,
-    },
-    logoText: {
-      color: '#171108',
-      fontSize: 20,
-      fontWeight: '950',
     },
     kicker: {
       marginTop: 18,
