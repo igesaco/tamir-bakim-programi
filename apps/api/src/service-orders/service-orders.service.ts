@@ -1277,39 +1277,50 @@ export class ServiceOrdersService {
               },
             });
 
+          const customerMessages:
+            Partial<
+              Record<
+                ServiceOrderStatus,
+                {
+                  title: string;
+                  message: string;
+                }
+              >
+            > = {
+            [ServiceOrderStatus.IN_PROGRESS]: {
+              title:
+                'Servis işlemi başladı',
+              message:
+                `${updated.vehicle.plate} plakalı aracınızın servis işlemlerine başlandı.`,
+            },
+            [ServiceOrderStatus.PART_WAITING]: {
+              title:
+                'Parça tedariki bekleniyor',
+              message:
+                `${updated.vehicle.plate} plakalı aracınız için gerekli parça / malzeme tedariki bekleniyor.`,
+            },
+            [ServiceOrderStatus.QUALITY_CONTROL]: {
+              title:
+                'Teknik işlemler tamamlandı',
+              message:
+                `${updated.vehicle.plate} plakalı aracınız kalite kontrol ve son kontrol aşamasındadır.`,
+            },
+            [ServiceOrderStatus.READY]: {
+              title:
+                'Aracınız teslimata hazır',
+              message:
+                `${updated.vehicle.plate} plakalı aracınızın servis işlemleri tamamlandı ve teslimata hazırdır.`,
+            },
+            [ServiceOrderStatus.PAYMENT_WAITING]: {
+              title:
+                'Ödeme bekleniyor',
+              message:
+                `${updated.vehicle.plate} plakalı aracınız için ödeme / tahsilat işlemi bekleniyor.`,
+            },
+          };
+
           const customerMessage =
-            {
-              [ServiceOrderStatus.IN_PROGRESS]: {
-                title:
-                  'Servis işlemi başladı',
-                message:
-                  `${updated.vehicle.plate} plakalı aracınızın servis işlemlerine başlandı.`,
-              },
-              [ServiceOrderStatus.PART_WAITING]: {
-                title:
-                  'Parça tedariki bekleniyor',
-                message:
-                  `${updated.vehicle.plate} plakalı aracınız için gerekli parça / malzeme tedariki bekleniyor.`,
-              },
-              [ServiceOrderStatus.QUALITY_CONTROL]: {
-                title:
-                  'Teknik işlemler tamamlandı',
-                message:
-                  `${updated.vehicle.plate} plakalı aracınız kalite kontrol ve son kontrol aşamasındadır.`,
-              },
-              [ServiceOrderStatus.READY]: {
-                title:
-                  'Aracınız teslimata hazır',
-                message:
-                  `${updated.vehicle.plate} plakalı aracınızın servis işlemleri tamamlandı ve teslimata hazırdır.`,
-              },
-              [ServiceOrderStatus.PAYMENT_WAITING]: {
-                title:
-                  'Ödeme bekleniyor',
-                message:
-                  `${updated.vehicle.plate} plakalı aracınız için ödeme / tahsilat işlemi bekleniyor.`,
-              },
-            }[
+            customerMessages[
               status
             ];
 
