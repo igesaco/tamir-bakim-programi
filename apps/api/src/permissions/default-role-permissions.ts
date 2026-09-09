@@ -75,6 +75,19 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<
 
   [UserRole.ACCOUNTING]: [
     PermissionKey.CUSTOMER_VIEW,
+    PermissionKey.VEHICLE_VIEW,
+
+    PermissionKey.SERVICE_ORDER_VIEW,
+    PermissionKey.SERVICE_ORDER_ASSIGN,
+    PermissionKey.SERVICE_ORDER_ITEM_MANAGE,
+
+    PermissionKey.QUOTE_VIEW,
+    PermissionKey.QUOTE_CREATE,
+    PermissionKey.QUOTE_STATUS,
+
+    PermissionKey.MEDIA_VIEW,
+    PermissionKey.NOTIFICATION_VIEW,
+
     PermissionKey.CASHIER_VIEW,
     PermissionKey.CASHIER_COLLECT,
     PermissionKey.CASHIER_STATUS,

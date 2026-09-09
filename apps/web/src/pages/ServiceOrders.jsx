@@ -156,7 +156,11 @@ export default function ServiceOrders() {
   }
 
   const statusOptions = [
+    'ARRIVED',
     'ACCEPTED',
+    'INSPECTION',
+    'QUOTE_WAITING',
+    'APPROVED',
     'IN_PROGRESS',
     'PART_WAITING',
     'QUALITY_CONTROL',

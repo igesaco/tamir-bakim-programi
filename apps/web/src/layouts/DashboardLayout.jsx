@@ -50,6 +50,35 @@ const menu = [
       'MANAGER',
       'SERVICE_ADVISOR',
       'TECHNICIAN',
+      'ACCOUNTING',
+    ],
+  },
+  {
+    path: '/pricing',
+    label: 'Fiyatlandırma',
+    short: 'Fİ',
+    icon: 'cash',
+    feature: 'SERVICE_ORDERS',
+    permission: 'SERVICE_ORDER_VIEW',
+    roles: [
+      'OWNER',
+      'MANAGER',
+      'SERVICE_ADVISOR',
+      'ACCOUNTING',
+    ],
+  },
+  {
+    path: '/quotes',
+    label: 'Teklif / Proforma',
+    short: 'TF',
+    icon: 'reports',
+    feature: 'QUOTES',
+    permission: 'QUOTE_VIEW',
+    roles: [
+      'OWNER',
+      'MANAGER',
+      'SERVICE_ADVISOR',
+      'ACCOUNTING',
     ],
   },
   {
@@ -113,6 +142,7 @@ const menu = [
       'OWNER',
       'MANAGER',
       'SERVICE_ADVISOR',
+      'ACCOUNTING',
     ],
   },
   {
@@ -367,6 +397,17 @@ function getPageInfo(
     return {
       label: 'Randevular',
       icon: 'customers',
+    };
+  }
+
+  if (
+    pathname.startsWith(
+      '/pricing',
+    )
+  ) {
+    return {
+      label: 'Fiyatlandırma',
+      icon: 'cash',
     };
   }
 

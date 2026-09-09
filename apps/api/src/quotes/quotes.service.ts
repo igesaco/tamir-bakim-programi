@@ -4,8 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  NotificationChannel,
+  NotificationStatus,
+  PaymentMethod,
+  PaymentStatus,
   QuoteStatus,
   ServiceItemType,
+  ServiceOrderStatus,
   UserRole,
 } from '@prisma/client';
 
@@ -403,24 +408,205 @@ export class QuotesService {
       );
     }
 
-    return this.prisma.quote.update({
-      where: { id },
-      data: {
-        status,
-        sentAt:
-          status ===
-          QuoteStatus.SENT
-            ? new Date()
-            : undefined,
-        approvedAt:
-          status ===
-          QuoteStatus.APPROVED
-            ? new Date()
-            : undefined,
+    if (
+      status !==
+      QuoteStatus.APPROVED
+    ) {
+      return this.prisma.$transaction(
+        async (tx) => {
+          const updated =
+            await tx.quote.update({
+              where: { id },
+              data: {
+                status,
+                sentAt:
+                  status ===
+                  QuoteStatus.SENT
+                    ? new Date()
+                    : undefined,
+              },
+              include: {
+                items: true,
+              },
+            });
+
+          if (
+            status ===
+              QuoteStatus.SENT &&
+            quote.serviceOrderId
+          ) {
+            await tx.serviceOrder.updateMany({
+              where: {
+                id:
+                  quote.serviceOrderId,
+                organizationId,
+              },
+              data: {
+                status:
+                  ServiceOrderStatus.QUOTE_WAITING,
+              },
+            });
+          }
+
+          return updated;
+        },
+      );
+    }
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const approvedAt =
+          new Date();
+
+        const updatedQuote =
+          await tx.quote.update({
+            where: { id },
+            data: {
+              status:
+                QuoteStatus.APPROVED,
+              approvedAt,
+            },
+            include: {
+              items: true,
+            },
+          });
+
+        if (
+          !quote.serviceOrderId
+        ) {
+          return updatedQuote;
+        }
+
+        const order =
+          await tx.serviceOrder.findFirst({
+            where: {
+              id:
+                quote.serviceOrderId,
+              organizationId,
+            },
+          });
+
+        if (!order) {
+          throw new BadRequestException(
+            'Teklife bağlı iş emri bulunamadı.',
+          );
+        }
+
+        await tx.serviceOrder.update({
+          where: {
+            id: order.id,
+          },
+          data: {
+            status:
+              ServiceOrderStatus.APPROVED,
+          },
+        });
+
+        const amount =
+          Number(
+            quote.total,
+          );
+
+        if (amount > 0) {
+          const existingPending =
+            await tx.payment.findFirst({
+              where: {
+                organizationId,
+                quoteId: id,
+                status:
+                  PaymentStatus.PENDING,
+              },
+              select: {
+                id: true,
+              },
+            });
+
+          if (!existingPending) {
+            await tx.payment.create({
+              data: {
+                organizationId,
+                branchId:
+                  order.branchId,
+                customerId:
+                  order.customerId,
+                serviceOrderId:
+                  order.id,
+                quoteId: id,
+                amount,
+                method:
+                  PaymentMethod.OTHER,
+                status:
+                  PaymentStatus.PENDING,
+                reference:
+                  `QUOTE_APPROVAL:${id}`,
+              },
+            });
+          }
+        }
+
+        if (
+          order.assignedTechnicianId
+        ) {
+          await tx.notification.create({
+            data: {
+              organizationId,
+              branchId:
+                order.branchId,
+              userId:
+                order.assignedTechnicianId,
+              serviceOrderId:
+                order.id,
+              channel:
+                NotificationChannel.IN_APP,
+              status:
+                NotificationStatus.PENDING,
+              title:
+                'İş emri onaylandı',
+              message:
+                `${order.orderNumber} iş emri müşteri tarafından onaylandı. İşleme başlayabilirsiniz.`,
+            },
+          });
+        }
+
+        const customer =
+          await tx.customer.findUnique({
+            where: {
+              id:
+                order.customerId,
+            },
+            select: {
+              portalEnabled: true,
+            },
+          });
+
+        if (
+          customer?.portalEnabled
+        ) {
+          await tx.notification.create({
+            data: {
+              organizationId,
+              branchId:
+                order.branchId,
+              customerId:
+                order.customerId,
+              serviceOrderId:
+                order.id,
+              channel:
+                NotificationChannel.IN_APP,
+              status:
+                NotificationStatus.PENDING,
+              title:
+                'Servis işleminiz onaylandı',
+              message:
+                amount > 0
+                  ? `İş emriniz onaylandı. ${amount.toFixed(2)} TL tutarında bekleyen ödemeniz bulunmaktadır.`
+                  : 'İş emriniz onaylandı. Servis işlemleri başlatılabilir.',
+            },
+          });
+        }
+
+        return updatedQuote;
       },
-      include: {
-        items: true,
-      },
-    });
+    );
   }
 }

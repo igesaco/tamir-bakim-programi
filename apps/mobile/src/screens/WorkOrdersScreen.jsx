@@ -95,6 +95,10 @@ export default function WorkOrdersScreen() {
     useState('1');
   const [photoType, setPhotoType] =
     useState('AFTER');
+  const [
+    customerVisiblePhoto,
+    setCustomerVisiblePhoto,
+  ] = useState(true);
 
   const canChangeStatus =
     hasPermission(
@@ -320,6 +324,48 @@ export default function WorkOrdersScreen() {
     }
   }
 
+  async function toggleTask(
+    item,
+  ) {
+    if (!selected) {
+      return;
+    }
+
+    setBusy(true);
+    setError('');
+    setMessage('');
+
+    try {
+      await api.patch(
+        `/service-orders/${selected.id}/items/${item.id}/complete`,
+        {
+          completed:
+            !item.completed,
+        },
+      );
+
+      setMessage(
+        item.completed
+          ? 'İşlem yeniden açıldı.'
+          : 'İşlem tamamlandı.',
+      );
+
+      await Promise.all([
+        load(),
+        refreshSelected(),
+      ]);
+    } catch (err) {
+      setError(
+        apiMessage(
+          err,
+          'İşlem durumu güncellenemedi.',
+        ),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function uploadPhotoAsset(
     asset,
   ) {
@@ -374,6 +420,13 @@ export default function WorkOrdersScreen() {
       formData.append(
         'description',
         `${photoTypes.find(([value]) => value === photoType)?.[1] || 'Servis'} fotoğrafı - mobil`,
+      );
+
+      formData.append(
+        'customerVisible',
+        customerVisiblePhoto
+          ? 'true'
+          : 'false',
       );
 
       await api.post(
@@ -687,6 +740,71 @@ export default function WorkOrdersScreen() {
                 </Text>
               </Card>
 
+              {selected?.items?.length ? (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>
+                    Yapılacak İşlemler
+                  </Text>
+
+                  <Text style={styles.sectionHint}>
+                    Her işlemi tamamlandıkça işaretleyin. Son işlem tamamlandığında araç otomatik olarak kalite kontrol aşamasına geçer.
+                  </Text>
+
+                  <View style={styles.taskList}>
+                    {selected.items.map(
+                      (item) => (
+                        <Pressable
+                          key={item.id}
+                          disabled={busy}
+                          onPress={() =>
+                            toggleTask(
+                              item,
+                            )
+                          }
+                          style={[
+                            styles.taskRow,
+                            item.completed &&
+                              styles.taskRowDone,
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.taskCheck,
+                              item.completed &&
+                                styles.taskCheckDone,
+                            ]}
+                          >
+                            <Text style={styles.taskCheckText}>
+                              {item.completed
+                                ? '✓'
+                                : ''}
+                            </Text>
+                          </View>
+
+                          <View style={styles.flex}>
+                            <Text
+                              style={[
+                                styles.taskTitle,
+                                item.completed &&
+                                  styles.taskTitleDone,
+                              ]}
+                            >
+                              {item.name}
+                            </Text>
+
+                            {item.description ? (
+                              <Text style={styles.taskDescription}>
+                                {item.description}
+                              </Text>
+                            ) : null}
+                          </View>
+                        </Pressable>
+                      ),
+                    )}
+                  </View>
+                </View>
+              ) : null}
+
               {canChangeStatus ? (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>
@@ -874,6 +992,30 @@ export default function WorkOrdersScreen() {
                       ),
                     )}
                   </View>
+
+                  <Pressable
+                    onPress={() =>
+                      setCustomerVisiblePhoto(
+                        (value) =>
+                          !value,
+                      )
+                    }
+                    style={[
+                      styles.visibilityToggle,
+                      customerVisiblePhoto &&
+                        styles.visibilityToggleActive,
+                    ]}
+                  >
+                    <Text style={styles.visibilityTitle}>
+                      {customerVisiblePhoto
+                        ? '✓ Müşteri uygulamasında göster'
+                        : 'Müşteriye gösterme'}
+                    </Text>
+
+                    <Text style={styles.visibilityHint}>
+                      Teknik iç kullanım fotoğraflarında bu seçeneği kapatabilirsiniz.
+                    </Text>
+                  </Pressable>
 
                   <View style={styles.photoActionRow}>
                     <View style={styles.photoAction}>

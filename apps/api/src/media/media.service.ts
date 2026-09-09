@@ -202,6 +202,9 @@ export class MediaService {
           file.size,
         description:
           dto.description,
+        customerVisible:
+          dto.customerVisible ===
+          'true',
       },
     });
   }

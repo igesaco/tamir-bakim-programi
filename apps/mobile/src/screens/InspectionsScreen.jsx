@@ -159,6 +159,11 @@ export default function InspectionsScreen({
   ]);
 
   const [
+    operationTemplates,
+    setOperationTemplates,
+  ] = useState([]);
+
+  const [
     photoType,
     setPhotoType,
   ] = useState(
@@ -238,6 +243,9 @@ export default function InspectionsScreen({
     const requests = [
       api.get('/customers'),
       api.get('/vehicles'),
+      api.get(
+        '/inspections/mobile-intake-v3/templates',
+      ),
     ];
 
     if (canChooseBranch) {
@@ -259,9 +267,14 @@ export default function InspectionsScreen({
       responses[1].data,
     );
 
+    setOperationTemplates(
+      responses[2]?.data ||
+        [],
+    );
+
     if (canChooseBranch) {
       setBranches(
-        responses[2]?.data ||
+        responses[3]?.data ||
           [],
       );
     }
@@ -594,6 +607,60 @@ export default function InspectionsScreen({
     );
   }
 
+  function applyOperationTemplate(
+    template,
+  ) {
+    const templateItems =
+      (template?.items || []).map(
+        (item) => ({
+          id:
+            `work-${Date.now()}-${Math.random()}`,
+          category:
+            item.type === 'PART'
+              ? 'PARCA'
+              : item.category ===
+                  'TAMIR'
+                ? 'TAMIR'
+                : 'BAKIM',
+          name:
+            item.name || '',
+          description:
+            item.description || '',
+          quantity:
+            String(
+              item.quantity || 1,
+            ),
+          unitPrice:
+            String(
+              item.unitPrice || 0,
+            ),
+        }),
+      );
+
+    if (!templateItems.length) {
+      return;
+    }
+
+    setWorkItems(
+      (current) => {
+        const existing =
+          current.filter(
+            (item) =>
+              item.name.trim(),
+          );
+
+        return [
+          ...existing,
+          ...templateItems,
+        ];
+      },
+    );
+
+    setMessage(
+      `${template.name} paketi iş emrine eklendi. Kalemleri kayıttan önce düzenleyebilirsiniz.`,
+    );
+  }
+
   async function queueFromCamera() {
     setError('');
     setMessage('');
@@ -774,6 +841,11 @@ export default function InspectionsScreen({
       'Mobil araç kabul fotoğrafı',
     );
 
+    formData.append(
+      'customerVisible',
+      'true',
+    );
+
     return api.post(
       '/media/upload',
       formData,
@@ -862,7 +934,8 @@ export default function InspectionsScreen({
         customerPhone:
           newCustomerMode
             ? form.customerPhone
-                .trim()
+                .trim() ||
+              undefined
             : undefined,
         customerEmail:
           newCustomerMode
@@ -949,7 +1022,7 @@ export default function InspectionsScreen({
 
       const response =
         await api.post(
-          '/inspections/mobile-intake',
+          '/inspections/mobile-intake-v3',
           payload,
         );
 
@@ -988,7 +1061,7 @@ export default function InspectionsScreen({
       setMessage(
         uploadFailed
           ? `${orderNumber} oluşturuldu. ${uploaded} fotoğraf yüklendi, ${uploadFailed} fotoğraf yüklenemedi.`
-          : `${orderNumber} oluşturuldu ve ön kabul PC paneline gönderildi${uploaded ? ` · ${uploaded} fotoğraf` : ''}.`,
+          : `${orderNumber} oluşturuldu. Araç kabulü tamamlandı ve muhasebeye fiyatlandırma için gönderildi${uploaded ? ` · ${uploaded} fotoğraf` : ''}.`,
       );
 
       resetForm();
@@ -1056,17 +1129,9 @@ export default function InspectionsScreen({
 
   const customerReady =
     newCustomerMode
-      ? (
-          form.customerFirstName
-            .trim()
-            .length >= 2 &&
-          form.customerPhone
-            .replace(
-              /\D/g,
-              '',
-            )
-            .length >= 10
-        )
+      ? form.customerFirstName
+          .trim()
+          .length >= 2
       : Boolean(
           form.customerId,
         );
@@ -1108,7 +1173,7 @@ export default function InspectionsScreen({
     >
       <ScreenTitle
         title="Araç Kabul"
-        subtitle="Müşteriyi ve aracı seçin veya telefondan oluşturun; yapılacak işleri ve fotoğrafları ekleyin. Kayıt aynı anda PC paneline ve iş emrine düşer."
+        subtitle="Yeni veya kayıtlı müşteriyi ve aracı seçin; ön kabul, işlem paketi ve fotoğrafları ekleyin. Kayıt muhasebeye fiyatlandırma için otomatik düşer."
       />
 
       <Field
@@ -1727,6 +1792,44 @@ export default function InspectionsScreen({
                   </Text>
                 </Pressable>
               </View>
+
+              {operationTemplates.length ? (
+                <>
+                  <Text style={styles.sectionHint}>
+                    Hazır işlem paketleri
+                  </Text>
+
+                  <View style={styles.selectorList}>
+                    {operationTemplates.map(
+                      (template) => (
+                        <Pressable
+                          key={template.code}
+                          onPress={() =>
+                            applyOperationTemplate(
+                              template,
+                            )
+                          }
+                          style={styles.selectorCard}
+                        >
+                          <View style={styles.flex}>
+                            <Text style={styles.selectorTitle}>
+                              {template.name}
+                            </Text>
+
+                            <Text style={styles.selectorMeta}>
+                              {template.description}
+                            </Text>
+                          </View>
+
+                          <Text style={styles.selectorCount}>
+                            + {template.items?.length || 0} işlem
+                          </Text>
+                        </Pressable>
+                      ),
+                    )}
+                  </View>
+                </>
+              ) : null}
 
               <View style={styles.workList}>
                 {workItems.map(

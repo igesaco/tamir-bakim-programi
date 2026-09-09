@@ -1,13 +1,13 @@
 export const serviceStatusLabels = {
   APPOINTMENT: 'Randevu',
   ARRIVED: 'Geldi',
-  ACCEPTED: 'Bakıma Alındı',
-  INSPECTION: 'Kontrol',
-  QUOTE_WAITING: 'Teklif Bekliyor',
-  APPROVED: 'Onaylandı',
-  IN_PROGRESS: 'Bakım Sırası Bekliyor',
+  ACCEPTED: 'Araç Kabul Edildi',
+  INSPECTION: 'Teknik İnceleme',
+  QUOTE_WAITING: 'Fiyatlandırma Bekleniyor',
+  APPROVED: 'İş Emri Onaylandı',
+  IN_PROGRESS: 'Servis İşlemi Başladı',
   PART_WAITING: 'Parça Bekleniyor',
-  QUALITY_CONTROL: 'Bakım Tamamlandı',
+  QUALITY_CONTROL: 'Kalite Kontrol / Son Kontrol',
   READY: 'Teslimata Hazır',
   PAYMENT_WAITING: 'Ödeme Bekliyor',
   DELIVERED: 'Teslim Edildi',
@@ -15,7 +15,6 @@ export const serviceStatusLabels = {
 };
 
 export const technicianStatuses = [
-  'ACCEPTED',
   'IN_PROGRESS',
   'PART_WAITING',
   'QUALITY_CONTROL',
@@ -23,7 +22,11 @@ export const technicianStatuses = [
 ];
 
 export const managerStatuses = [
+  'ARRIVED',
   'ACCEPTED',
+  'INSPECTION',
+  'QUOTE_WAITING',
+  'APPROVED',
   'IN_PROGRESS',
   'PART_WAITING',
   'QUALITY_CONTROL',

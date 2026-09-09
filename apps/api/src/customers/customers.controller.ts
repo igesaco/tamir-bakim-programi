@@ -28,6 +28,7 @@ import { UpdateCustomerDto } from './dto/update-customer.dto';
   UserRole.OWNER,
   UserRole.MANAGER,
   UserRole.SERVICE_ADVISOR,
+  UserRole.ACCOUNTING,
 )
 
 @Feature(FeatureKey.CUSTOMERS)

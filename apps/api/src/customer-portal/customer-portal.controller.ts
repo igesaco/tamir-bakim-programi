@@ -88,6 +88,54 @@ export class CustomerPortalController {
     );
   }
 
+  @Post('quotes/:quoteId/approve')
+  @UseGuards(
+    AuthGuard(
+      'customer-portal-jwt',
+    ),
+  )
+  approveQuote(
+    @Req() req: any,
+    @Param('quoteId')
+    quoteId: string,
+  ) {
+    return this.customerPortalService.approveCustomerQuote(
+      req.user.customerId,
+      req.user.organizationId,
+      quoteId,
+    );
+  }
+
+  @Get('notifications')
+  @UseGuards(
+    AuthGuard(
+      'customer-portal-jwt',
+    ),
+  )
+  notifications(@Req() req: any) {
+    return this.customerPortalService.getCustomerNotifications(
+      req.user.customerId,
+      req.user.organizationId,
+    );
+  }
+
+  @Post('notifications/:id/read')
+  @UseGuards(
+    AuthGuard(
+      'customer-portal-jwt',
+    ),
+  )
+  readNotification(
+    @Req() req: any,
+    @Param('id') id: string,
+  ) {
+    return this.customerPortalService.markCustomerNotificationRead(
+      req.user.customerId,
+      req.user.organizationId,
+      id,
+    );
+  }
+
   @Get('me')
   @UseGuards(
     AuthGuard(

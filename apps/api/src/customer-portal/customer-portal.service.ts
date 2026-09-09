@@ -8,7 +8,11 @@ import { JwtService } from '@nestjs/jwt';
 import {
   FeatureKey,
   MaintenancePlanStatus,
+  NotificationChannel,
+  NotificationStatus,
+  PaymentMethod,
   PaymentStatus,
+  QuoteStatus,
   ServiceOrderStatus,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -739,6 +743,7 @@ export class CustomerPortalService {
         qrActive: true,
         media: {
           where: {
+            customerVisible: true,
             type: {
               in: [
                 'VEHICLE',
@@ -833,6 +838,7 @@ export class CustomerPortalService {
           mileage: true,
           media: {
             where: {
+              customerVisible: true,
               type: {
                 in: [
                   'VEHICLE',
@@ -998,6 +1004,74 @@ export class CustomerPortalService {
           estimatedDeliveryAt: true,
           createdAt: true,
           updatedAt: true,
+          items: {
+            select: {
+              id: true,
+              type: true,
+              name: true,
+              description: true,
+              quantity: true,
+              completed: true,
+            },
+            orderBy: {
+              createdAt: 'asc',
+            },
+          },
+          media: {
+            where: {
+              customerVisible: true,
+            },
+            select: {
+              id: true,
+              type: true,
+              storageKey: true,
+              fileName: true,
+              description: true,
+              createdAt: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+          quotes: {
+            where: {
+              status: {
+                in: [
+                  QuoteStatus.SENT,
+                  QuoteStatus.APPROVED,
+                  QuoteStatus.PARTIALLY_APPROVED,
+                ],
+              },
+            },
+            select: {
+              id: true,
+              quoteNumber: true,
+              status: true,
+              subtotal: true,
+              discountTotal: true,
+              taxTotal: true,
+              total: true,
+              notes: true,
+              sentAt: true,
+              approvedAt: true,
+              items: {
+                select: {
+                  id: true,
+                  type: true,
+                  name: true,
+                  quantity: true,
+                  unitPrice: true,
+                  totalPrice: true,
+                  vatAmount: true,
+                  grossTotal: true,
+                },
+              },
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 3,
+          },
         },
         orderBy: {
           createdAt: 'desc',
@@ -1135,4 +1209,242 @@ export class CustomerPortalService {
       payments,
     };
   }
+  async approveCustomerQuote(
+    customerId: string,
+    organizationId: string,
+    quoteId: string,
+  ) {
+    const quote =
+      await this.prisma.quote.findFirst({
+        where: {
+          id: quoteId,
+          customerId,
+          organizationId,
+          status: {
+            in: [
+              QuoteStatus.SENT,
+              QuoteStatus.PARTIALLY_APPROVED,
+            ],
+          },
+        },
+        include: {
+          serviceOrder: true,
+          vehicle: {
+            select: {
+              plate: true,
+            },
+          },
+        },
+      });
+
+    if (
+      !quote ||
+      !quote.serviceOrder
+    ) {
+      throw new BadRequestException(
+        'Onaylanabilir servis teklifi bulunamadı.',
+      );
+    }
+
+    const order =
+      quote.serviceOrder;
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const approvedAt =
+          new Date();
+
+        const updatedQuote =
+          await tx.quote.update({
+            where: {
+              id: quote.id,
+            },
+            data: {
+              status:
+                QuoteStatus.APPROVED,
+              approvedAt,
+            },
+            include: {
+              items: true,
+            },
+          });
+
+        await tx.serviceOrder.update({
+          where: {
+            id: order.id,
+          },
+          data: {
+            status:
+              ServiceOrderStatus.APPROVED,
+          },
+        });
+
+        const amount =
+          Number(
+            quote.total,
+          );
+
+        if (amount > 0) {
+          const existingPending =
+            await tx.payment.findFirst({
+              where: {
+                organizationId,
+                quoteId:
+                  quote.id,
+                status:
+                  PaymentStatus.PENDING,
+              },
+              select: {
+                id: true,
+              },
+            });
+
+          if (!existingPending) {
+            await tx.payment.create({
+              data: {
+                organizationId,
+                branchId:
+                  order.branchId,
+                customerId,
+                serviceOrderId:
+                  order.id,
+                quoteId:
+                  quote.id,
+                amount,
+                method:
+                  PaymentMethod.OTHER,
+                status:
+                  PaymentStatus.PENDING,
+                reference:
+                  `CUSTOMER_QUOTE_APPROVAL:${quote.id}`,
+              },
+            });
+          }
+        }
+
+        if (
+          order.assignedTechnicianId
+        ) {
+          await tx.notification.create({
+            data: {
+              organizationId,
+              branchId:
+                order.branchId,
+              userId:
+                order.assignedTechnicianId,
+              serviceOrderId:
+                order.id,
+              channel:
+                NotificationChannel.IN_APP,
+              status:
+                NotificationStatus.PENDING,
+              title:
+                'Müşteri teklifi onayladı',
+              message:
+                `${quote.vehicle.plate} plakalı araç için ${order.orderNumber} iş emri onaylandı. İşleme başlayabilirsiniz.`,
+            },
+          });
+        }
+
+        await tx.notification.create({
+          data: {
+            organizationId,
+            branchId:
+              order.branchId,
+            customerId,
+            serviceOrderId:
+              order.id,
+            channel:
+              NotificationChannel.IN_APP,
+            status:
+              NotificationStatus.PENDING,
+            title:
+              'Teklifiniz onaylandı',
+            message:
+              amount > 0
+                ? `Servis teklifiniz onaylandı. ${amount.toFixed(2)} TL tutarında bekleyen ödeme kaydı oluşturuldu.`
+                : 'Servis teklifiniz onaylandı. İş emri işleme hazır.',
+          },
+        });
+
+        return {
+          quote:
+            updatedQuote,
+          serviceOrderStatus:
+            ServiceOrderStatus.APPROVED,
+          pendingAmount:
+            amount,
+        };
+      },
+    );
+  }
+
+  async getCustomerNotifications(
+    customerId: string,
+    organizationId: string,
+  ) {
+    await this.prisma.customer.findFirstOrThrow({
+      where: {
+        id: customerId,
+        organizationId,
+        portalEnabled: true,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return this.prisma.notification.findMany({
+      where: {
+        customerId,
+        organizationId,
+      },
+      select: {
+        id: true,
+        title: true,
+        message: true,
+        status: true,
+        serviceOrderId: true,
+        createdAt: true,
+        readAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 50,
+    });
+  }
+
+  async markCustomerNotificationRead(
+    customerId: string,
+    organizationId: string,
+    notificationId: string,
+  ) {
+    const notification =
+      await this.prisma.notification.findFirst({
+        where: {
+          id: notificationId,
+          customerId,
+          organizationId,
+        },
+      });
+
+    if (!notification) {
+      throw new BadRequestException(
+        'Bildirim bulunamadı.',
+      );
+    }
+
+    return this.prisma.notification.update({
+      where: {
+        id: notification.id,
+      },
+      data: {
+        status:
+          NotificationStatus.READ,
+        readAt: new Date(),
+      },
+    });
+  }
+
 }

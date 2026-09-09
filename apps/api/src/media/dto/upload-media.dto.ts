@@ -1,4 +1,9 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsIn,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { MediaType } from '@prisma/client';
 
 export class UploadMediaDto {
@@ -20,4 +25,8 @@ export class UploadMediaDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  customerVisible?: string;
 }
