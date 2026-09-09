@@ -16,6 +16,7 @@ import CustomerHomeScreen from './screens/CustomerHomeScreen';
 import CustomerVehiclesScreen from './screens/CustomerVehiclesScreen';
 import CustomerVehicleDetailScreen from './screens/CustomerVehicleDetailScreen';
 import CustomerAccountScreen from './screens/CustomerAccountScreen';
+import CustomerNotificationsScreen from './screens/CustomerNotificationsScreen';
 import {
   colors,
 } from './theme';
@@ -30,6 +31,11 @@ const tabs = [
     key: 'vehicles',
     label: 'Araçlarım',
     glyph: 'A',
+  },
+  {
+    key: 'notifications',
+    label: 'Bildirimler',
+    glyph: 'B',
   },
   {
     key: 'account',
@@ -114,6 +120,15 @@ export default function CustomerAppShell({
           )
         }
       />
+    );
+  }
+
+  if (
+    screen ===
+    'notifications'
+  ) {
+    content = (
+      <CustomerNotificationsScreen />
     );
   }
 
