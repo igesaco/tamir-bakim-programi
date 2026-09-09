@@ -29,6 +29,7 @@ import { QuotesService } from './quotes.service';
   UserRole.OWNER,
   UserRole.MANAGER,
   UserRole.SERVICE_ADVISOR,
+  UserRole.ACCOUNTING,
 )
 
 @Feature(FeatureKey.QUOTES)
