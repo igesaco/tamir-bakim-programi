@@ -7,6 +7,8 @@ import {
 import {
   FeatureKey,
   InspectionStatus,
+  NotificationChannel,
+  NotificationStatus,
   PermissionKey,
   ServiceOrderStatus,
   UserRole,
@@ -18,6 +20,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateInspectionDto } from './dto/create-inspection.dto';
 import { CreateInspectionItemDto } from './dto/create-inspection-item.dto';
 import { CreateMobileIntakeDto } from './dto/create-mobile-intake.dto';
+import { MOBILE_INTAKE_V3_TEMPLATES } from './mobile-intake-v3.templates';
 
 @Injectable()
 export class InspectionsService {
@@ -163,6 +166,174 @@ export class InspectionsService {
         );
       }
     }
+  }
+
+  getMobileIntakeV3Templates() {
+    return MOBILE_INTAKE_V3_TEMPLATES;
+  }
+
+  async createMobileIntakeV3(
+    organizationId: string,
+    actorBranchId: string | null,
+    actorRole: UserRole,
+    userId: string,
+    dto: CreateMobileIntakeDto,
+  ) {
+    const legacyResult =
+      await this.createMobileIntake(
+        organizationId,
+        actorBranchId,
+        actorRole,
+        userId,
+        dto,
+      );
+
+    const orderId =
+      legacyResult.serviceOrder?.id;
+
+    const inspectionId =
+      legacyResult.inspection?.id;
+
+    if (
+      !orderId ||
+      !inspectionId
+    ) {
+      throw new BadRequestException(
+        'Yeni servis akışı için araç kabul kaydı tamamlanamadı.',
+      );
+    }
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const order =
+          await tx.serviceOrder.update({
+            where: {
+              id: orderId,
+            },
+            data: {
+              status:
+                ServiceOrderStatus.QUOTE_WAITING,
+            },
+            include: {
+              customer: true,
+              vehicle: true,
+              items: true,
+              assignedTechnician: true,
+            },
+          });
+
+        const inspection =
+          await tx.inspection.update({
+            where: {
+              id: inspectionId,
+            },
+            data: {
+              status:
+                InspectionStatus.COMPLETED,
+            },
+            include: {
+              items: true,
+              media: true,
+              inspector: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+          });
+
+        const officeUsers =
+          await tx.user.findMany({
+            where: {
+              organizationId,
+              active: true,
+              role: {
+                in: [
+                  UserRole.ACCOUNTING,
+                  UserRole.OWNER,
+                  UserRole.MANAGER,
+                ],
+              },
+              OR: [
+                {
+                  branchId:
+                    order.branchId,
+                },
+                {
+                  branchId: null,
+                },
+              ],
+            },
+            select: {
+              id: true,
+            },
+          });
+
+        if (
+          officeUsers.length
+        ) {
+          await tx.notification.createMany({
+            data:
+              officeUsers.map(
+                (user) => ({
+                  organizationId,
+                  branchId:
+                    order.branchId,
+                  userId:
+                    user.id,
+                  serviceOrderId:
+                    order.id,
+                  channel:
+                    NotificationChannel.IN_APP,
+                  status:
+                    NotificationStatus.PENDING,
+                  title:
+                    'Yeni araç kabulü fiyatlandırma bekliyor',
+                  message:
+                    `${order.vehicle.plate} plakalı araç için ${order.orderNumber} iş emri oluşturuldu. Teklif / proforma hazırlanması gerekiyor.`,
+                }),
+              ),
+          });
+        }
+
+        if (
+          legacyResult.customer
+            ?.portalEnabled
+        ) {
+          await tx.notification.create({
+            data: {
+              organizationId,
+              branchId:
+                order.branchId,
+              customerId:
+                order.customerId,
+              serviceOrderId:
+                order.id,
+              channel:
+                NotificationChannel.IN_APP,
+              status:
+                NotificationStatus.PENDING,
+              title:
+                'Aracınız servise kabul edildi',
+              message:
+                `${order.vehicle.plate} plakalı aracınız için teknik ön kabul tamamlandı. Fiyatlandırma hazırlanıyor.`,
+            },
+          });
+        }
+
+        return {
+          ...legacyResult,
+          flowVersion: 'V3',
+          inspection,
+          serviceOrder:
+            order,
+          nextStep:
+            'QUOTE_PRICING',
+        };
+      },
+    );
   }
 
   async createMobileIntake(
