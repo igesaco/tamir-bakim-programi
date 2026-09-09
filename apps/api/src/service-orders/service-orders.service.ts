@@ -31,7 +31,6 @@ function money(value: number) {
 
 const TECHNICIAN_ALLOWED_STATUSES =
   new Set<ServiceOrderStatus>([
-    ServiceOrderStatus.ACCEPTED,
     ServiceOrderStatus.IN_PROGRESS,
     ServiceOrderStatus.PART_WAITING,
     ServiceOrderStatus.QUALITY_CONTROL,
@@ -351,6 +350,19 @@ export class ServiceOrdersService {
                 id: true,
                 firstName: true,
                 lastName: true,
+              },
+            },
+            items: {
+              select: {
+                id: true,
+                type: true,
+                name: true,
+                description: true,
+                quantity: true,
+                completed: true,
+              },
+              orderBy: {
+                createdAt: 'asc',
               },
             },
             media: {
@@ -1049,16 +1061,55 @@ export class ServiceOrdersService {
     id: string,
     itemId: string,
     actorRole: UserRole,
+    actorId: string,
     actorBranchId: string | null,
     completed: boolean,
   ) {
     const order =
-      await this.findOfficeOrder(
-        organizationId,
-        id,
-        actorRole,
-        actorBranchId,
+      await this.prisma.serviceOrder.findFirst({
+        where: {
+          id,
+          ...this.buildAccessWhere(
+            organizationId,
+            actorRole,
+            actorId,
+            actorBranchId,
+          ),
+        },
+        select: {
+          id: true,
+          status: true,
+          customerId: true,
+          branchId: true,
+          vehicle: {
+            select: {
+              plate: true,
+            },
+          },
+        },
+      });
+
+    if (!order) {
+      throw new NotFoundException(
+        'İş emri bulunamadı veya erişim yetkiniz yok.',
       );
+    }
+
+    if (
+      actorRole ===
+        UserRole.TECHNICIAN &&
+      ![
+        ServiceOrderStatus.IN_PROGRESS,
+        ServiceOrderStatus.PART_WAITING,
+        ServiceOrderStatus.QUALITY_CONTROL,
+      ].includes(
+        order.status,
+      )
+    ) {
+      throw new BadRequestException(
+        'İşlem kalemleri yalnızca onaylanmış ve başlatılmış iş emrinde güncellenebilir.',
+      );
+    }
 
     const item =
       await this.prisma.serviceOrderItem.findFirst({
@@ -1075,18 +1126,107 @@ export class ServiceOrdersService {
       );
     }
 
-    return this.prisma.serviceOrderItem.update({
-      where: {
-        id: itemId,
+    return this.prisma.$transaction(
+      async (tx) => {
+        const updatedItem =
+          await tx.serviceOrderItem.update({
+            where: {
+              id: itemId,
+            },
+            data: {
+              completed:
+                Boolean(completed),
+            },
+            include: {
+              part: true,
+            },
+          });
+
+        if (
+          completed &&
+          actorRole ===
+            UserRole.TECHNICIAN
+        ) {
+          await tx.serviceOrderWorkLog.create({
+            data: {
+              organizationId,
+              serviceOrderId:
+                order.id,
+              userId:
+                actorId,
+              type:
+                ServiceOrderWorkLogType.NOTE,
+              note:
+                `İşlem tamamlandı: ${item.name}`,
+            },
+          });
+
+          const remaining =
+            await tx.serviceOrderItem.count({
+              where: {
+                serviceOrderId:
+                  order.id,
+                completed:
+                  false,
+              },
+            });
+
+          if (
+            remaining === 0 &&
+            order.status !==
+              ServiceOrderStatus.QUALITY_CONTROL
+          ) {
+            await tx.serviceOrder.update({
+              where: {
+                id: order.id,
+              },
+              data: {
+                status:
+                  ServiceOrderStatus.QUALITY_CONTROL,
+              },
+            });
+
+            const customer =
+              await tx.customer.findUnique({
+                where: {
+                  id:
+                    order.customerId,
+                },
+                select: {
+                  portalEnabled:
+                    true,
+                },
+              });
+
+            if (
+              customer?.portalEnabled
+            ) {
+              await tx.notification.create({
+                data: {
+                  organizationId,
+                  branchId:
+                    order.branchId,
+                  customerId:
+                    order.customerId,
+                  serviceOrderId:
+                    order.id,
+                  channel:
+                    NotificationChannel.IN_APP,
+                  status:
+                    NotificationStatus.PENDING,
+                  title:
+                    'Teknik işlemler tamamlandı',
+                  message:
+                    `${order.vehicle.plate} plakalı aracınızdaki planlanan işlemler tamamlandı. Araç kalite kontrol aşamasına geçti.`,
+                },
+              });
+            }
+          }
+        }
+
+        return updatedItem;
       },
-      data: {
-        completed:
-          Boolean(completed),
-      },
-      include: {
-        part: true,
-      },
-    });
+    );
   }
 
   async removeItem(
@@ -1253,6 +1393,47 @@ export class ServiceOrdersService {
       throw new ForbiddenException(
         'Teknisyen bu servis durumunu kullanamaz.',
       );
+    }
+
+    if (
+      actorRole ===
+        UserRole.TECHNICIAN
+    ) {
+      const allowedTransitions:
+        Partial<
+          Record<
+            ServiceOrderStatus,
+            ServiceOrderStatus[]
+          >
+        > = {
+        [ServiceOrderStatus.APPROVED]: [
+          ServiceOrderStatus.IN_PROGRESS,
+        ],
+        [ServiceOrderStatus.IN_PROGRESS]: [
+          ServiceOrderStatus.PART_WAITING,
+          ServiceOrderStatus.QUALITY_CONTROL,
+        ],
+        [ServiceOrderStatus.PART_WAITING]: [
+          ServiceOrderStatus.IN_PROGRESS,
+          ServiceOrderStatus.QUALITY_CONTROL,
+        ],
+        [ServiceOrderStatus.QUALITY_CONTROL]: [
+          ServiceOrderStatus.READY,
+        ],
+        [ServiceOrderStatus.READY]: [],
+      };
+
+      if (
+        !(
+          allowedTransitions[
+            order.status
+          ] || []
+        ).includes(status)
+      ) {
+        throw new BadRequestException(
+          'Bu iş emri mevcut aşamadan seçilen aşamaya geçirilemez. Önce gerekli onay ve önceki servis adımları tamamlanmalıdır.',
+        );
+      }
     }
 
     if (
