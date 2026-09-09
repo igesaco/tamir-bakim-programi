@@ -841,6 +841,11 @@ export default function InspectionsScreen({
       'Mobil araç kabul fotoğrafı',
     );
 
+    formData.append(
+      'customerVisible',
+      'true',
+    );
+
     return api.post(
       '/media/upload',
       formData,
