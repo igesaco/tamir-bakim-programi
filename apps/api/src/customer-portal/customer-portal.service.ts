@@ -8,7 +8,9 @@ import { JwtService } from '@nestjs/jwt';
 import {
   FeatureKey,
   MaintenancePlanStatus,
+  NotificationChannel,
   NotificationStatus,
+  PaymentMethod,
   PaymentStatus,
   QuoteStatus,
   ServiceOrderStatus,
@@ -1207,6 +1209,176 @@ export class CustomerPortalService {
       payments,
     };
   }
+  async approveCustomerQuote(
+    customerId: string,
+    organizationId: string,
+    quoteId: string,
+  ) {
+    const quote =
+      await this.prisma.quote.findFirst({
+        where: {
+          id: quoteId,
+          customerId,
+          organizationId,
+          status: {
+            in: [
+              QuoteStatus.SENT,
+              QuoteStatus.PARTIALLY_APPROVED,
+            ],
+          },
+        },
+        include: {
+          serviceOrder: true,
+          vehicle: {
+            select: {
+              plate: true,
+            },
+          },
+        },
+      });
+
+    if (
+      !quote ||
+      !quote.serviceOrder
+    ) {
+      throw new BadRequestException(
+        'Onaylanabilir servis teklifi bulunamadı.',
+      );
+    }
+
+    const order =
+      quote.serviceOrder;
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const approvedAt =
+          new Date();
+
+        const updatedQuote =
+          await tx.quote.update({
+            where: {
+              id: quote.id,
+            },
+            data: {
+              status:
+                QuoteStatus.APPROVED,
+              approvedAt,
+            },
+            include: {
+              items: true,
+            },
+          });
+
+        await tx.serviceOrder.update({
+          where: {
+            id: order.id,
+          },
+          data: {
+            status:
+              ServiceOrderStatus.APPROVED,
+          },
+        });
+
+        const amount =
+          Number(
+            quote.total,
+          );
+
+        if (amount > 0) {
+          const existingPending =
+            await tx.payment.findFirst({
+              where: {
+                organizationId,
+                quoteId:
+                  quote.id,
+                status:
+                  PaymentStatus.PENDING,
+              },
+              select: {
+                id: true,
+              },
+            });
+
+          if (!existingPending) {
+            await tx.payment.create({
+              data: {
+                organizationId,
+                branchId:
+                  order.branchId,
+                customerId,
+                serviceOrderId:
+                  order.id,
+                quoteId:
+                  quote.id,
+                amount,
+                method:
+                  PaymentMethod.OTHER,
+                status:
+                  PaymentStatus.PENDING,
+                reference:
+                  `CUSTOMER_QUOTE_APPROVAL:${quote.id}`,
+              },
+            });
+          }
+        }
+
+        if (
+          order.assignedTechnicianId
+        ) {
+          await tx.notification.create({
+            data: {
+              organizationId,
+              branchId:
+                order.branchId,
+              userId:
+                order.assignedTechnicianId,
+              serviceOrderId:
+                order.id,
+              channel:
+                NotificationChannel.IN_APP,
+              status:
+                NotificationStatus.PENDING,
+              title:
+                'Müşteri teklifi onayladı',
+              message:
+                `${quote.vehicle.plate} plakalı araç için ${order.orderNumber} iş emri onaylandı. İşleme başlayabilirsiniz.`,
+            },
+          });
+        }
+
+        await tx.notification.create({
+          data: {
+            organizationId,
+            branchId:
+              order.branchId,
+            customerId,
+            serviceOrderId:
+              order.id,
+            channel:
+              NotificationChannel.IN_APP,
+            status:
+              NotificationStatus.PENDING,
+            title:
+              'Teklifiniz onaylandı',
+            message:
+              amount > 0
+                ? `Servis teklifiniz onaylandı. ${amount.toFixed(2)} TL tutarında bekleyen ödeme kaydı oluşturuldu.`
+                : 'Servis teklifiniz onaylandı. İş emri işleme hazır.',
+          },
+        });
+
+        return {
+          quote:
+            updatedQuote,
+          serviceOrderStatus:
+            ServiceOrderStatus.APPROVED,
+          pendingAmount:
+            amount,
+        };
+      },
+    );
+  }
+
   async getCustomerNotifications(
     customerId: string,
     organizationId: string,
