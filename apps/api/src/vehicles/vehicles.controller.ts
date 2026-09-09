@@ -55,6 +55,7 @@ export class VehiclesController {
     UserRole.OWNER,
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
+    UserRole.ACCOUNTING,
   )
 @Permission(PermissionKey.VEHICLE_VIEW)
   @Get()
@@ -80,6 +81,7 @@ export class VehiclesController {
     UserRole.OWNER,
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
+    UserRole.ACCOUNTING,
   )
 @Permission(PermissionKey.VEHICLE_VIEW)
   @Get(':id')
