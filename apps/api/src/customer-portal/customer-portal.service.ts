@@ -8,7 +8,9 @@ import { JwtService } from '@nestjs/jwt';
 import {
   FeatureKey,
   MaintenancePlanStatus,
+  NotificationStatus,
   PaymentStatus,
+  QuoteStatus,
   ServiceOrderStatus,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -739,6 +741,7 @@ export class CustomerPortalService {
         qrActive: true,
         media: {
           where: {
+            customerVisible: true,
             type: {
               in: [
                 'VEHICLE',
@@ -833,6 +836,7 @@ export class CustomerPortalService {
           mileage: true,
           media: {
             where: {
+              customerVisible: true,
               type: {
                 in: [
                   'VEHICLE',
@@ -1031,9 +1035,9 @@ export class CustomerPortalService {
             where: {
               status: {
                 in: [
-                  'SENT',
-                  'APPROVED',
-                  'PARTIALLY_APPROVED',
+                  QuoteStatus.SENT,
+                  QuoteStatus.APPROVED,
+                  QuoteStatus.PARTIALLY_APPROVED,
                 ],
               },
             },
@@ -1264,7 +1268,8 @@ export class CustomerPortalService {
         id: notification.id,
       },
       data: {
-        status: 'READ',
+        status:
+          NotificationStatus.READ,
         readAt: new Date(),
       },
     });
