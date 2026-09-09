@@ -8,12 +8,17 @@
     "newArchEnabled": true,
     "android": {
       "package": "com.igesa.tamirbakim",
-      "versionCode": 1
+      "versionCode": 1,
+      "icon": "./assets/icon.png"
     },
     "ios": {
       "bundleIdentifier": "com.igesa.tamirbakim",
       "supportsTablet": true,
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "icon": "./assets/icon.png",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "plugins": [
       "expo-secure-store",
@@ -26,6 +31,18 @@
         }
       ]
     ],
-    "scheme": "tamirbakim"
+    "scheme": "tamirbakim",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#080d11"
+    },
+    "owner": "igesacos-team",
+    "extra": {
+      "eas": {
+        "projectId": "ef121369-1d22-4c0a-853b-184297ceb2ff"
+      }
+    }
   }
 }
