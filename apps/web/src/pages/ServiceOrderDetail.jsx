@@ -79,6 +79,7 @@ export default function ServiceOrderDetail() {
     'OWNER',
     'MANAGER',
     'SERVICE_ADVISOR',
+    'ACCOUNTING',
   ].includes(user?.role);
 
   const statuses =
