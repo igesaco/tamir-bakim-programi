@@ -15,6 +15,8 @@ import {
   Message,
 } from '../components/UI';
 import { useAuth } from '../auth/AuthContext';
+import BrandLogo from '../components/BrandLogo';
+
 import {
   colors,
   radius,
@@ -73,11 +75,7 @@ export default function LoginScreen({
       }
       style={styles.page}
     >
-      <View style={styles.logo}>
-        <Text style={styles.logoText}>
-          TB
-        </Text>
-      </View>
+      <BrandLogo size={66} />
 
       <Text style={styles.kicker}>
         İGESA · TAMİR BAKIM
