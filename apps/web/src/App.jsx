@@ -30,6 +30,7 @@ import ServiceOrderDetail from './pages/ServiceOrderDetail';
 import DeliveryReport from './pages/DeliveryReport';
 
 import Quotes from './pages/Quotes';
+import PricingQueue from './pages/PricingQueue';
 import QuoteProforma from './pages/QuoteProforma';
 import Maintenance from './pages/Maintenance';
 import Inventory from './pages/Inventory';
@@ -55,6 +56,14 @@ const SERVICE_ROLES = [
 const SERVICE_ORDER_ROLES = [
   ...SERVICE_ROLES,
   'TECHNICIAN',
+  'ACCOUNTING',
+];
+
+const PRICING_ROLES = [
+  'OWNER',
+  'MANAGER',
+  'SERVICE_ADVISOR',
+  'ACCOUNTING',
 ];
 
 const MANAGEMENT_ROLES = [
@@ -171,7 +180,7 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ForRoles
-                  roles={SERVICE_ROLES}
+                  roles={PRICING_ROLES}
                   feature="QUOTES"
                   permission="QUOTE_VIEW"
                 >
@@ -286,10 +295,23 @@ export default function App() {
             />
 
             <Route
+              path="pricing"
+              element={
+                <ForRoles
+                  roles={PRICING_ROLES}
+                  feature="SERVICE_ORDERS"
+                  permission="SERVICE_ORDER_VIEW"
+                >
+                  <PricingQueue />
+                </ForRoles>
+              }
+            />
+
+            <Route
               path="quotes"
               element={
                 <ForRoles
-                  roles={SERVICE_ROLES}
+                  roles={PRICING_ROLES}
                   feature="QUOTES"
                   permission="QUOTE_VIEW"
                 >
