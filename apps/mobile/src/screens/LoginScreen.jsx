@@ -143,19 +143,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.bg,
   },
-  logo: {
-    width: 66,
-    height: 66,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: colors.accent,
-  },
-  logoText: {
-    color: '#171108',
-    fontSize: 21,
-    fontWeight: '950',
-  },
   kicker: {
     marginTop: 20,
     color: colors.accent,
