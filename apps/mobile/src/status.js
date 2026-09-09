@@ -15,7 +15,6 @@ export const serviceStatusLabels = {
 };
 
 export const technicianStatuses = [
-  'ACCEPTED',
   'IN_PROGRESS',
   'PART_WAITING',
   'QUALITY_CONTROL',
