@@ -11,3 +11,8 @@ uploads/
 *.tsbuildinfo
 
 apps/mobile/.expo/
+
+# Generated mobile brand assets (created by apps/mobile postinstall)
+apps/mobile/assets/icon.png
+apps/mobile/assets/splash.png
+apps/mobile/assets/brand-logo.png
