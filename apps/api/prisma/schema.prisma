@@ -1099,6 +1099,7 @@ model Media {
   mimeType   String?
   sizeBytes  Int?
   description String?
+  customerVisible Boolean @default(false)
 
   createdAt DateTime @default(now())
 
