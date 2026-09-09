@@ -3,7 +3,10 @@
   useMemo,
   useState,
 } from 'react';
-import { Link } from 'react-router-dom';
+import {
+  Link,
+  useSearchParams,
+} from 'react-router-dom';
 
 import api from '../api/client';
 import { statusLabel } from '../utils/status';
@@ -29,6 +32,9 @@ function money(value) {
 }
 
 export default function Quotes() {
+  const [searchParams] =
+    useSearchParams();
+
   const [quotes, setQuotes] = useState([]);
   const [customers, setCustomers] =
     useState([]);
@@ -62,7 +68,15 @@ export default function Quotes() {
         api.get('/customers'),
         api.get('/vehicles'),
         api.get('/service-orders'),
-        api.get('/maintenance/packages'),
+        api
+          .get(
+            '/maintenance/packages',
+          )
+          .catch(
+            () => ({
+              data: [],
+            }),
+          ),
       ]);
 
     setQuotes(q.data);
@@ -70,6 +84,70 @@ export default function Quotes() {
     setVehicles(v.data);
     setOrders(o.data);
     setPackages(p.data);
+
+    const orderId =
+      searchParams.get(
+        'order',
+      );
+
+    if (orderId) {
+      const selectedOrder =
+        o.data.find(
+          (order) =>
+            order.id ===
+            orderId,
+        );
+
+      if (selectedOrder) {
+        setForm({
+          customerId:
+            selectedOrder.customerId,
+          vehicleId:
+            selectedOrder.vehicleId,
+          serviceOrderId:
+            selectedOrder.id,
+          notes:
+            selectedOrder.complaint
+              ? `Müşteri talebi: ${selectedOrder.complaint}`
+              : '',
+        });
+
+        if (
+          selectedOrder.items
+            ?.length
+        ) {
+          setItems(
+            selectedOrder.items.map(
+              (item) => ({
+                type:
+                  item.type,
+                name:
+                  item.name,
+                description:
+                  item.description ||
+                  '',
+                quantity:
+                  Number(
+                    item.quantity,
+                  ) || 1,
+                unitPrice:
+                  Number(
+                    item.unitPrice,
+                  ) || '',
+                discountAmount:
+                  Number(
+                    item.discountAmount,
+                  ) || 0,
+                vatRate:
+                  Number(
+                    item.vatRate,
+                  ) || 20,
+              }),
+            ),
+          );
+        }
+      }
+    }
   }
 
   useEffect(() => {
