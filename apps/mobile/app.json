@@ -9,7 +9,12 @@
     "android": {
       "package": "com.igesa.tamirbakim",
       "versionCode": 1,
-      "icon": "./assets/icon.png"
+      "icon": "./assets/icon.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#080d11"
+      },
+      "softwareKeyboardLayoutMode": "resize"
     },
     "ios": {
       "bundleIdentifier": "com.igesa.tamirbakim",
