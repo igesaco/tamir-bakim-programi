@@ -998,6 +998,74 @@ export class CustomerPortalService {
           estimatedDeliveryAt: true,
           createdAt: true,
           updatedAt: true,
+          items: {
+            select: {
+              id: true,
+              type: true,
+              name: true,
+              description: true,
+              quantity: true,
+              completed: true,
+            },
+            orderBy: {
+              createdAt: 'asc',
+            },
+          },
+          media: {
+            where: {
+              customerVisible: true,
+            },
+            select: {
+              id: true,
+              type: true,
+              storageKey: true,
+              fileName: true,
+              description: true,
+              createdAt: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+          quotes: {
+            where: {
+              status: {
+                in: [
+                  'SENT',
+                  'APPROVED',
+                  'PARTIALLY_APPROVED',
+                ],
+              },
+            },
+            select: {
+              id: true,
+              quoteNumber: true,
+              status: true,
+              subtotal: true,
+              discountTotal: true,
+              taxTotal: true,
+              total: true,
+              notes: true,
+              sentAt: true,
+              approvedAt: true,
+              items: {
+                select: {
+                  id: true,
+                  type: true,
+                  name: true,
+                  quantity: true,
+                  unitPrice: true,
+                  totalPrice: true,
+                  vatAmount: true,
+                  grossTotal: true,
+                },
+              },
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 3,
+          },
         },
         orderBy: {
           createdAt: 'desc',
@@ -1135,4 +1203,71 @@ export class CustomerPortalService {
       payments,
     };
   }
+  async getCustomerNotifications(
+    customerId: string,
+    organizationId: string,
+  ) {
+    await this.prisma.customer.findFirstOrThrow({
+      where: {
+        id: customerId,
+        organizationId,
+        portalEnabled: true,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return this.prisma.notification.findMany({
+      where: {
+        customerId,
+        organizationId,
+      },
+      select: {
+        id: true,
+        title: true,
+        message: true,
+        status: true,
+        serviceOrderId: true,
+        createdAt: true,
+        readAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 50,
+    });
+  }
+
+  async markCustomerNotificationRead(
+    customerId: string,
+    organizationId: string,
+    notificationId: string,
+  ) {
+    const notification =
+      await this.prisma.notification.findFirst({
+        where: {
+          id: notificationId,
+          customerId,
+          organizationId,
+        },
+      });
+
+    if (!notification) {
+      throw new BadRequestException(
+        'Bildirim bulunamadı.',
+      );
+    }
+
+    return this.prisma.notification.update({
+      where: {
+        id: notification.id,
+      },
+      data: {
+        status: 'READ',
+        readAt: new Date(),
+      },
+    });
+  }
+
 }
