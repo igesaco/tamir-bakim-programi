@@ -15,6 +15,18 @@
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://tamir-bakim-api.onrender.com"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
+    "android-preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://tamir-bakim-api.onrender.com"
       }
     }
   },
