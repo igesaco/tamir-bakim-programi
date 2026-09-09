@@ -88,6 +88,24 @@ export class CustomerPortalController {
     );
   }
 
+  @Post('quotes/:quoteId/approve')
+  @UseGuards(
+    AuthGuard(
+      'customer-portal-jwt',
+    ),
+  )
+  approveQuote(
+    @Req() req: any,
+    @Param('quoteId')
+    quoteId: string,
+  ) {
+    return this.customerPortalService.approveCustomerQuote(
+      req.user.customerId,
+      req.user.organizationId,
+      quoteId,
+    );
+  }
+
   @Get('notifications')
   @UseGuards(
     AuthGuard(
