@@ -934,7 +934,8 @@ export default function InspectionsScreen({
         customerPhone:
           newCustomerMode
             ? form.customerPhone
-                .trim()
+                .trim() ||
+              undefined
             : undefined,
         customerEmail:
           newCustomerMode
@@ -1128,17 +1129,9 @@ export default function InspectionsScreen({
 
   const customerReady =
     newCustomerMode
-      ? (
-          form.customerFirstName
-            .trim()
-            .length >= 2 &&
-          form.customerPhone
-            .replace(
-              /\D/g,
-              '',
-            )
-            .length >= 10
-        )
+      ? form.customerFirstName
+          .trim()
+          .length >= 2
       : Boolean(
           form.customerId,
         );
