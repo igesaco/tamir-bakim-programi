@@ -37,6 +37,27 @@ export class InspectionsController {
     private readonly inspectionsService: InspectionsService,
   ) {}
 
+@Permission(PermissionKey.INSPECTION_VIEW)
+  @Get('mobile-intake-v3/templates')
+  getMobileIntakeV3Templates() {
+    return this.inspectionsService.getMobileIntakeV3Templates();
+  }
+
+@Permission(PermissionKey.INSPECTION_MANAGE)
+  @Post('mobile-intake-v3')
+  createMobileIntakeV3(
+    @Req() req: any,
+    @Body() dto: CreateMobileIntakeDto,
+  ) {
+    return this.inspectionsService.createMobileIntakeV3(
+      req.user.organizationId,
+      req.user.branchId,
+      req.user.role,
+      req.user.sub,
+      dto,
+    );
+  }
+
 @Permission(PermissionKey.INSPECTION_MANAGE)
   @Post('mobile-intake')
   createMobileIntake(
