@@ -78,6 +78,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<
     PermissionKey.VEHICLE_VIEW,
 
     PermissionKey.SERVICE_ORDER_VIEW,
+    PermissionKey.SERVICE_ORDER_ASSIGN,
     PermissionKey.SERVICE_ORDER_ITEM_MANAGE,
 
     PermissionKey.QUOTE_VIEW,
