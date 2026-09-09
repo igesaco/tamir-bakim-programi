@@ -22,5 +22,9 @@
     "expo-image-picker": "~57.0.16",
     "sharp": "^0.34.3",
     "node-addon-api": "^8.5.0"
+  },
+  "optionalDependencies": {
+    "@img/sharp-linux-x64": "0.34.5",
+    "@img/sharp-libvips-linux-x64": "1.2.4"
   }
 }
