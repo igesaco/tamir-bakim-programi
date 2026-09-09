@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import {
   InventoryMovementType,
+  NotificationChannel,
+  NotificationStatus,
   ServiceItemType,
   ServiceOrderStatus,
   ServiceOrderWorkLogType,
@@ -1257,15 +1259,101 @@ export class ServiceOrdersService {
       status !==
       ServiceOrderStatus.DELIVERED
     ) {
-      return this.prisma.serviceOrder.update({
-        where: { id },
-        data: {
-          status,
+      return this.prisma.$transaction(
+        async (tx) => {
+          const updated =
+            await tx.serviceOrder.update({
+              where: { id },
+              data: {
+                status,
+              },
+              include: {
+                assignedTechnician: true,
+                vehicle: {
+                  select: {
+                    plate: true,
+                  },
+                },
+              },
+            });
+
+          const customerMessage =
+            {
+              [ServiceOrderStatus.IN_PROGRESS]: {
+                title:
+                  'Servis işlemi başladı',
+                message:
+                  `${updated.vehicle.plate} plakalı aracınızın servis işlemlerine başlandı.`,
+              },
+              [ServiceOrderStatus.PART_WAITING]: {
+                title:
+                  'Parça tedariki bekleniyor',
+                message:
+                  `${updated.vehicle.plate} plakalı aracınız için gerekli parça / malzeme tedariki bekleniyor.`,
+              },
+              [ServiceOrderStatus.QUALITY_CONTROL]: {
+                title:
+                  'Teknik işlemler tamamlandı',
+                message:
+                  `${updated.vehicle.plate} plakalı aracınız kalite kontrol ve son kontrol aşamasındadır.`,
+              },
+              [ServiceOrderStatus.READY]: {
+                title:
+                  'Aracınız teslimata hazır',
+                message:
+                  `${updated.vehicle.plate} plakalı aracınızın servis işlemleri tamamlandı ve teslimata hazırdır.`,
+              },
+              [ServiceOrderStatus.PAYMENT_WAITING]: {
+                title:
+                  'Ödeme bekleniyor',
+                message:
+                  `${updated.vehicle.plate} plakalı aracınız için ödeme / tahsilat işlemi bekleniyor.`,
+              },
+            }[
+              status
+            ];
+
+          if (customerMessage) {
+            const customer =
+              await tx.customer.findUnique({
+                where: {
+                  id:
+                    order.customerId,
+                },
+                select: {
+                  portalEnabled:
+                    true,
+                },
+              });
+
+            if (
+              customer?.portalEnabled
+            ) {
+              await tx.notification.create({
+                data: {
+                  organizationId,
+                  branchId:
+                    order.branchId,
+                  customerId:
+                    order.customerId,
+                  serviceOrderId:
+                    order.id,
+                  channel:
+                    NotificationChannel.IN_APP,
+                  status:
+                    NotificationStatus.PENDING,
+                  title:
+                    customerMessage.title,
+                  message:
+                    customerMessage.message,
+                },
+              });
+            }
+          }
+
+          return updated;
         },
-        include: {
-          assignedTechnician: true,
-        },
-      });
+      );
     }
 
     const deliveredAt =
@@ -1372,6 +1460,52 @@ export class ServiceOrdersService {
                     }),
                   ),
               },
+            },
+          });
+        }
+
+        const deliveredCustomer =
+          await tx.customer.findUnique({
+            where: {
+              id:
+                order.customerId,
+            },
+            select: {
+              portalEnabled: true,
+            },
+          });
+
+        if (
+          deliveredCustomer?.portalEnabled
+        ) {
+          const deliveredVehicle =
+            await tx.vehicle.findUnique({
+              where: {
+                id:
+                  order.vehicleId,
+              },
+              select: {
+                plate: true,
+              },
+            });
+
+          await tx.notification.create({
+            data: {
+              organizationId,
+              branchId:
+                order.branchId,
+              customerId:
+                order.customerId,
+              serviceOrderId:
+                order.id,
+              channel:
+                NotificationChannel.IN_APP,
+              status:
+                NotificationStatus.PENDING,
+              title:
+                'Araç teslim edildi',
+              message:
+                `${deliveredVehicle?.plate || 'Aracınız'} için servis kaydı tamamlandı ve bakım geçmişine işlendi.`,
             },
           });
         }
