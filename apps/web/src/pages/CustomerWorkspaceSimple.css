@@ -1,0 +1,46 @@
+.simple-workspace { max-width: 1500px; margin: 0 auto; }
+.simple-heading { align-items: flex-start; }
+.simple-eyebrow { display: block; margin-bottom: 8px; color: #f59e0b; font-size: 11px; font-weight: 900; letter-spacing: 1.4px; }
+.simple-stepbar { display: flex; align-items: center; gap: 10px; margin: 0 0 18px; padding: 13px 16px; overflow-x: auto; border: 1px solid #2b3037; border-radius: 12px; background: #101318; color: #d1d6dc; white-space: nowrap; }
+.simple-stepbar span { padding: 6px 10px; border-radius: 8px; background: #1b2026; font-size: 12px; font-weight: 700; }
+.simple-stepbar b { color: #6f7780; }
+.simple-section { margin-top: 14px; }
+.simple-primary-section { border-color: #5e481b; box-shadow: inset 0 0 0 1px rgba(245, 158, 11, .05); }
+.simple-section-title { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 18px; }
+.simple-section-title > div { display: flex; align-items: center; gap: 10px; }
+.simple-section-title h3 { margin: 0; }
+.simple-section-title small { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: #f59e0b; color: #181109; font-size: 12px; font-weight: 900; }
+.simple-section-title > span { color: #828b95; font-size: 12px; }
+.simple-vehicle-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.simple-vehicle { display: grid; gap: 7px; padding: 16px; border: 1px solid #2d333a; border-radius: 12px; background: #101419; }
+.simple-vehicle > strong { color: #f59e0b; font-size: 20px; }
+.simple-vehicle > span { color: #9ba3ac; font-size: 12px; }
+.simple-vehicle .action-row { margin-top: 5px; }
+.simple-edit-box { margin-top: 16px; padding: 16px; border: 1px solid #353b43; border-radius: 12px; background: #0f1216; }
+.simple-items-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 10px; }
+.simple-item-row { display: grid; grid-template-columns: 130px minmax(220px, 1fr) 110px 55px; gap: 8px; margin-bottom: 8px; }
+.simple-item-row input, .simple-item-row select, .simple-quote-row input, .simple-quote-row select { width: 100%; padding: 10px 11px; border: 1px solid #30363d; border-radius: 8px; background: #0f1216; color: #fff; outline: none; }
+.simple-item-row input:focus, .simple-item-row select:focus, .simple-quote-row input:focus, .simple-quote-row select:focus { border-color: #f59e0b; }
+.simple-main-action { width: 100%; margin-top: 12px; }
+.simple-order-list { display: grid; gap: 12px; }
+.simple-order { padding: 16px; border: 1px solid #2b3138; border-radius: 12px; background: #101419; }
+.simple-order-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.simple-order-head > div { display: grid; gap: 5px; }
+.simple-order-head > div > strong { font-size: 15px; }
+.simple-order-head > div > span { color: #8e97a1; font-size: 12px; }
+.simple-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.simple-tags span { margin: 0; padding: 5px 8px; border-radius: 20px; background: #1d2228; color: #aeb6bf; font-size: 10px; }
+.simple-pricing-box { margin-top: 15px; padding: 15px; border: 1px solid #4a3b1b; border-radius: 11px; background: #15140f; }
+.simple-pricing-box h4 { margin: 0 0 12px; }
+.simple-quote-row { display: grid; grid-template-columns: 110px minmax(200px, 1fr) 85px 120px 115px 90px; gap: 7px; margin-bottom: 7px; }
+.simple-total { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 18px; margin: 14px 0; padding: 12px; border-radius: 9px; background: #0e1114; }
+.simple-total span { margin: 0; color: #929ba5; font-size: 12px; }
+.simple-total strong { color: #f59e0b; font-size: 20px; }
+.simple-pricing-box .primary-button { padding: 9px 13px; }
+@media (max-width: 900px) {
+  .simple-item-row, .simple-quote-row { grid-template-columns: 1fr 1fr; }
+  .simple-order-head, .simple-section-title { align-items: flex-start; flex-direction: column; }
+}
+@media (max-width: 600px) {
+  .simple-item-row, .simple-quote-row { grid-template-columns: 1fr; }
+}
