@@ -9,6 +9,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "check": "expo export --platform android --output-dir dist",
+    "check:android": "expo export --platform android --output-dir dist/android",
+    "check:ios": "expo export --platform ios --output-dir dist/ios",
+    "test:config": "node --test scripts/app-config.test.cjs",
     "brand:assets": "node scripts/generate-brand-assets.cjs",
     "postinstall": "node scripts/generate-brand-assets.cjs"
   },
