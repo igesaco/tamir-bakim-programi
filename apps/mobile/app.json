@@ -26,8 +26,23 @@
         "expo-image-picker",
         {
           "photosPermission": "Araç ve servis fotoğraflarını iş emrine eklemek için fotoğraflarınıza erişim gerekir.",
-          "cameraPermission": "Araç ve servis fotoğraflarını çekmek için kameraya erişim gerekir.",
+          "cameraPermission": "Ruhsat, kimlik, araç ve servis fotoğraflarını çekmek için kameraya erişim gerekir.",
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-mlkit-ocr",
+        {
+          "iosEngine": "auto"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.0",
+            "useFrameworks": "static"
+          }
         }
       ]
     ],
