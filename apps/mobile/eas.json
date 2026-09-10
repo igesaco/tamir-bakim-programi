@@ -4,6 +4,21 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "workflowD": {
+      "distribution": "internal",
+      "environment": "preview",
+      "env": {
+        "APP_VARIANT": "workflowD"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "workflowD-testflight": {
+      "extends": "workflowD",
+      "distribution": "store",
+      "autoIncrement": true
+    },
     "preview": {
       "distribution": "internal",
       "env": {
@@ -19,6 +34,7 @@
     }
   },
   "submit": {
+    "workflowD-testflight": {},
     "production": {}
   }
 }
