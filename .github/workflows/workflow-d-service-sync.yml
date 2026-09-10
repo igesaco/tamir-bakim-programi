@@ -1,0 +1,186 @@
+name: Workflow D - Service Sync
+
+on:
+  push:
+    branches:
+      - workflowD-service-sync
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workflowD-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.event_name != 'pull_request' || github.head_ref == 'workflowD-service-sync'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tamir_bakim
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d tamir_bakim"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/tamir_bakim?schema=public
+      JWT_SECRET: core-v2-ci-jwt-secret-change-me-only-for-ci-123456789
+      CUSTOMER_ID_PEPPER: core-v2-ci-customer-id-pepper-987654321
+      CUSTOMER_PORTAL_JWT_SECRET: core-v2-ci-customer-portal-jwt-246813579
+      CUSTOMER_PORTAL_OTP_MODE: development
+      PLATFORM_FOUNDER_EMAIL: founder-ci@example.com
+      PLATFORM_FOUNDER_PASSWORD: CoreV2CiFounderPassword_123!
+      PLATFORM_FOUNDER_FIRST_NAME: IGESA
+      PLATFORM_FOUNDER_LAST_NAME: CI
+      NODE_ENV: test
+      SWAGGER_ENABLED: "false"
+      CORS_ORIGINS: http://localhost:5173
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            apps/api/package-lock.json
+            apps/web/package-lock.json
+
+      - name: API install
+        working-directory: apps/api
+        run: npm ci --include=dev
+
+      - name: Prisma validate
+        working-directory: apps/api
+        run: npx prisma validate
+
+      - name: Prisma generate
+        working-directory: apps/api
+        run: npx prisma generate
+
+      - name: Prisma migrate deploy
+        working-directory: apps/api
+        run: npx prisma migrate deploy
+
+      - name: API production build
+        working-directory: apps/api
+        run: npm run build
+
+      - name: API lint
+        working-directory: apps/api
+        run: npm run lint
+
+      - name: API health and database smoke test
+        working-directory: apps/api
+        shell: bash
+        run: |
+          PORT=3100 NODE_ENV=test node dist/main.js > /tmp/tamir-bakim-api.log 2>&1 &
+          API_PID=$!
+          trap 'kill $API_PID || true' EXIT
+
+          for i in {1..40}; do
+            if curl --fail --silent http://127.0.0.1:3100/health > /tmp/health.json; then
+              cat /tmp/health.json
+              grep -q '"status":"ok"' /tmp/health.json
+              grep -q '"database":"ok"' /tmp/health.json
+              exit 0
+            fi
+
+            if ! kill -0 $API_PID 2>/dev/null; then
+              cat /tmp/tamir-bakim-api.log
+              exit 1
+            fi
+
+            sleep 1
+          done
+
+          cat /tmp/tamir-bakim-api.log
+          exit 1
+
+      - name: Access control runtime smoke test
+        working-directory: apps/api
+        shell: bash
+        run: |
+          PORT=3100 NODE_ENV=test node dist/main.js > /tmp/tamir-bakim-access.log 2>&1 &
+          API_PID=$!
+          trap 'kill $API_PID || true' EXIT
+
+          for i in {1..40}; do
+            if curl --fail --silent http://127.0.0.1:3100/health > /dev/null; then
+              break
+            fi
+
+            if ! kill -0 $API_PID 2>/dev/null; then
+              cat /tmp/tamir-bakim-access.log
+              exit 1
+            fi
+
+            sleep 1
+          done
+
+          BASE_URL=http://127.0.0.1:3100 node access-smoke.mjs
+
+      - name: Web install
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Web lint
+        working-directory: apps/web
+        run: npm run lint
+
+      - name: Web production build
+        working-directory: apps/web
+        env:
+          VITE_API_URL: http://127.0.0.1:3100
+        run: npm run build
+
+  mobile:
+    if: github.event_name != 'pull_request' || github.head_ref == 'workflowD-service-sync'
+    name: Mobile ${{ matrix.platform }} export
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [android, ios]
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      CI: "1"
+      APP_VARIANT: workflowD
+      # Compile-only URL; this job never connects to a running API.
+      EXPO_PUBLIC_API_URL: https://workflowd-ci.invalid
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - name: Mobile configuration isolation tests
+        run: npm run test:config
+      - name: Mobile install
+        run: npm ci --no-audit --no-fund
+      - name: Export ${{ matrix.platform }} bundle
+        run: npm run check:${{ matrix.platform }}
