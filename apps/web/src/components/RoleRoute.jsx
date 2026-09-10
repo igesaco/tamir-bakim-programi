@@ -55,9 +55,15 @@ export default function RoleRoute({
     );
   }
 
+  const accountingCustomerWorkspace =
+    user.role === 'ACCOUNTING' &&
+    feature === 'CUSTOMERS' &&
+    permission === 'CUSTOMER_VIEW';
+
   if (
     roles?.length &&
-    !roles.includes(user.role)
+    !roles.includes(user.role) &&
+    !accountingCustomerWorkspace
   ) {
     return (
       <Navigate
