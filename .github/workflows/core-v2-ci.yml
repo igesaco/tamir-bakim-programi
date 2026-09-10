@@ -6,6 +6,7 @@ on:
       - feature/core-workflow-v2
       - workflowA
       - workflowB-service-flow-v3
+      - workflowC-simplified-customer-workspace
   workflow_dispatch:
 
 jobs:
@@ -141,7 +142,6 @@ jobs:
         env:
           VITE_API_URL: http://127.0.0.1:3100
         run: npm run build
-
 
       - name: Mobile install
         working-directory: apps/mobile
