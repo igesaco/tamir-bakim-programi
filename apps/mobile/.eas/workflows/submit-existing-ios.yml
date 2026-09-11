@@ -13,6 +13,8 @@ jobs:
     name: Upload existing build to TestFlight
     type: submit
     environment: production
+    env:
+      EXPO_DEBUG: "1"
     params:
       profile: production
       build_id: ${{ inputs.build_id }}
