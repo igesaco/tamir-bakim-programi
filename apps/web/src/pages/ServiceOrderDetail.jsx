@@ -1,4 +1,6 @@
-﻿import { useEffect, useState } from 'react';
+import { nextStatuses } from '../utils/order-transitions';
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import api from '../api/client';
@@ -32,6 +34,8 @@ export default function ServiceOrderDetail() {
   const { id } = useParams();
   const { user } = useAuth();
 
+  const [maintenancePlans, setMaintenancePlans] = useState([]);
+  const [statusError, setStatusError] = useState('');
   const [order, setOrder] = useState(null);
   const [technicians, setTechnicians] = useState([]);
   const [availableParts, setAvailableParts] = useState([]);
@@ -81,11 +85,21 @@ export default function ServiceOrderDetail() {
     'SERVICE_ADVISOR',
     'ACCOUNTING',
   ].includes(user?.role);
+  const canManageItems =
+    user?.permissions?.includes(
+      'SERVICE_ORDER_ITEM_MANAGE',
+    );
+  const canCompleteItems =
+    user?.permissions?.includes(
+      'SERVICE_ORDER_ITEM_COMPLETE',
+    );
 
   const statuses =
     user?.role === 'TECHNICIAN'
       ? technicianStatuses
       : allStatuses;
+
+  useLiveRefresh(() => load(true));
 
   async function load() {
     const response = await api.get(
@@ -107,6 +121,9 @@ export default function ServiceOrderDetail() {
     }));
 
     if (user?.role !== 'TECHNICIAN') {
+      const plans = await api.get('/maintenance/plans', { params: { vehicleId: response.data.vehicleId } }).catch(() => null);
+      if (plans) setMaintenancePlans(plans.data.filter(p => p.status === 'ACTIVE'));
+
       const partsResponse =
         await api.get(
           `/service-orders/${id}/available-parts`,
@@ -130,12 +147,19 @@ export default function ServiceOrderDetail() {
   }, [id, canAssign]);
 
   async function changeStatus(status) {
-    await api.patch(
-      `/service-orders/${id}/status`,
-      { status },
-    );
-
-    await load();
+    setStatusError('');
+    try {
+      await api.patch(`/service-orders/${id}/status`, { status });
+      await load();
+    } catch (error) {
+      const message = error.response?.data?.message || 'Durum güncellenemedi.';
+      if (status === 'DELIVERED' && String(message).startsWith('Bakiye var') && ['OWNER','MANAGER','ACCOUNTING'].includes(user?.role)) {
+        const creditDeliveryReason = window.prompt('Tahsilat tamamlanmadan cari hesaba teslim gerekçesi:');
+        if (!creditDeliveryReason) return;
+        try { await api.patch(`/service-orders/${id}/status`, { status, creditDeliveryReason }); await load(); }
+        catch (retry) { setStatusError(retry.response?.data?.message || 'Teslim kaydedilemedi.'); }
+      } else setStatusError(message);
+    }
   }
 
   async function assignTechnician(technicianId) {
@@ -591,8 +615,21 @@ export default function ServiceOrderDetail() {
       <div className="panel-card spaced-card">
         <h3>Servis Durumu</h3>
 
+        {statusError && <p role="alert">{statusError}</p>}
+        {canAssign && maintenancePlans.length > 0 && !['DELIVERED','CANCELLED'].includes(order.status) && (
+          <fieldset><legend>Bu iş emrinde yapılacak planlı bakımlar</legend>
+            <p>Seçili bakımlar teslimde kabul kilometresi ve teslim tarihiyle tamamlanır; periyodik planları yenilenir.</p>
+            {maintenancePlans.map(plan => <label key={plan.id} style={{ display: 'block' }}>
+              <input type="checkbox" checked={(order.maintenancePlanIds || []).includes(plan.id)} onChange={async event => {
+                const ids = event.target.checked ? [...(order.maintenancePlanIds || []), plan.id] : (order.maintenancePlanIds || []).filter(id => id !== plan.id);
+                try { await api.patch(`/service-orders/${id}/maintenance-plans`, { ids }); await load(); }
+                catch (error) { setStatusError(error.response?.data?.message || 'Bakım planı bağlanamadı.'); }
+              }} /> {plan.title}
+            </label>)}
+          </fieldset>
+        )}
         <div className="status-flow">
-          {statuses.map((status) => (
+          {statuses.filter(status => status === order.status || (nextStatuses[order.status] || []).includes(status)).map((status) => (
             <button
               key={status}
               className={
@@ -1175,12 +1212,12 @@ export default function ServiceOrderDetail() {
               <div>
                 <h3>Yapılan İşlemler / Parçalar</h3>
                 <p className="sub-text">
-                  Stoktan seçilen parçalar eklendiği anda ilgili şube stokundan otomatik düşer.
+                  Onaylı parçalar teknisyen tamamladığında ilgili şube stokundan tek kez düşer.
                 </p>
               </div>
             </div>
 
-            <form
+            {canManageItems && <form
               className="service-item-form"
               onSubmit={addItem}
             >
@@ -1346,7 +1383,7 @@ export default function ServiceOrderDetail() {
                   ? 'Ekleniyor...'
                   : 'İşlem Ekle'}
               </button>
-            </form>
+            </form>}
 
             {itemError && (
               <div className="page-message error-message spaced-card">
@@ -1456,6 +1493,7 @@ export default function ServiceOrderDetail() {
                           onClick={() =>
                             toggleItem(item)
                           }
+                          disabled={!canCompleteItems}
                         >
                           {item.completed
                             ? 'Tamamlandı'
@@ -1464,14 +1502,14 @@ export default function ServiceOrderDetail() {
                       </td>
 
                       <td>
-                        <button
+                        {canManageItems && <button
                           className="table-action danger-text"
                           onClick={() =>
                             removeItem(item)
                           }
                         >
                           Sil
-                        </button>
+                        </button>}
                       </td>
                     </tr>
                   ))}

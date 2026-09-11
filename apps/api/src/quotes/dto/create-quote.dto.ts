@@ -12,6 +12,10 @@ import {
 import { ServiceItemType } from '@prisma/client';
 
 export class CreateQuoteItemDto {
+  @IsOptional()
+  @IsString()
+  serviceOrderItemId?: string;
+
   @IsEnum(ServiceItemType)
   type: ServiceItemType;
 

@@ -308,7 +308,7 @@ export default function App() {
               element={
                 <ForRoles
                   roles={PRICING_ROLES}
-                  feature="SERVICE_ORDERS"
+                  feature="QUOTES"
                   permission="SERVICE_ORDER_VIEW"
                 >
                   <PricingQueue />

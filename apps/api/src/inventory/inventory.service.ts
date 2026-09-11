@@ -1,3 +1,7 @@
+import { itemApproved } from '../workflow/item-approval';
+import { atomic } from '../workflow/transaction';
+import { issueItem } from '../workflow/stock';
+import { assertOpen } from '../workflow/order-rules';
 import {
   BadRequestException,
   Injectable,
@@ -5,22 +9,11 @@ import {
 } from '@nestjs/common';
 import {
   InventoryMovementType,
-  ServiceItemType,
 } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePartDto } from './dto/create-part.dto';
 import { StockMovementDto } from './dto/stock-movement.dto';
-
-function money(value: number) {
-  return (
-    Math.round(
-      (value +
-        Number.EPSILON) *
-        100,
-    ) / 100
-  );
-}
 
 @Injectable()
 export class InventoryService {
@@ -294,186 +287,28 @@ export class InventoryService {
     );
   }
 
-  async stockOut(
-    organizationId: string,
-    branchId: string | null,
-    userId: string,
-    dto: StockMovementDto,
-  ) {
-    const validBranchId =
-      await this.validateBranch(
-        organizationId,
-        branchId,
-      );
-
-    const inventory =
-      await this.prisma.inventory.findUnique({
-        where: {
-          branchId_partId: {
-            branchId:
-              validBranchId,
-            partId:
-              dto.partId,
-          },
-        },
-        include: {
-          part: true,
-        },
-      });
-
-    if (
-      !inventory ||
-      inventory.organizationId !==
-        organizationId ||
-      inventory.part
-        .organizationId !==
-        organizationId
-    ) {
-      throw new NotFoundException(
-        'Bu parça stokta bulunamadı.',
-      );
-    }
-
-    if (
-      Number(
-        inventory.quantity,
-      ) < dto.quantity
-    ) {
-      throw new BadRequestException(
-        'Yeterli stok bulunmuyor.',
-      );
-    }
-
-    if (dto.serviceOrderId) {
-      const order =
-        await this.prisma.serviceOrder.findFirst({
-          where: {
-            id:
-              dto.serviceOrderId,
-            organizationId,
-            branchId:
-              validBranchId,
-          },
-        });
-
-      if (!order) {
-        throw new BadRequestException(
-          'İş emri bulunamadı.',
-        );
+  async stockOut(organizationId: string, branchId: string | null, userId: string, dto: StockMovementDto) {
+    const validBranchId = await this.validateBranch(organizationId, branchId);
+    return atomic(this.prisma, organizationId, async tx => {
+      if (dto.serviceOrderId) {
+        const order = await tx.serviceOrder.findFirst({ where: { id: dto.serviceOrderId, organizationId, branchId: validBranchId }, include: { items: true, quotes: true } });
+        if (!order) throw new BadRequestException('İş emri bulunamadı.');
+        assertOpen(order.status);
+        if (!['APPROVED','IN_PROGRESS','PART_WAITING','QUALITY_CONTROL'].includes(order.status)) throw new BadRequestException('Stok çıkışı için iş emri onaylanmalı.');
+        const matches = order.items.filter(item => item.partId === dto.partId && Number(item.quantity) === Number(dto.quantity)
+          && (!dto.serviceOrderItemId || item.id === dto.serviceOrderItemId));
+        if (matches.length !== 1) throw new BadRequestException('İş emrindeki parça kalemini ve miktarını seçin; yeni parçayı önce teklif/onay sürecine ekleyin.');
+        const item = matches[0];
+        if (order.quotes.length && !(await itemApproved(tx, organizationId, item))) throw new BadRequestException('Parçanın müşteri onayı gerekli.');
+        await issueItem(tx, organizationId, validBranchId, item, userId);
+      } else {
+        const changed = await tx.inventory.updateMany({ where: { organizationId, branchId: validBranchId, partId: dto.partId, quantity: { gte: dto.quantity } }, data: { quantity: { decrement: dto.quantity } } });
+        if (changed.count !== 1) throw new BadRequestException('Yeterli stok bulunmuyor.');
+        await tx.inventoryMovement.create({ data: { organizationId, branchId: validBranchId, partId: dto.partId, createdById: userId,
+          type: InventoryMovementType.OUT, quantity: dto.quantity, unitCost: dto.unitCost, note: dto.note } });
       }
-    }
-
-    return this.prisma.$transaction(
-      async (tx) => {
-        const updatedInventory =
-          await tx.inventory.update({
-            where: {
-              branchId_partId: {
-                branchId:
-                  validBranchId,
-                partId:
-                  dto.partId,
-              },
-            },
-            data: {
-              quantity: {
-                decrement:
-                  dto.quantity,
-              },
-            },
-            include: {
-              part: true,
-            },
-          });
-
-        let serviceOrderItemId:
-          | string
-          | null = null;
-
-        if (dto.serviceOrderId) {
-          const unitPrice =
-            money(
-              Number(
-                inventory.part
-                  .salePrice,
-              ),
-            );
-
-          const totalPrice =
-            money(
-              dto.quantity *
-                unitPrice,
-            );
-
-          const vatRate = 20;
-          const vatAmount =
-            money(
-              totalPrice *
-                (vatRate / 100),
-            );
-
-          const grossTotal =
-            money(
-              totalPrice +
-                vatAmount,
-            );
-
-          const serviceOrderItem =
-            await tx.serviceOrderItem.create({
-              data: {
-                serviceOrderId:
-                  dto.serviceOrderId,
-                partId:
-                  dto.partId,
-                type:
-                  ServiceItemType.PART,
-                name:
-                  inventory.part.name,
-                description:
-                  dto.note,
-                quantity:
-                  dto.quantity,
-                unitPrice,
-                totalPrice,
-                vatRate,
-                vatAmount,
-                grossTotal,
-              },
-            });
-
-          serviceOrderItemId =
-            serviceOrderItem.id;
-        }
-
-        await tx.inventoryMovement.create({
-          data: {
-            organizationId,
-            branchId:
-              validBranchId,
-            partId:
-              dto.partId,
-            serviceOrderId:
-              dto.serviceOrderId,
-            createdById:
-              userId,
-            type:
-              InventoryMovementType.OUT,
-            quantity:
-              dto.quantity,
-            unitCost:
-              dto.unitCost ??
-              inventory.part
-                .purchasePrice,
-            note:
-              serviceOrderItemId
-                ? `SERVICE_ORDER_ITEM:${serviceOrderItemId}`
-                : dto.note,
-          },
-        });
-
-        return updatedInventory;
-      },
-    );
+      return tx.inventory.findUnique({ where: { branchId_partId: { branchId: validBranchId, partId: dto.partId } }, include: { part: true } });
+    });
   }
 
   async findMovements(

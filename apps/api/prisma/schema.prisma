@@ -71,6 +71,7 @@ enum PermissionKey {
   SERVICE_ORDER_ASSIGN
   SERVICE_ORDER_STATUS
   SERVICE_ORDER_ITEM_MANAGE
+  SERVICE_ORDER_ITEM_COMPLETE
   SERVICE_ORDER_WORKLOG
 
   APPOINTMENT_VIEW
@@ -217,6 +218,7 @@ enum PaymentMethod {
 }
 
 enum PaymentStatus {
+  SETTLED
   PENDING
   PAID
   PARTIAL
@@ -492,7 +494,8 @@ model Vehicle {
   fuelType     String?
   transmission String?
   color        String?
-  mileage      Int @default(0)
+  mileage          Int      @default(0)
+  mileageUpdatedAt DateTime @default(now())
 
   oilType       String?
   oilCapacity   String?
@@ -666,6 +669,10 @@ model ServiceOrder {
   complaint    String?
   internalNote String?
 
+  requestKey String?
+  requestHash String?
+  creditDeliveryReason String?
+  maintenancePlanIds String[] @default([])
   estimatedDeliveryAt DateTime?
   deliveredAt         DateTime?
 
@@ -684,6 +691,7 @@ model ServiceOrder {
   notifications      Notification[]
   payments           Payment[]
 
+  @@unique([organizationId, requestKey])
   @@unique([organizationId, orderNumber])
   @@index([branchId])
   @@index([customerId])
@@ -711,6 +719,9 @@ model ServiceOrderItem {
   vatAmount      Decimal @default(0) @db.Decimal(12, 2)
   grossTotal     Decimal @default(0) @db.Decimal(12, 2)
 
+  quoteItems QuoteItem[]
+  approvedQuoteId String?
+  stockIssued Boolean @default(false)
   completed Boolean @default(false)
 
   createdAt DateTime @default(now())
@@ -795,6 +806,8 @@ model Quote {
 }
 
 model QuoteItem {
+  serviceOrderItemId String?
+  serviceOrderItem ServiceOrderItem? @relation(fields: [serviceOrderItemId], references: [id], onDelete: SetNull)
   id      String @id @default(cuid())
   quoteId String
   quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
@@ -1093,6 +1106,8 @@ model Media {
   uploadedById String?
   uploadedBy   User? @relation(fields: [uploadedById], references: [id])
 
+  object MediaObject?
+
   type       MediaType
   storageKey String   @unique
   fileName   String
@@ -1107,6 +1122,16 @@ model Media {
   @@index([vehicleId])
   @@index([serviceOrderId])
   @@index([inspectionId])
+  requestKey String?
+  @@unique([organizationId, requestKey])
+}
+
+model MediaObject {
+  mediaId String @id
+  media   Media  @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  data    Bytes
+
+  createdAt DateTime @default(now())
 }
 
 /* =========================================================
@@ -1155,6 +1180,8 @@ model Notification {
    ========================================================= */
 
 model Payment {
+  requestKey String?
+  requestHash String?
   id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
@@ -1182,6 +1209,7 @@ model Payment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([organizationId, requestKey])
   @@index([organizationId])
   @@index([customerId])
   @@index([serviceOrderId])

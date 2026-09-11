@@ -1,4 +1,5 @@
-﻿import {
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
+import {
   useEffect,
   useMemo,
   useState,
@@ -153,12 +154,8 @@ export default function CustomerDetail() {
       feature,
     ) ?? false;
 
-  const canViewFinance =
-    [
-      'OWNER',
-      'MANAGER',
-    ].includes(user?.role) &&
-    hasFeature('CASHIER');
+  const canViewFinance = user?.permissions?.includes('CASHIER_VIEW') && hasFeature('CASHIER');
+  const canUse = (feature, permission) => hasFeature(feature) && user?.permissions?.includes(permission);
 
   const [vehicleForm, setVehicleForm] =
     useState({
@@ -266,7 +263,9 @@ export default function CustomerDetail() {
     }
   }
 
-  async function load() {
+  useLiveRefresh(() => load(true), !busy);
+
+  async function load(background = false) {
     setError('');
 
     const emptyResponse =
@@ -277,40 +276,30 @@ export default function CustomerDetail() {
     const responses =
       await Promise.all([
         api.get(`/customers/${id}`),
-        hasFeature(
-          'SERVICE_ORDERS',
-        )
+        canUse('SERVICE_ORDERS', 'SERVICE_ORDER_VIEW')
           ? api.get(
               '/service-orders',
             )
           : emptyResponse,
-        hasFeature('QUOTES')
+        canUse('QUOTES', 'QUOTE_VIEW')
           ? api.get('/quotes')
           : emptyResponse,
-        hasFeature(
-          'APPOINTMENTS',
-        )
+        canUse('APPOINTMENTS', 'APPOINTMENT_VIEW')
           ? api.get(
               '/appointments',
             )
           : emptyResponse,
-        hasFeature(
-          'MAINTENANCE',
-        )
+        canUse('MAINTENANCE', 'MAINTENANCE_VIEW')
           ? api.get(
               '/maintenance/plans',
             )
           : emptyResponse,
-        hasFeature(
-          'MAINTENANCE',
-        )
+        canUse('MAINTENANCE', 'MAINTENANCE_VIEW')
           ? api.get(
               '/maintenance/records',
             )
           : emptyResponse,
-        hasFeature(
-          'MAINTENANCE',
-        )
+        canUse('MAINTENANCE', 'MAINTENANCE_VIEW')
           ? api.get(
               '/maintenance/packages',
             )
@@ -349,7 +338,7 @@ export default function CustomerDetail() {
 
     setCustomer(nextCustomer);
 
-    setContactForm({
+    if (!background) setContactForm({
       phone:
         nextCustomer.phone || '',
       email:
@@ -515,38 +504,10 @@ export default function CustomerDetail() {
         0,
       );
 
-  const totalBilled =
-    orders.reduce(
-      (orderSum, order) =>
-        orderSum +
-        (
-          order.items?.reduce(
-            (sum, item) => {
-              const gross =
-                Number(
-                  item.grossTotal ||
-                    0,
-                );
+  const totalBilled = quotes.filter(q => q.status === 'APPROVED').reduce((sum, q) => sum + Number(q.total || 0), 0)
+    + orders.filter(order => order.status !== 'CANCELLED' && !quotes.some(q => q.serviceOrderId === order.id))
+      .reduce((sum, order) => sum + (order.items || []).reduce((n, item) => n + (Number(item.grossTotal) || Number(item.totalPrice || 0) + Number(item.vatAmount || 0)), 0), 0);
 
-              return (
-                sum +
-                (gross > 0
-                  ? gross
-                  : Number(
-                      item.totalPrice ||
-                        0,
-                    ) +
-                    Number(
-                      item.vatAmount ||
-                        0,
-                    ))
-              );
-            },
-            0,
-          ) || 0
-        ),
-      0,
-    );
 
   const openBalance =
     Math.max(
@@ -817,6 +778,7 @@ export default function CustomerDetail() {
           items:
             quoteItems.map(
               (item) => ({
+                serviceOrderItemId: item.serviceOrderItemId,
                 type:
                   item.type,
                 name:

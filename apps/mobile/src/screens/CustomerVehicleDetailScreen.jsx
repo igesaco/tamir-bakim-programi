@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
 import {
   Image,
   ScrollView,
@@ -87,6 +88,8 @@ export default function CustomerVehicleDetailScreen({
     useState('');
   const [quoteBusy, setQuoteBusy] =
     useState(false);
+
+  useLiveRefresh(() => load(), !quoteBusy);
 
   async function load() {
     const result =
@@ -549,20 +552,7 @@ export default function CustomerVehicleDetailScreen({
 
             <Text style={styles.paymentValue}>
               {money(
-                pendingPayments.length
-                  ? pendingPayments.reduce(
-                      (
-                        sum,
-                        payment,
-                      ) =>
-                        sum +
-                        Number(
-                          payment.amount ||
-                            0,
-                        ),
-                      0,
-                    )
-                  : currentAccount?.openBalance,
+                currentAccount?.openBalance,
               )}{' '}
               ₺
             </Text>

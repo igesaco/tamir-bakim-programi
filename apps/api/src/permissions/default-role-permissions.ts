@@ -35,6 +35,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<
     PermissionKey.SERVICE_ORDER_STATUS,
     PermissionKey.SERVICE_ORDER_WORKLOG,
     PermissionKey.SERVICE_ORDER_ITEM_MANAGE,
+    PermissionKey.SERVICE_ORDER_ITEM_COMPLETE,
 
     PermissionKey.APPOINTMENT_VIEW,
     PermissionKey.APPOINTMENT_MANAGE,
@@ -56,6 +57,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<
   ],
 
   [UserRole.TECHNICIAN]: [
+    PermissionKey.SERVICE_ORDER_ITEM_COMPLETE,
+    PermissionKey.NOTIFICATION_VIEW,
     PermissionKey.SERVICE_ORDER_VIEW,
     PermissionKey.SERVICE_ORDER_STATUS,
     PermissionKey.SERVICE_ORDER_WORKLOG,
@@ -67,6 +70,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<
   ],
 
   [UserRole.WAREHOUSE]: [
+    PermissionKey.NOTIFICATION_VIEW,
     PermissionKey.INVENTORY_VIEW,
     PermissionKey.INVENTORY_MANAGE,
     PermissionKey.SUPPLIER_VIEW,
@@ -74,12 +78,16 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<
   ],
 
   [UserRole.ACCOUNTING]: [
+    PermissionKey.CUSTOMER_UPDATE,
+    PermissionKey.VEHICLE_UPDATE,
+    PermissionKey.SERVICE_ORDER_STATUS,
     PermissionKey.CUSTOMER_VIEW,
     PermissionKey.VEHICLE_VIEW,
 
     PermissionKey.SERVICE_ORDER_VIEW,
     PermissionKey.SERVICE_ORDER_ASSIGN,
     PermissionKey.SERVICE_ORDER_ITEM_MANAGE,
+    PermissionKey.SERVICE_ORDER_ITEM_COMPLETE,
 
     PermissionKey.QUOTE_VIEW,
     PermissionKey.QUOTE_CREATE,

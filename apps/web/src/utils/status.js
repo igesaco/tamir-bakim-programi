@@ -29,6 +29,7 @@
   INACTIVE: 'Pasif',
 
   PAID: 'Ödendi',
+  SETTLED: 'Bakiye kapandı',
   PARTIAL: 'Kısmi Ödeme',
   PENDING: 'Bekliyor',
   REFUNDED: 'İade Edildi',

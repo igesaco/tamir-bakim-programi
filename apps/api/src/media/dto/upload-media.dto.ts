@@ -1,5 +1,6 @@
 import {
   IsEnum,
+  IsUUID,
   IsIn,
   IsOptional,
   IsString,
@@ -7,6 +8,10 @@ import {
 import { MediaType } from '@prisma/client';
 
 export class UploadMediaDto {
+  @IsOptional()
+  @IsUUID()
+  requestKey?: string;
+
   @IsEnum(MediaType)
   type: MediaType;
 

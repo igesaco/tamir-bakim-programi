@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
 import {
   useEffect,
   useMemo,
@@ -17,6 +18,8 @@ export default function PricingQueue() {
     useState('');
   const [error, setError] =
     useState('');
+
+  useLiveRefresh(() => load(true));
 
   async function load() {
     const response =

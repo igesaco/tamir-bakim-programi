@@ -1,16 +1,13 @@
+import { atomic } from '../workflow/transaction';
+import { applyQuoteStatus } from '../workflow/quote-status';
 import {
   BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import {
-  NotificationChannel,
-  NotificationStatus,
-  PaymentMethod,
-  PaymentStatus,
   QuoteStatus,
   ServiceItemType,
-  ServiceOrderStatus,
   UserRole,
 } from '@prisma/client';
 
@@ -35,6 +32,7 @@ export class QuotesService {
     actorRole: UserRole,
     dto: CreateQuoteDto,
   ) {
+    return atomic(this.prisma, organizationId, async tx => {
     if (!dto.items?.length) {
       throw new BadRequestException(
         'Teklifte en az bir kalem bulunmalıdır.',
@@ -42,7 +40,7 @@ export class QuotesService {
     }
 
     const vehicle =
-      await this.prisma.vehicle.findFirst({
+      await tx.vehicle.findFirst({
         where: {
           id: dto.vehicleId,
           customerId:
@@ -77,7 +75,7 @@ export class QuotesService {
 
     if (dto.serviceOrderId) {
       const serviceOrder =
-        await this.prisma.serviceOrder.findFirst({
+        await tx.serviceOrder.findFirst({
           where: {
             id: dto.serviceOrderId,
             organizationId,
@@ -90,6 +88,7 @@ export class QuotesService {
           },
         });
 
+      if (serviceOrder && ['DELIVERED', 'CANCELLED'].includes(serviceOrder.status)) throw new BadRequestException('Kapanmış iş emrine teklif eklenemez.');
       if (!serviceOrder) {
         throw new BadRequestException(
           'İş emri teklif bilgileriyle eşleşmiyor veya bu iş emrine erişim yetkiniz yok.',
@@ -98,6 +97,12 @@ export class QuotesService {
 
       effectiveBranchId =
         serviceOrder.branchId;
+    }
+
+    if (dto.items.some(item => item.serviceOrderItemId)) {
+      const ids = dto.items.map(item => item.serviceOrderItemId).filter(Boolean) as string[];
+      const count = await tx.serviceOrderItem.count({ where: { id: { in: ids }, serviceOrderId: dto.serviceOrderId || '__none__', serviceOrder: { organizationId } } });
+      if (new Set(ids).size !== ids.length || count !== ids.length) throw new BadRequestException('Teklif kalemleri iş emriyle eşleşmiyor.');
     }
 
     const partIds = [
@@ -115,7 +120,7 @@ export class QuotesService {
 
     if (partIds.length) {
       const parts =
-        await this.prisma.part.findMany({
+        await tx.part.findMany({
           where: {
             id: {
               in: partIds,
@@ -207,6 +212,7 @@ export class QuotesService {
           );
 
         return {
+          serviceOrderItemId: item.serviceOrderItemId,
           partId:
             item.partId,
           type:
@@ -279,7 +285,7 @@ export class QuotesService {
         ),
       );
 
-    return this.prisma.quote.create({
+    return tx.quote.create({
       data: {
         organizationId,
         branchId:
@@ -308,6 +314,7 @@ export class QuotesService {
         vehicle: true,
         items: true,
       },
+    });
     });
   }
 
@@ -379,234 +386,7 @@ export class QuotesService {
     return quote;
   }
 
-  async updateStatus(
-    organizationId: string,
-    id: string,
-    status: QuoteStatus,
-    actorRole: UserRole,
-    branchId: string | null,
-  ) {
-    const quote =
-      await this.prisma.quote.findFirst({
-        where: {
-          id,
-          organizationId,
-          ...(actorRole ===
-          UserRole.SERVICE_ADVISOR
-            ? {
-                branchId:
-                  branchId ??
-                  '__branch_not_assigned__',
-              }
-            : {}),
-        },
-      });
-
-    if (!quote) {
-      throw new NotFoundException(
-        'Teklif bulunamadı veya erişim yetkiniz yok.',
-      );
-    }
-
-    if (
-      status !==
-      QuoteStatus.APPROVED
-    ) {
-      return this.prisma.$transaction(
-        async (tx) => {
-          const updated =
-            await tx.quote.update({
-              where: { id },
-              data: {
-                status,
-                sentAt:
-                  status ===
-                  QuoteStatus.SENT
-                    ? new Date()
-                    : undefined,
-              },
-              include: {
-                items: true,
-              },
-            });
-
-          if (
-            status ===
-              QuoteStatus.SENT &&
-            quote.serviceOrderId
-          ) {
-            await tx.serviceOrder.updateMany({
-              where: {
-                id:
-                  quote.serviceOrderId,
-                organizationId,
-              },
-              data: {
-                status:
-                  ServiceOrderStatus.QUOTE_WAITING,
-              },
-            });
-          }
-
-          return updated;
-        },
-      );
-    }
-
-    return this.prisma.$transaction(
-      async (tx) => {
-        const approvedAt =
-          new Date();
-
-        const updatedQuote =
-          await tx.quote.update({
-            where: { id },
-            data: {
-              status:
-                QuoteStatus.APPROVED,
-              approvedAt,
-            },
-            include: {
-              items: true,
-            },
-          });
-
-        if (
-          !quote.serviceOrderId
-        ) {
-          return updatedQuote;
-        }
-
-        const order =
-          await tx.serviceOrder.findFirst({
-            where: {
-              id:
-                quote.serviceOrderId,
-              organizationId,
-            },
-          });
-
-        if (!order) {
-          throw new BadRequestException(
-            'Teklife bağlı iş emri bulunamadı.',
-          );
-        }
-
-        await tx.serviceOrder.update({
-          where: {
-            id: order.id,
-          },
-          data: {
-            status:
-              ServiceOrderStatus.APPROVED,
-          },
-        });
-
-        const amount =
-          Number(
-            quote.total,
-          );
-
-        if (amount > 0) {
-          const existingPending =
-            await tx.payment.findFirst({
-              where: {
-                organizationId,
-                quoteId: id,
-                status:
-                  PaymentStatus.PENDING,
-              },
-              select: {
-                id: true,
-              },
-            });
-
-          if (!existingPending) {
-            await tx.payment.create({
-              data: {
-                organizationId,
-                branchId:
-                  order.branchId,
-                customerId:
-                  order.customerId,
-                serviceOrderId:
-                  order.id,
-                quoteId: id,
-                amount,
-                method:
-                  PaymentMethod.OTHER,
-                status:
-                  PaymentStatus.PENDING,
-                reference:
-                  `QUOTE_APPROVAL:${id}`,
-              },
-            });
-          }
-        }
-
-        if (
-          order.assignedTechnicianId
-        ) {
-          await tx.notification.create({
-            data: {
-              organizationId,
-              branchId:
-                order.branchId,
-              userId:
-                order.assignedTechnicianId,
-              serviceOrderId:
-                order.id,
-              channel:
-                NotificationChannel.IN_APP,
-              status:
-                NotificationStatus.PENDING,
-              title:
-                'İş emri onaylandı',
-              message:
-                `${order.orderNumber} iş emri müşteri tarafından onaylandı. İşleme başlayabilirsiniz.`,
-            },
-          });
-        }
-
-        const customer =
-          await tx.customer.findUnique({
-            where: {
-              id:
-                order.customerId,
-            },
-            select: {
-              portalEnabled: true,
-            },
-          });
-
-        if (
-          customer?.portalEnabled
-        ) {
-          await tx.notification.create({
-            data: {
-              organizationId,
-              branchId:
-                order.branchId,
-              customerId:
-                order.customerId,
-              serviceOrderId:
-                order.id,
-              channel:
-                NotificationChannel.IN_APP,
-              status:
-                NotificationStatus.PENDING,
-              title:
-                'Servis işleminiz onaylandı',
-              message:
-                amount > 0
-                  ? `İş emriniz onaylandı. ${amount.toFixed(2)} TL tutarında bekleyen ödemeniz bulunmaktadır.`
-                  : 'İş emriniz onaylandı. Servis işlemleri başlatılabilir.',
-            },
-          });
-        }
-
-        return updatedQuote;
-      },
-    );
+  updateStatus(organizationId: string, id: string, status: QuoteStatus, actorRole: UserRole, branchId: string | null) {
+    return atomic(this.prisma, organizationId, tx => applyQuoteStatus(tx, organizationId, id, status, { role: actorRole, branchId }));
   }
 }

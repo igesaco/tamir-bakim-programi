@@ -26,6 +26,14 @@ export class BranchesService {
     });
   }
 
+  options(organizationId: string, role: string, branchId: string | null) {
+    return this.prisma.branch.findMany({
+      where: { organizationId, active: true,
+        ...(role === 'SERVICE_ADVISOR' ? { id: branchId ?? '__none__' } : {}),
+      }, select: { id: true, name: true }, orderBy: { name: 'asc' },
+    });
+  }
+
   findAll(organizationId: string) {
     return this.prisma.branch.findMany({
       where: {

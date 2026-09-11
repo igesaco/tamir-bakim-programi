@@ -23,6 +23,18 @@ import { UpdateOrganizationBrandingDto } from './dto/update-organization-brandin
 import { UpdateOrganizationCommercialDto } from './dto/update-organization-commercial.dto';
 import { UpdateTenantOwnerDto } from './dto/update-tenant-owner.dto';
 
+const featureDependencies: Partial<Record<FeatureKey, FeatureKey[]>> = {
+  [FeatureKey.VEHICLES_QR]: [FeatureKey.CUSTOMERS],
+  [FeatureKey.SERVICE_ORDERS]: [FeatureKey.CUSTOMERS, FeatureKey.VEHICLES_QR],
+  [FeatureKey.INSPECTIONS]: [FeatureKey.SERVICE_ORDERS],
+  [FeatureKey.QUOTES]: [FeatureKey.SERVICE_ORDERS],
+  [FeatureKey.INVENTORY]: [FeatureKey.SERVICE_ORDERS],
+  [FeatureKey.MAINTENANCE]: [FeatureKey.VEHICLES_QR],
+  [FeatureKey.MEDIA]: [FeatureKey.VEHICLES_QR],
+  [FeatureKey.CASHIER]: [FeatureKey.SERVICE_ORDERS],
+  [FeatureKey.CUSTOMER_PORTAL]: [FeatureKey.CUSTOMERS, FeatureKey.VEHICLES_QR],
+};
+
 @Injectable()
 export class PlatformService
   implements OnModuleInit
@@ -595,6 +607,36 @@ export class PlatformService
         id: organizationId,
       },
     });
+
+    const current = new Set(
+      await this.entitlementsService.getEffectiveFeatures(
+        organizationId,
+      ),
+    );
+    const next = new Set(current);
+    if (enabled) next.add(feature);
+    else next.delete(feature);
+
+    if (enabled) {
+      const missing = (featureDependencies[feature] || [])
+        .filter(required => !next.has(required));
+      if (missing.length) {
+        throw new BadRequestException(
+          `${feature} modülü için önce ${missing.join(', ')} modüllerini açın.`,
+        );
+      }
+    } else {
+      const dependants = Object.entries(featureDependencies)
+        .filter(([candidate, requirements]) =>
+          next.has(candidate as FeatureKey) && requirements?.includes(feature),
+        )
+        .map(([candidate]) => candidate);
+      if (dependants.length) {
+        throw new BadRequestException(
+          `${feature} kapatılamaz. Önce bağlı modülleri kapatın: ${dependants.join(', ')}.`,
+        );
+      }
+    }
 
     await this.prisma.organizationFeatureOverride.upsert({
       where: {

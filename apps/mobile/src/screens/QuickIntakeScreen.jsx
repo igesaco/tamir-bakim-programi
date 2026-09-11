@@ -1,326 +1,210 @@
-import { useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Crypto from 'expo-crypto';
 import api from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Button, Card, Field, Message, ScreenTitle } from '../components/UI';
 import { readDocument } from '../documentOcr';
-import { colors, radius, spacing } from '../theme';
+import { colors, spacing } from '../theme';
 
-const EMPTY_ITEM = () => ({ type: 'LABOR', name: '', quantity: '1' });
+const emptyForm = () => ({ firstName: '', lastName: '', phone: '', email: '', plate: '', brand: '', model: '', modelYear: '', vin: '', mileage: '', complaint: '', internalNote: '', fuelLevel: '', existingDamage: '', valuablesNote: '' });
+const emptyItem = () => ({ type: 'LABOR', name: '', quantity: '1' });
+const normalizedPlate = value => String(value || '').replace(/\s+/g, '').toLocaleUpperCase('tr-TR');
+const apiMessage = (e, fallback) => { const m = e?.response?.data?.message; return Array.isArray(m) ? m.join(', ') : m || e?.message || fallback; };
 
-function apiMessage(error, fallback) {
-  const message = error?.response?.data?.message;
-  return Array.isArray(message) ? message.join(', ') : message || fallback;
-}
-
-export default function QuickIntakeScreen({
-  initialCustomerId = '',
-  initialVehicleId = '',
-  onSeedConsumed,
-}) {
+export default function QuickIntakeScreen({ initialCustomerId = '', initialVehicleId = '', onSeedConsumed }) {
   const { user } = useAuth();
   const [customers, setCustomers] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [templates, setTemplates] = useState([]);
   const [search, setSearch] = useState('');
-  const [customerId, setCustomerId] = useState(initialCustomerId);
-  const [vehicleId, setVehicleId] = useState(initialVehicleId);
+  const [customerId, setCustomerId] = useState('');
+  const [vehicleId, setVehicleId] = useState('');
+  const [branchId, setBranchId] = useState(user?.branchId || '');
+  const [form, setForm] = useState(emptyForm);
+  const [items, setItems] = useState([emptyItem()]);
+  const [photos, setPhotos] = useState([]);
+  const [requestKey, setRequestKey] = useState(() => Crypto.randomUUID());
+  const [submitted, setSubmitted] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [scanBusy, setScanBusy] = useState('');
+  const sending = useRef(false);
+  const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-
-  const [form, setForm] = useState({
-    firstName: '', lastName: '', phone: '', email: '',
-    plate: '', brand: '', model: '', modelYear: '', vin: '',
-    fuelType: '', transmission: '', color: '', mileage: '',
-    complaint: '', internalNote: '',
-  });
-  const [items, setItems] = useState([EMPTY_ITEM()]);
-
-  async function loadCustomers() {
-    const response = await api.get('/customers');
-    setCustomers(response.data);
-    return response.data;
-  }
+  const draftFile = `${FileSystem.documentDirectory}intake-${user?.organizationId}-${user?.id || user?.sub}.json`;
+  const writes = useRef(Promise.resolve());
+  const persist = value => {
+    writes.current = writes.current.catch(() => {}).then(() => FileSystem.writeAsStringAsync(draftFile, JSON.stringify(value)));
+    return writes.current;
+  };
+  const snapshot = { customerId, vehicleId, branchId, form, items, photos, requestKey, submitted };
+  const latest = useRef(snapshot);
+  latest.current = snapshot;
 
   useEffect(() => {
-    loadCustomers()
-      .then((list) => {
-        const seededCustomer = list.find((item) => item.id === initialCustomerId);
-        if (seededCustomer) selectCustomer(seededCustomer, initialVehicleId);
-        onSeedConsumed?.();
-      })
-      .catch((err) => setError(apiMessage(err, 'Müşteri listesi yüklenemedi.')));
+    let active = true;
+    async function init() {
+      if (!initialCustomerId) {
+        try {
+          const saved = JSON.parse(await FileSystem.readAsStringAsync(draftFile));
+          if (active && saved.requestKey) {
+            setCustomerId(saved.customerId || ''); setVehicleId(saved.vehicleId || '');
+            setBranchId(saved.branchId || user?.branchId || ''); setForm({ ...emptyForm(), ...saved.form });
+            setItems(saved.items || [emptyItem()]); setPhotos(saved.photos || []);
+            setRequestKey(saved.requestKey); setSubmitted(saved.submitted || null);
+            setMessage('Kaydedilen kabul taslağı geri yüklendi.');
+          }
+        } catch { /* A first visit has no saved draft. */ }
+      }
+      if (active) setReady(true);
+      const results = await Promise.allSettled([api.get('/customers'), api.get('/branches/options'), api.get('/inspections/mobile-intake-v3/templates')]);
+      if (!active) return;
+      if (results[0].status === 'fulfilled') {
+        const list = results[0].value.data; setCustomers(list);
+        const seeded = list.find(c => c.id === initialCustomerId);
+        if (seeded) selectCustomer(seeded, initialVehicleId);
+      } else setError('Müşteri listesi alınamadı. Bağlantı geldiğinde Yenile düğmesini kullanın; taslağınız korunur.');
+      if (results[1].status === 'fulfilled') setBranches(results[1].value.data);
+      if (results[2].status === 'fulfilled') setTemplates(results[2].value.data);
+      onSeedConsumed?.();
+    }
+    init();
+    return () => { active = false; if (ready) persist(latest.current).catch(() => {}); };
   }, []);
 
-  const filteredCustomers = useMemo(() => {
+  useEffect(() => {
+    if (ready) persist(snapshot).catch(() => setError('Taslak cihaza kaydedilemedi. Depolama alanını kontrol edin.'));
+  }, [ready, customerId, vehicleId, branchId, form, items, photos, requestKey, submitted]);
+
+  const matches = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('tr-TR');
-    if (!term) return customers.slice(0, 8);
-    return customers.filter((customer) => {
-      const text = [
-        customer.firstName, customer.lastName, customer.phone,
-        ...(customer.vehicles || []).map((vehicle) => vehicle.plate),
-      ].filter(Boolean).join(' ').toLocaleLowerCase('tr-TR');
-      return text.includes(term);
-    }).slice(0, 8);
+    if (!term) return [];
+    return customers.filter(c => `${c.firstName} ${c.lastName} ${c.phone || ''}`.toLocaleLowerCase('tr-TR').includes(term)
+      || (c.vehicles || []).some(v => normalizedPlate(v.plate).includes(normalizedPlate(search)))).slice(0, 8);
   }, [customers, search]);
 
-  function selectCustomer(customer, preferredVehicleId = '') {
+  function selectCustomer(customer, preferredId = '') {
     const vehicles = customer.vehicles || [];
-    const vehicle = vehicles.find((item) => item.id === preferredVehicleId) || vehicles[0];
-    setCustomerId(customer.id);
-    setVehicleId(vehicle?.id || '');
-    setForm((current) => ({
-      ...current,
-      firstName: customer.firstName || '',
-      lastName: customer.lastName || '',
-      phone: customer.phone || '',
-      email: customer.email || '',
-      plate: vehicle?.plate || '',
-      brand: vehicle?.brand || '',
-      model: vehicle?.model || '',
-      modelYear: vehicle?.modelYear ? String(vehicle.modelYear) : '',
-      vin: vehicle?.vin || '',
-      fuelType: vehicle?.fuelType || '',
-      transmission: vehicle?.transmission || '',
-      color: vehicle?.color || '',
-      mileage: String(vehicle?.mileage || 0),
-    }));
-    setSearch('');
+    const vehicle = vehicles.find(v => v.id === preferredId)
+      || vehicles.find(v => normalizedPlate(v.plate) === normalizedPlate(search))
+      || (vehicles.length === 1 ? vehicles[0] : null);
+    setCustomerId(customer.id); setVehicleId(vehicle?.id || ''); setSearch('');
+    setForm(current => ({ ...current, firstName: customer.firstName || '', lastName: customer.lastName || '', phone: customer.phone || '', email: customer.email || '',
+      plate: vehicle?.plate || '', brand: vehicle?.brand || '', model: vehicle?.model || '', modelYear: String(vehicle?.modelYear || ''), vin: vehicle?.vin || '', mileage: '' }));
   }
-
-  function newCustomer() {
-    setCustomerId('');
-    setVehicleId('');
-    setForm({
-      firstName: '', lastName: '', phone: '', email: '',
-      plate: '', brand: '', model: '', modelYear: '', vin: '',
-      fuelType: '', transmission: '', color: '', mileage: '',
-      complaint: '', internalNote: '',
-    });
+  function newVehicle() {
+    setVehicleId(''); setForm(current => ({ ...current, plate: '', brand: '', model: '', modelYear: '', vin: '', mileage: '' }));
   }
-
-  async function scan(kind) {
-    setError('');
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      setError('Belge okumak için kamera izni gerekli.');
-      return;
-    }
-
-    const shot = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      quality: 1,
-      allowsEditing: false,
-    });
-    if (shot.canceled || !shot.assets?.[0]?.uri) return;
-
-    setScanBusy(kind);
+  function reset() {
+    setCustomerId(''); setVehicleId(''); setForm(emptyForm()); setItems([emptyItem()]); setPhotos([]);
+    setSubmitted(null); setRequestKey(Crypto.randomUUID()); setSearch('');
+  }
+  async function capture(kind = 'photo', library = false) {
+    setError(''); setBusy(true);
     try {
-      const result = await readDocument(shot.assets[0].uri, kind);
-      if (kind === 'identity') {
-        setForm((current) => ({
-          ...current,
-          firstName: result.firstName || current.firstName,
-          lastName: result.lastName || current.lastName,
-        }));
-        setMessage('Kimlik okundu. Ad ve soyadı kontrol edin. Kimlik numarası kaydedilmedi.');
+      const permission = library ? await ImagePicker.requestMediaLibraryPermissionsAsync() : await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) throw new Error('Kamera veya fotoğraf erişim izni gerekli.');
+      const result = library ? await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.75 }) : await ImagePicker.launchCameraAsync({ quality: 0.75 });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      if (kind === 'photo') {
+        const key = Crypto.randomUUID();
+        const extension = asset.mimeType === 'image/png' ? 'png' : asset.mimeType === 'image/heic' ? 'heic' : 'jpg';
+        const uri = `${FileSystem.documentDirectory}intake-photo-${key}.${extension}`;
+        await FileSystem.copyAsync({ from: asset.uri, to: uri });
+        setPhotos(current => [...current, { uri, requestKey: key, name: `${key}.${extension}`, mimeType: asset.mimeType || 'image/jpeg', uploaded: false }]);
       } else {
-        setForm((current) => ({
-          ...current,
-          plate: result.plate || current.plate,
-          brand: result.brand || current.brand,
-          model: result.model || current.model,
-          modelYear: result.modelYear || current.modelYear,
-          vin: result.vin || current.vin,
-        }));
-        setMessage('Ruhsat okundu. Algılanan araç bilgilerini kontrol edip gerekirse düzeltin.');
+        if ((kind === 'identity' && customerId) || (kind === 'registration' && vehicleId)) throw new Error('Kayıtlı bilgiyi değiştirmek için önce Yeni müşteri / Yeni araç seçin.');
+        const values = await readDocument(asset.uri, kind);
+        setForm(current => ({ ...current, ...(kind === 'identity' ? { firstName: values.firstName || '', lastName: values.lastName || '' }
+          : { plate: values.plate || '', brand: values.brand || '', model: values.model || '', modelYear: values.modelYear || '', vin: values.vin || '' }) }));
+        setMessage('Belge okundu. Kaydetmeden önce bilgileri kontrol edin.');
       }
-    } catch (err) {
-      setError(`Belge okunamadı: ${err?.message || 'OCR hatası'}. Bilgileri manuel girebilirsiniz.`);
-    } finally {
-      setScanBusy('');
-    }
+    } catch (e) { setError(apiMessage(e, 'Fotoğraf veya belge okunamadı.')); }
+    finally { setBusy(false); }
   }
-
-  function updateItem(index, field, value) {
-    setItems((current) => current.map((item, itemIndex) => (
-      itemIndex === index ? { ...item, [field]: value } : item
-    )));
-  }
-
   async function submit() {
-    if (!customerId && !form.firstName.trim()) {
-      setError('Yeni müşteri için en az ad bilgisi gerekli.');
-      return;
-    }
-    if (!vehicleId && !form.plate.trim()) {
-      setError('Araç plakası gerekli.');
-      return;
-    }
-    if (!form.mileage.trim()) {
-      setError('Araç kabul kilometresi gerekli.');
-      return;
-    }
-
-    setBusy(true);
-    setError('');
-    setMessage('');
+    if (sending.current || busy) return;
+    if (!branchId) return setError('Şube seçin.');
+    if (!submitted && ((!customerId && form.firstName.trim().length < 2) || (!vehicleId && (!form.plate.trim() || !form.brand.trim() || !form.model.trim())) || !form.mileage.trim()))
+      return setError('Müşteri adı, araç bilgileri ve güncel kabul kilometresini tamamlayın.');
+    sending.current = true; setBusy(true); setError('');
     try {
-      await api.post('/inspections/mobile-intake-v3', {
-        branchId: user?.branchId || undefined,
-        customerId: customerId || undefined,
-        customerFirstName: customerId ? undefined : form.firstName.trim(),
-        customerLastName: customerId ? undefined : form.lastName.trim() || undefined,
-        customerPhone: customerId ? undefined : form.phone.trim() || undefined,
-        customerEmail: customerId ? undefined : form.email.trim() || undefined,
-        vehicleId: vehicleId || undefined,
-        plate: vehicleId ? undefined : form.plate.trim(),
-        brand: vehicleId ? undefined : form.brand.trim() || undefined,
-        model: vehicleId ? undefined : form.model.trim() || undefined,
-        modelYear: !vehicleId && form.modelYear ? Number(form.modelYear) : undefined,
-        vin: vehicleId ? undefined : form.vin.trim() || undefined,
-        fuelType: vehicleId ? undefined : form.fuelType.trim() || undefined,
-        transmission: vehicleId ? undefined : form.transmission.trim() || undefined,
-        color: vehicleId ? undefined : form.color.trim() || undefined,
-        mileage: Number(form.mileage || 0),
-        customerComplaint: form.complaint.trim() || undefined,
-        internalNote: form.internalNote.trim() || undefined,
-        plannedItems: items.filter((item) => item.name.trim()).map((item) => ({
-          type: item.type,
-          name: item.name.trim(),
-          quantity: Number(item.quantity || 1),
-          unitPrice: 0,
-          vatRate: 20,
-        })),
-      });
-
-      Alert.alert('Araç kabul edildi', 'İş emri oluşturuldu ve fiyatlandırma için muhasebeye gönderildi.');
-      setMessage('Kabul tamamlandı. Yeni araç kabulüne hazırsınız.');
-      newCustomer();
-      setItems([EMPTY_ITEM()]);
-      await loadCustomers();
-    } catch (err) {
-      setError(apiMessage(err, 'Araç kabul işlemi tamamlanamadı.'));
-    } finally {
-      setBusy(false);
-    }
+      await persist(latest.current);
+      let result = submitted;
+      if (!result) {
+        const response = await api.post('/inspections/mobile-intake-v3', {
+          requestKey, branchId, customerId: customerId || undefined, vehicleId: vehicleId || undefined,
+          customerFirstName: customerId ? undefined : form.firstName.trim(), customerLastName: customerId ? undefined : form.lastName.trim() || undefined,
+          customerPhone: customerId ? undefined : form.phone.trim() || undefined, customerEmail: customerId ? undefined : form.email.trim() || undefined,
+          plate: vehicleId ? undefined : normalizedPlate(form.plate), brand: vehicleId ? undefined : form.brand.trim(), model: vehicleId ? undefined : form.model.trim(),
+          modelYear: !vehicleId && form.modelYear ? Number(form.modelYear) : undefined, vin: !vehicleId && form.vin ? form.vin.trim() : undefined,
+          mileage: Number(form.mileage), customerComplaint: form.complaint || undefined, internalNote: form.internalNote || undefined,
+          fuelLevel: form.fuelLevel || undefined, existingDamage: form.existingDamage || undefined, valuablesNote: form.valuablesNote || undefined,
+          plannedItems: items.filter(i => i.name.trim()).map(i => ({ type: i.type, name: i.name.trim(), quantity: Number(i.quantity || 1), unitPrice: 0, vatRate: 20 })),
+        });
+        result = { orderId: response.data.serviceOrder.id, inspectionId: response.data.inspection.id };
+        setSubmitted(result); await persist({ ...latest.current, submitted: result });
+      }
+      const remainingPhotos = [...photos];
+      for (let i = 0; i < remainingPhotos.length; i++) {
+        const photo = remainingPhotos[i]; if (photo.uploaded) continue;
+        const body = new FormData();
+        body.append('file', { uri: photo.uri, name: photo.name, type: photo.mimeType });
+        body.append('type', 'ACCEPTANCE'); body.append('serviceOrderId', result.orderId); body.append('inspectionId', result.inspectionId);
+        body.append('requestKey', photo.requestKey); body.append('customerVisible', 'false');
+        await api.post('/media/upload', body, { headers: { 'Content-Type': 'multipart/form-data' } });
+        remainingPhotos[i] = { ...photo, uploaded: true }; setPhotos([...remainingPhotos]);
+        await persist({ ...latest.current, submitted: result, photos: remainingPhotos });
+      }
+      reset();
+      await persist({ ...latest.current, form: emptyForm(), customerId: '', vehicleId: '', items: [emptyItem()], photos: [], submitted: null, requestKey: Crypto.randomUUID() });
+      for (const photo of photos) FileSystem.deleteAsync(photo.uri, { idempotent: true }).catch(() => {});
+      setMessage('Kabul ve fotoğraflar kaydedildi. Ofis aynı iş emrini görebilir.');
+      Alert.alert('Kabul tamamlandı', 'İş emri ve fotoğraflar kaydedildi.');
+    } catch (e) { setError(apiMessage(e, 'Kayıt tamamlanamadı. Taslak korunuyor; tekrar deneyebilirsiniz.')); }
+    finally { sending.current = false; setBusy(false); }
   }
-
-  return (
-    <KeyboardAvoidingView style={styles.page} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <ScreenTitle title="Hızlı Araç Kabul" subtitle="Belgeyi okut, bilgileri kontrol et, müşteri talebini yaz ve kabulü tamamla." />
-        <Message text={error} />
-        <Message text={message} tone="success" />
-
-        <Card style={styles.scanCard}>
-          <Text style={styles.sectionTitle}>1. Belgeden otomatik doldur</Text>
-          <View style={styles.buttonRow}>
-            <View style={styles.flex}><Button title={scanBusy === 'identity' ? 'Okunuyor...' : 'Kimlik Oku'} onPress={() => scan('identity')} disabled={!!scanBusy || busy} /></View>
-            <View style={styles.flex}><Button title={scanBusy === 'registration' ? 'Okunuyor...' : 'Ruhsat Oku'} onPress={() => scan('registration')} disabled={!!scanBusy || busy} tone="ghost" /></View>
-          </View>
-          <Text style={styles.help}>Kimlikten yalnızca ad/soyad alınır. T.C. kimlik numarası okunmaz veya kaydedilmez. OCR sonucu her zaman aşağıdan kontrol edilebilir.</Text>
+  const field = (key, label, extra = {}) => <Field label={label} value={form[key]} editable={!busy && !submitted && !(customerId && ['firstName','lastName','phone','email'].includes(key)) && !(vehicleId && ['plate','brand','model','modelYear','vin'].includes(key))} onChangeText={value => setForm(current => ({ ...current, [key]: value }))} {...extra} />;
+  return <KeyboardAvoidingView style={styles.page} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScreenTitle title="Araç Kabul" subtitle="Bir kez kaydet; ofis ve teknik ekip aynı iş emrinde devam etsin." />
+      <Message text={error} /><Message text={message} tone="success" />
+      {submitted && <Text style={styles.info}>İş emri kaydedildi. Kalan fotoğrafları göndermek için tekrar deneyin.</Text>}
+      <View pointerEvents={busy || submitted ? 'none' : 'auto'}>
+        <Card><Text style={styles.heading}>Şube</Text>{branches.map(b => <Button key={b.id} title={`${b.id === branchId ? '✓ ' : ''}${b.name}`} tone="ghost" onPress={() => setBranchId(b.id)} />)}</Card>
+        <Card><Text style={styles.heading}>Müşteri ve araç</Text>
+          <Field label="Müşteri / plaka ara" value={search} onChangeText={setSearch} />
+          <Button title="Listeyi yenile" tone="ghost" onPress={() => api.get('/customers').then(r => setCustomers(r.data)).catch(e => setError(apiMessage(e, 'Liste alınamadı.')))} />
+          {matches.map(c => <Pressable key={c.id} onPress={() => selectCustomer(c)}><Text style={styles.info}>{c.firstName} {c.lastName} • {(c.vehicles || []).map(v => v.plate).join(', ')}</Text></Pressable>)}
+          <Button title="Yeni müşteri" tone="ghost" onPress={() => { setCustomerId(''); newVehicle(); setForm(emptyForm()); }} />
+          <Button title="Kimlikten ad/soyad oku" tone="ghost" disabled={!!customerId} onPress={() => capture('identity')} />
+          {field('firstName','Ad')}{field('lastName','Soyad')}{field('phone','Telefon (isteğe bağlı)',{ keyboardType: 'phone-pad' })}{field('email','E-posta (isteğe bağlı)',{ autoCapitalize: 'none' })}
+          {customerId && <Text style={styles.info}>Kayıtlı müşterinin iletişim bilgisi ofisteki müşteri ekranından tamamlanabilir.</Text>}
+          {(customers.find(c => c.id === customerId)?.vehicles || []).map(v => <Button key={v.id} title={`${v.id === vehicleId ? '✓ ' : ''}${v.plate}`} tone="ghost" onPress={() => selectCustomer(customers.find(c => c.id === customerId), v.id)} />)}
+          <Button title="Bu müşteriye yeni araç" tone="ghost" onPress={newVehicle} />
+          <Button title="Ruhsat oku" tone="ghost" disabled={!!vehicleId} onPress={() => capture('registration')} />
+          {field('plate','Plaka')}{field('brand','Marka')}{field('model','Model')}{field('modelYear','Model yılı',{ keyboardType: 'number-pad' })}{field('vin','Şasi / VIN')}{field('mileage','Güncel kabul KM',{ keyboardType: 'number-pad' })}
         </Card>
-
-        <Card style={styles.cardGap}>
-          <View style={styles.sectionHead}><Text style={styles.sectionTitle}>2. Müşteri</Text><Pressable onPress={newCustomer}><Text style={styles.link}>+ Yeni müşteri</Text></Pressable></View>
-          <Field label="Kayıtlı müşteri / plaka ara" placeholder="Ad, telefon veya plaka" value={search} onChangeText={setSearch} />
-          {!!search && filteredCustomers.map((customer) => (
-            <Pressable key={customer.id} style={styles.result} onPress={() => selectCustomer(customer)}>
-              <Text style={styles.resultTitle}>{customer.firstName} {customer.lastName}</Text>
-              <Text style={styles.resultSub}>{customer.phone || 'Telefon yok'} • {(customer.vehicles || []).map((vehicle) => vehicle.plate).join(', ') || 'Araç yok'}</Text>
-            </Pressable>
-          ))}
-          {customerId ? <Text style={styles.selected}>✓ Kayıtlı müşteri seçildi</Text> : null}
-          <View style={styles.twoCol}>
-            <View style={styles.flex}><Field label="Ad" value={form.firstName} editable={!customerId} onChangeText={(value) => setForm({ ...form, firstName: value })} /></View>
-            <View style={styles.flex}><Field label="Soyad" value={form.lastName} editable={!customerId} onChangeText={(value) => setForm({ ...form, lastName: value })} /></View>
-          </View>
-          <View style={styles.twoCol}>
-            <View style={styles.flex}><Field label="Telefon (opsiyonel)" keyboardType="phone-pad" value={form.phone} editable={!customerId} onChangeText={(value) => setForm({ ...form, phone: value })} /></View>
-            <View style={styles.flex}><Field label="E-posta (opsiyonel)" keyboardType="email-address" autoCapitalize="none" value={form.email} editable={!customerId} onChangeText={(value) => setForm({ ...form, email: value })} /></View>
-          </View>
+        <Card><Text style={styles.heading}>Kabul kontrolü</Text>
+          {field('complaint','Müşteri talebi',{ multiline: true })}{field('fuelLevel','Yakıt seviyesi')}{field('existingDamage','Mevcut hasarlar',{ multiline: true })}{field('valuablesNote','Araçta bırakılan eşyalar')}{field('internalNote','İç servis notu',{ multiline: true })}
+          <Button title="Kabul fotoğrafı çek" onPress={() => capture()} /><Button title="Galeriden fotoğraf ekle" tone="ghost" onPress={() => capture('photo', true)} />
+          {photos.map(photo => <View key={photo.requestKey}><Image source={{ uri: photo.uri }} style={styles.photo} /><Button title="Fotoğrafı kaldır" tone="ghost" onPress={() => setPhotos(current => current.filter(p => p.requestKey !== photo.requestKey))} /></View>)}
         </Card>
-
-        <Card style={styles.cardGap}>
-          <Text style={styles.sectionTitle}>3. Araç</Text>
-          {customerId && (customers.find((item) => item.id === customerId)?.vehicles || []).map((vehicle) => (
-            <Pressable key={vehicle.id} style={[styles.vehicleChip, vehicleId === vehicle.id && styles.vehicleChipActive]} onPress={() => selectCustomer(customers.find((item) => item.id === customerId), vehicle.id)}>
-              <Text style={styles.vehicleText}>{vehicle.plate} • {vehicle.brand} {vehicle.model}</Text>
-            </Pressable>
-          ))}
-          <View style={styles.twoCol}>
-            <View style={styles.flex}><Field label="Plaka" autoCapitalize="characters" value={form.plate} editable={!vehicleId} onChangeText={(value) => setForm({ ...form, plate: value.toLocaleUpperCase('tr-TR') })} /></View>
-            <View style={styles.flex}><Field label="Kabul KM" keyboardType="number-pad" value={form.mileage} onChangeText={(value) => setForm({ ...form, mileage: value.replace(/\D/g, '') })} /></View>
-          </View>
-          <View style={styles.twoCol}>
-            <View style={styles.flex}><Field label="Marka" value={form.brand} editable={!vehicleId} onChangeText={(value) => setForm({ ...form, brand: value })} /></View>
-            <View style={styles.flex}><Field label="Model" value={form.model} editable={!vehicleId} onChangeText={(value) => setForm({ ...form, model: value })} /></View>
-          </View>
-          <View style={styles.twoCol}>
-            <View style={styles.flex}><Field label="Model Yılı" keyboardType="number-pad" value={form.modelYear} editable={!vehicleId} onChangeText={(value) => setForm({ ...form, modelYear: value.replace(/\D/g, '').slice(0, 4) })} /></View>
-            <View style={styles.flex}><Field label="Şasi / VIN" autoCapitalize="characters" value={form.vin} editable={!vehicleId} onChangeText={(value) => setForm({ ...form, vin: value.toUpperCase() })} /></View>
-          </View>
+        <Card><Text style={styles.heading}>Yapılacak işlemler</Text>
+          {templates.map(t => <Button key={t.code} title={`+ ${t.name}`} tone="ghost" onPress={() => setItems(current => [...current.filter(i => i.name.trim()), ...t.items.map(i => ({ type: i.type, name: i.name, quantity: String(i.quantity) }))])} />)}
+          {items.map((item,index) => <View key={index}>
+            <Field label="İşlem" value={item.name} onChangeText={value => setItems(current => current.map((i,n) => n === index ? { ...i, name: value } : i))} />
+            <Field label="Miktar" value={item.quantity} keyboardType="decimal-pad" onChangeText={value => setItems(current => current.map((i,n) => n === index ? { ...i, quantity: value.replace(',', '.') } : i))} />
+            <Button title={`${item.type === 'PART' ? 'Parça' : 'İşçilik'} • türü değiştir`} tone="ghost" onPress={() => setItems(current => current.map((i,n) => n === index ? { ...i, type: i.type === 'PART' ? 'LABOR' : 'PART' } : i))} />
+            <Button title="Kalemi kaldır" tone="ghost" onPress={() => setItems(current => current.filter((_,n) => n !== index))} />
+          </View>)}<Button title="+ İşlem ekle" tone="ghost" onPress={() => setItems(current => [...current, emptyItem()])} />
         </Card>
-
-        <Card style={styles.cardGap}>
-          <Text style={styles.sectionTitle}>4. Talep ve yapılacak işlemler</Text>
-          <Field label="Müşterinin talebi / şikayeti" multiline style={styles.multiline} placeholder="Örn. Yağ bakımı ve ön takımdan gelen ses kontrol edilecek." value={form.complaint} onChangeText={(value) => setForm({ ...form, complaint: value })} />
-          {items.map((item, index) => (
-            <View key={index} style={styles.itemRow}>
-              <Pressable style={styles.typeButton} onPress={() => updateItem(index, 'type', item.type === 'LABOR' ? 'PART' : item.type === 'PART' ? 'OTHER' : 'LABOR')}>
-                <Text style={styles.typeText}>{item.type === 'LABOR' ? 'İşçilik' : item.type === 'PART' ? 'Parça' : 'Diğer'}</Text>
-              </Pressable>
-              <View style={styles.itemName}><Field placeholder="Yapılacak işlem" value={item.name} onChangeText={(value) => updateItem(index, 'name', value)} /></View>
-              <Pressable onPress={() => setItems((current) => current.length > 1 ? current.filter((_, itemIndex) => itemIndex !== index) : [EMPTY_ITEM()])}><Text style={styles.delete}>Sil</Text></Pressable>
-            </View>
-          ))}
-          <Button title="+ İşlem Ekle" tone="ghost" onPress={() => setItems((current) => [...current, EMPTY_ITEM()])} />
-          <View style={styles.noteGap}><Field label="İç servis notu (opsiyonel)" multiline style={styles.multiline} value={form.internalNote} onChangeText={(value) => setForm({ ...form, internalNote: value })} /></View>
-        </Card>
-
-        <View style={styles.submit}><Button title={busy ? 'Araç kabul ediliyor...' : 'ARACI KABUL ET'} onPress={submit} disabled={busy || !!scanBusy} /></View>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
+      </View>
+      <Button title={busy ? 'Kaydediliyor...' : submitted ? 'Kalan fotoğrafları gönder' : 'Aracı kabul et'} onPress={submit} disabled={busy || !ready} />
+    </ScrollView>
+  </KeyboardAvoidingView>;
 }
-
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.md, paddingBottom: 120 },
-  cardGap: { marginTop: 12 },
-  scanCard: { borderColor: '#5d461d' },
-  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  sectionTitle: { color: colors.text, fontSize: 16, fontWeight: '900', marginBottom: 12 },
-  buttonRow: { flexDirection: 'row', gap: 8 },
-  flex: { flex: 1 },
-  help: { marginTop: 10, color: colors.muted, fontSize: 10, lineHeight: 15 },
-  link: { color: colors.accent, fontSize: 12, fontWeight: '800' },
-  result: { padding: 11, marginBottom: 7, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.panel2 },
-  resultTitle: { color: colors.text, fontSize: 12, fontWeight: '800' },
-  resultSub: { marginTop: 3, color: colors.muted, fontSize: 10 },
-  selected: { marginBottom: 10, color: '#86d6a8', fontSize: 11, fontWeight: '800' },
-  twoCol: { flexDirection: 'row', gap: 8 },
-  vehicleChip: { padding: 11, marginBottom: 8, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.panel2 },
-  vehicleChipActive: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
-  vehicleText: { color: colors.text, fontSize: 11, fontWeight: '700' },
-  multiline: { minHeight: 84, paddingTop: 12, textAlignVertical: 'top' },
-  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 3 },
-  typeButton: { height: 44, minWidth: 62, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.panel2 },
-  typeText: { color: colors.muted, fontSize: 9, fontWeight: '800' },
-  itemName: { flex: 1 },
-  delete: { color: '#ef8f8f', fontSize: 10, fontWeight: '800' },
-  noteGap: { marginTop: 12 },
-  submit: { marginTop: 16 },
-});
+const styles = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.bg }, content: { padding: spacing.md, paddingBottom: 120, gap: 14 }, heading: { color: colors.text, fontSize: 17, fontWeight: '800', marginBottom: 10 }, info: { color: colors.muted, paddingVertical: 10 }, photo: { height: 160, borderRadius: 10, marginTop: 12 } });

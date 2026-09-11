@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -14,6 +15,7 @@ import { StartPortalAccessDto } from './dto/start-portal-access.dto';
 import { StartPortalQrAccessDto } from './dto/start-portal-qr-access.dto';
 import { StartPortalPhoneAccessDto } from './dto/start-portal-phone-access.dto';
 import { VerifyPortalAccessDto } from './dto/verify-portal-access.dto';
+import { UpdateCustomerMileageDto } from './dto/update-customer-mileage.dto';
 
 @Controller('customer-portal')
 export class CustomerPortalController {
@@ -85,6 +87,21 @@ export class CustomerPortalController {
       req.user.customerId,
       vehicleId,
       req.user.organizationId,
+    );
+  }
+
+  @Patch('vehicles/:vehicleId/mileage')
+  @UseGuards(AuthGuard('customer-portal-jwt'))
+  updateMileage(
+    @Req() req: any,
+    @Param('vehicleId') vehicleId: string,
+    @Body() dto: UpdateCustomerMileageDto,
+  ) {
+    return this.customerPortalService.updateCustomerMileage(
+      req.user.customerId,
+      vehicleId,
+      req.user.organizationId,
+      dto.mileage,
     );
   }
 

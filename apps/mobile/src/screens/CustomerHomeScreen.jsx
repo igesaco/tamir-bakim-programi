@@ -2,6 +2,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import {
@@ -52,6 +53,13 @@ export default function CustomerHomeScreen({
   const [loading, setLoading] =
     useState(true);
 
+  const [mileageInput, setMileageInput] =
+    useState('');
+  const [mileageBusy, setMileageBusy] =
+    useState(false);
+  const [mileageMessage, setMileageMessage] =
+    useState('');
+
   useEffect(() => {
     customerRequest(
       '/customer-portal/vehicles',
@@ -65,6 +73,52 @@ export default function CustomerHomeScreen({
   const serviceOrder =
     customerData
       ?.currentServiceOrder;
+
+  const vehicle = vehicles[0];
+  const mileageDue = vehicle &&
+    (
+      !vehicle.mileageUpdatedAt ||
+      Date.now() - new Date(vehicle.mileageUpdatedAt).getTime() >=
+        30 * 24 * 60 * 60 * 1000
+    );
+
+  async function updateMileage() {
+    const mileage = Number(mileageInput);
+    if (
+      !Number.isInteger(mileage) ||
+      mileage < Number(vehicle?.mileage || 0)
+    ) {
+      setMileageMessage(
+        'Güncel kilometre mevcut kayıttan düşük olamaz.',
+      );
+      return;
+    }
+
+    setMileageBusy(true);
+    try {
+      const updated = await customerRequest(
+        `/customer-portal/vehicles/${vehicle.id}/mileage`,
+        { method: 'PATCH', body: { mileage } },
+      );
+      setVehicles(current =>
+        current.map(item =>
+          item.id === vehicle.id
+            ? { ...item, ...updated }
+            : item,
+        ),
+      );
+      setMileageInput('');
+      setMileageMessage(
+        'Kilometre güncellendi. Bakım uyarıları yeniden hesaplandı.',
+      );
+    } catch (error) {
+      setMileageMessage(
+        error.message || 'Kilometre güncellenemedi.',
+      );
+    } finally {
+      setMileageBusy(false);
+    }
+  }
 
   return (
     <ScrollView
@@ -155,6 +209,37 @@ export default function CustomerHomeScreen({
               'tr-TR',
             )}
           </Text>
+
+          {mileageDue ? (
+            <View style={styles.mileagePrompt}>
+              <Text style={styles.mileagePromptTitle}>
+                Aylık kilometre güncellemesi
+              </Text>
+              <Text style={styles.mileagePromptText}>
+                Bakım zamanını doğru hesaplamak için güncel kilometreyi girin.
+              </Text>
+              <TextInput
+                keyboardType="number-pad"
+                placeholder="Güncel KM"
+                placeholderTextColor={colors.muted}
+                value={mileageInput}
+                onChangeText={setMileageInput}
+                style={styles.mileageInput}
+              />
+              <Text
+                disabled={mileageBusy}
+                onPress={updateMileage}
+                style={styles.mileageButton}
+              >
+                {mileageBusy ? 'Kaydediliyor...' : 'Kilometreyi Kaydet'}
+              </Text>
+              {mileageMessage ? (
+                <Text style={styles.mileagePromptText}>
+                  {mileageMessage}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
         </Card>
       ) : (
         <Empty text="Hesabınıza bağlı araç bulunmuyor." />
@@ -254,5 +339,37 @@ const styles =
         colors.accent,
       fontSize: 11,
       fontWeight: '800',
+    },
+    mileagePrompt: {
+      marginTop: 14,
+      paddingTop: 14,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    mileagePromptTitle: {
+      color: colors.accent,
+      fontWeight: '900',
+    },
+    mileagePromptText: {
+      color: colors.muted,
+      marginTop: 5,
+      lineHeight: 18,
+    },
+    mileageInput: {
+      marginTop: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      color: colors.text,
+      padding: 12,
+    },
+    mileageButton: {
+      marginTop: 10,
+      color: '#111',
+      backgroundColor: colors.accent,
+      padding: 12,
+      borderRadius: 10,
+      textAlign: 'center',
+      fontWeight: '900',
     },
   });

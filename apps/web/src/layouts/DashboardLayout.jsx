@@ -58,7 +58,7 @@ const menu = [
     label: 'Fiyatlandırma',
     short: 'Fİ',
     icon: 'cash',
-    feature: 'SERVICE_ORDERS',
+    feature: 'QUOTES',
     permission: 'SERVICE_ORDER_VIEW',
     roles: [
       'OWNER',

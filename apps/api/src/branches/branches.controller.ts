@@ -30,6 +30,12 @@ export class BranchesController {
     private readonly branchesService: BranchesService,
   ) {}
 
+  @Get('options')
+  @Roles(UserRole.OWNER, UserRole.MANAGER, UserRole.SERVICE_ADVISOR, UserRole.ACCOUNTING)
+  options(@Req() req: any) {
+    return this.branchesService.options(req.user.organizationId, req.user.role, req.user.branchId);
+  }
+
 @Permission(PermissionKey.BRANCH_VIEW)
   @Get()
   findAll(@Req() req: any) {

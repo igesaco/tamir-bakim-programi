@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
 import {
   RefreshControl,
   ScrollView,
@@ -29,6 +30,8 @@ export default function NotificationsScreen() {
     useState(false);
   const [error, setError] =
     useState('');
+
+  useLiveRefresh(() => load());
 
   async function load() {
     const response =

@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
 import {
   RefreshControl,
   ScrollView,
@@ -78,6 +79,8 @@ export default function CashierScreen() {
       user,
       'CASHIER_COLLECT',
     );
+
+  useLiveRefresh(() => load());
 
   async function load() {
     const requests = [

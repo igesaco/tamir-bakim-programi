@@ -1,4 +1,5 @@
-﻿import {
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
+import {
   useEffect,
   useMemo,
   useState,
@@ -44,6 +45,8 @@ export default function Cashier() {
     reference: '',
   });
 
+  useLiveRefresh(() => load(true), !busy);
+
   async function load() {
     const [
       paymentRes,
@@ -56,7 +59,7 @@ export default function Cashier() {
       api.get('/customers'),
       api.get('/service-orders'),
       api.get('/quotes'),
-      api.get('/branches'),
+      api.get('/branches/options'),
     ]);
 
     setPayments(paymentRes.data);

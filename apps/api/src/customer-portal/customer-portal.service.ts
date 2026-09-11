@@ -1,3 +1,6 @@
+import { atomic } from '../workflow/transaction';
+import { applyQuoteStatus } from '../workflow/quote-status';
+import { quoteBalance } from '../workflow/finance';
 import {
   BadRequestException,
   ForbiddenException,
@@ -10,7 +13,6 @@ import {
   MaintenancePlanStatus,
   NotificationChannel,
   NotificationStatus,
-  PaymentMethod,
   PaymentStatus,
   QuoteStatus,
   ServiceOrderStatus,
@@ -344,11 +346,17 @@ export class CustomerPortalService {
             take: 1,
           },
         },
-        take: 10,
+
       });
 
+    const eligible = [] as typeof customers;
+    for (const candidate of customers) {
+      const enabled = await this.entitlementsService.getEffectiveFeatures(candidate.organizationId);
+      if (enabled.includes(FeatureKey.CUSTOMER_PORTAL)) eligible.push(candidate);
+    }
+    if (eligible.length > 1) throw new BadRequestException('Giriş yapılacak servisi belirlemek için aracınızın bakım kartındaki QR kodunu okutun.');
     const customer =
-      customers.find(
+      eligible.find(
         (item) =>
           item.phone &&
           this.normalizePhone(
@@ -740,6 +748,7 @@ export class CustomerPortalService {
         fuelType: true,
         transmission: true,
         mileage: true,
+        mileageUpdatedAt: true,
         qrActive: true,
         media: {
           where: {
@@ -797,6 +806,45 @@ export class CustomerPortalService {
     });
   }
 
+  async updateCustomerMileage(
+    customerId: string,
+    vehicleId: string,
+    organizationId: string,
+    mileage: number,
+  ) {
+    return atomic(this.prisma, organizationId, async tx => {
+      const vehicle = await tx.vehicle.findFirst({
+        where: { id: vehicleId, customerId, organizationId },
+      });
+      if (!vehicle) {
+        throw new ForbiddenException('Araç hesabınıza ait değil.');
+      }
+      if (mileage < vehicle.mileage) {
+        throw new BadRequestException(
+          'Kilometre mevcut kayıttan düşük olamaz.',
+        );
+      }
+
+      const updated = await tx.vehicle.update({
+        where: { id: vehicle.id },
+        data: { mileage, mileageUpdatedAt: new Date() },
+        select: { id: true, mileage: true, mileageUpdatedAt: true },
+      });
+      await tx.notification.create({
+        data: {
+          organizationId,
+          branchId: vehicle.branchId,
+          customerId,
+          channel: NotificationChannel.IN_APP,
+          status: NotificationStatus.PENDING,
+          title: 'Kilometre bilgisi güncellendi',
+          message: `${vehicle.plate} plakalı aracın kilometresi ${mileage.toLocaleString('tr-TR')} olarak kaydedildi.`,
+        },
+      });
+      return updated;
+    });
+  }
+
   async getPortalData(
     customerId: string,
     vehicleId: string,
@@ -836,6 +884,7 @@ export class CustomerPortalService {
           fuelType: true,
           transmission: true,
           mileage: true,
+          mileageUpdatedAt: true,
           media: {
             where: {
               customerVisible: true,
@@ -868,26 +917,11 @@ export class CustomerPortalService {
       });
 
     const [
-      items,
       payments,
       maintenanceHistory,
       maintenancePlans,
       activeServiceOrders,
     ] = await Promise.all([
-      this.prisma.serviceOrderItem.findMany({
-        where: {
-          serviceOrder: {
-            customerId,
-            organizationId,
-            vehicleId,
-          },
-        },
-        select: {
-          grossTotal: true,
-          totalPrice: true,
-          vatAmount: true,
-        },
-      }),
       this.prisma.payment.findMany({
         where: {
           customerId,
@@ -938,7 +972,7 @@ export class CustomerPortalService {
           mileage: true,
           performedAt: true,
           totalAmount: true,
-          notes: true,
+          notes: false,
           items: {
             select: {
               id: true,
@@ -1051,7 +1085,7 @@ export class CustomerPortalService {
               discountTotal: true,
               taxTotal: true,
               total: true,
-              notes: true,
+              notes: false,
               sentAt: true,
               approvedAt: true,
               items: {
@@ -1080,31 +1114,10 @@ export class CustomerPortalService {
       }),
     ]);
 
-    const billed =
-      items.reduce(
-        (sum, item) => {
-          const gross =
-            Number(
-              item.grossTotal ||
-                0,
-            );
-
-          return (
-            sum +
-            (gross > 0
-              ? gross
-              : Number(
-                  item.totalPrice ||
-                    0,
-                ) +
-                Number(
-                  item.vatAmount ||
-                    0,
-                ))
-          );
-        },
-        0,
-      );
+    const approvedQuotes = await this.prisma.quote.findMany({ where: { organizationId, customerId, vehicleId, status: QuoteStatus.APPROVED }, select: { total: true } });
+    const legacyOrders = await this.prisma.serviceOrder.findMany({ where: { organizationId, customerId, vehicleId, status: { not: ServiceOrderStatus.CANCELLED }, quotes: { none: {} } }, include: { items: true } });
+    const billed = approvedQuotes.reduce((sum, q) => sum + Number(q.total), 0)
+      + legacyOrders.reduce((sum, order) => sum + order.items.reduce((n, i) => n + (Number(i.grossTotal) || Number(i.totalPrice) + Number(i.vatAmount)), 0), 0);
 
     const paid =
       payments
@@ -1209,174 +1222,13 @@ export class CustomerPortalService {
       payments,
     };
   }
-  async approveCustomerQuote(
-    customerId: string,
-    organizationId: string,
-    quoteId: string,
-  ) {
-    const quote =
-      await this.prisma.quote.findFirst({
-        where: {
-          id: quoteId,
-          customerId,
-          organizationId,
-          status: {
-            in: [
-              QuoteStatus.SENT,
-              QuoteStatus.PARTIALLY_APPROVED,
-            ],
-          },
-        },
-        include: {
-          serviceOrder: true,
-          vehicle: {
-            select: {
-              plate: true,
-            },
-          },
-        },
-      });
-
-    if (
-      !quote ||
-      !quote.serviceOrder
-    ) {
-      throw new BadRequestException(
-        'Onaylanabilir servis teklifi bulunamadı.',
-      );
-    }
-
-    const order =
-      quote.serviceOrder;
-
-    return this.prisma.$transaction(
-      async (tx) => {
-        const approvedAt =
-          new Date();
-
-        const updatedQuote =
-          await tx.quote.update({
-            where: {
-              id: quote.id,
-            },
-            data: {
-              status:
-                QuoteStatus.APPROVED,
-              approvedAt,
-            },
-            include: {
-              items: true,
-            },
-          });
-
-        await tx.serviceOrder.update({
-          where: {
-            id: order.id,
-          },
-          data: {
-            status:
-              ServiceOrderStatus.APPROVED,
-          },
-        });
-
-        const amount =
-          Number(
-            quote.total,
-          );
-
-        if (amount > 0) {
-          const existingPending =
-            await tx.payment.findFirst({
-              where: {
-                organizationId,
-                quoteId:
-                  quote.id,
-                status:
-                  PaymentStatus.PENDING,
-              },
-              select: {
-                id: true,
-              },
-            });
-
-          if (!existingPending) {
-            await tx.payment.create({
-              data: {
-                organizationId,
-                branchId:
-                  order.branchId,
-                customerId,
-                serviceOrderId:
-                  order.id,
-                quoteId:
-                  quote.id,
-                amount,
-                method:
-                  PaymentMethod.OTHER,
-                status:
-                  PaymentStatus.PENDING,
-                reference:
-                  `CUSTOMER_QUOTE_APPROVAL:${quote.id}`,
-              },
-            });
-          }
-        }
-
-        if (
-          order.assignedTechnicianId
-        ) {
-          await tx.notification.create({
-            data: {
-              organizationId,
-              branchId:
-                order.branchId,
-              userId:
-                order.assignedTechnicianId,
-              serviceOrderId:
-                order.id,
-              channel:
-                NotificationChannel.IN_APP,
-              status:
-                NotificationStatus.PENDING,
-              title:
-                'Müşteri teklifi onayladı',
-              message:
-                `${quote.vehicle.plate} plakalı araç için ${order.orderNumber} iş emri onaylandı. İşleme başlayabilirsiniz.`,
-            },
-          });
-        }
-
-        await tx.notification.create({
-          data: {
-            organizationId,
-            branchId:
-              order.branchId,
-            customerId,
-            serviceOrderId:
-              order.id,
-            channel:
-              NotificationChannel.IN_APP,
-            status:
-              NotificationStatus.PENDING,
-            title:
-              'Teklifiniz onaylandı',
-            message:
-              amount > 0
-                ? `Servis teklifiniz onaylandı. ${amount.toFixed(2)} TL tutarında bekleyen ödeme kaydı oluşturuldu.`
-                : 'Servis teklifiniz onaylandı. İş emri işleme hazır.',
-          },
-        });
-
-        return {
-          quote:
-            updatedQuote,
-          serviceOrderStatus:
-            ServiceOrderStatus.APPROVED,
-          pendingAmount:
-            amount,
-        };
-      },
-    );
+  approveCustomerQuote(customerId: string, organizationId: string, quoteId: string) {
+    return atomic(this.prisma, organizationId, async tx => {
+      const quote = await applyQuoteStatus(tx, organizationId, quoteId, QuoteStatus.APPROVED, { customerId });
+      const { remaining } = await quoteBalance(tx, organizationId, quoteId);
+      const order = quote.serviceOrderId ? await tx.serviceOrder.findUnique({ where: { id: quote.serviceOrderId } }) : null;
+      return { quote, serviceOrderStatus: order?.status, pendingAmount: remaining };
+    });
   }
 
   async getCustomerNotifications(

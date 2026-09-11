@@ -17,6 +17,7 @@ import { FeatureKey,
   PermissionKey,
 } from '@prisma/client';
 import { diskStorage } from 'multer';
+import { unlink } from 'fs/promises';
 import {
   extname,
   resolve,
@@ -145,20 +146,27 @@ export class MediaController {
       },
     }),
   )
-  upload(
+  async upload(
     @Req() req: any,
     @Body() dto: UploadMediaDto,
     @UploadedFile()
     file: Express.Multer.File,
   ) {
-    return this.mediaService.create(
-      req.user.organizationId,
-      req.user.branchId,
-      req.user.role,
-      req.user.sub,
-      dto,
-      file,
-    );
+    try {
+      return await this.mediaService.create(
+        req.user.organizationId,
+        req.user.branchId,
+        req.user.role,
+        req.user.sub,
+        dto,
+        file,
+      );
+    } catch (error) {
+      if (file?.path) {
+        await unlink(file.path).catch(() => undefined);
+      }
+      throw error;
+    }
   }
 
 @Permission(PermissionKey.MEDIA_VIEW)
@@ -167,6 +175,7 @@ export class MediaController {
     UserRole.OWNER,
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
+    UserRole.ACCOUNTING,
   )
   findAll(@Req() req: any) {
     return this.mediaService.findAll(
@@ -182,6 +191,7 @@ export class MediaController {
     UserRole.OWNER,
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
+    UserRole.ACCOUNTING,
   )
   findOne(
     @Req() req: any,

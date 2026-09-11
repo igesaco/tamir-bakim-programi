@@ -123,13 +123,13 @@ export default function Maintenance() {
     );
 
   async function completePlan(plan) {
-    const approved =
-      window.confirm(
-        `${plan.vehicle?.plate || 'Araç'} - ${plan.title} bakımı tamamlandı olarak işaretlensin mi?`,
-      );
-
-    if (!approved) {
-      return;
+    const kmInput = window.prompt('Bakımın yapıldığı gerçek kilometre:', String(plan.vehicle?.mileage ?? ''));
+    if (kmInput === null) return;
+    const dateInput = window.prompt('Bakımın yapıldığı tarih (YYYY-AA-GG):', new Date().toISOString().slice(0, 10));
+    if (!dateInput) return;
+    const mileage = Number(kmInput), performedAt = new Date(dateInput);
+    if (!kmInput.trim() || !Number.isInteger(mileage) || mileage < 0 || Number.isNaN(performedAt.getTime())) {
+      setMaintenanceError('Geçerli tarih ve kilometre girin.'); return;
     }
 
     setMaintenanceBusyId(
@@ -142,6 +142,7 @@ export default function Maintenance() {
       const response =
         await api.patch(
           `/maintenance/plans/${plan.id}/complete`,
+          { mileage, performedAt: performedAt.toISOString() },
         );
 
       const nextPlan =

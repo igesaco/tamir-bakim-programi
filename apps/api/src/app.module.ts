@@ -1,7 +1,8 @@
 import 'dotenv/config';
 
 import { Module } from '@nestjs/common';
-import { ServeStaticModule } from '@nestjs/serve-static';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { SafeResponseInterceptor } from './workflow/safe-response.interceptor';
 import {
   mkdirSync,
 } from 'fs';
@@ -52,11 +53,6 @@ mkdirSync(
 
 @Module({
   imports: [
-    ServeStaticModule.forRoot({
-      rootPath: mediaStorageDir,
-      serveRoot: '/uploads',
-    }),
-
     PrismaModule,
     EntitlementsModule,
     PermissionsModule,
@@ -83,6 +79,6 @@ mkdirSync(
     VehicleCatalogModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_INTERCEPTOR, useClass: SafeResponseInterceptor }],
 })
 export class AppModule {}

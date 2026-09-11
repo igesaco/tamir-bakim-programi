@@ -1,3 +1,4 @@
+import { LinkMaintenancePlansDto } from './dto/link-maintenance-plans.dto';
 import {
   Body,
   Controller,
@@ -5,6 +6,7 @@ import {
   Get,
   Param,
   ParseEnumPipe,
+  ParseBoolPipe,
   Patch,
   Post,
   Req,
@@ -35,6 +37,14 @@ export class ServiceOrdersController {
   constructor(
     private readonly serviceOrdersService: ServiceOrdersService,
   ) {}
+
+  @Permission(PermissionKey.MAINTENANCE_MANAGE)
+  @Patch(':id/maintenance-plans')
+  @Roles(UserRole.OWNER, UserRole.MANAGER, UserRole.SERVICE_ADVISOR, UserRole.ACCOUNTING)
+  @UseGuards(RolesGuard)
+  linkMaintenancePlans(@Req() req: any, @Param('id') id: string, @Body() dto: LinkMaintenancePlansDto) {
+    return this.serviceOrdersService.linkMaintenancePlans(req.user.organizationId, id, req.user.role, req.user.sub, req.user.branchId, dto.ids);
+  }
 
 @Permission(PermissionKey.SERVICE_ORDER_CREATE)
   @Post()
@@ -120,7 +130,7 @@ export class ServiceOrdersController {
     );
   }
 
-@Permission(PermissionKey.SERVICE_ORDER_ITEM_MANAGE)
+@Permission(PermissionKey.SERVICE_ORDER_ITEM_COMPLETE)
   @Patch(':id/items/:itemId/complete')
   @Roles(
     UserRole.OWNER,
@@ -134,7 +144,7 @@ export class ServiceOrdersController {
     @Req() req: any,
     @Param('id') id: string,
     @Param('itemId') itemId: string,
-    @Body('completed') completed: boolean,
+    @Body('completed', ParseBoolPipe) completed: boolean,
   ) {
     return this.serviceOrdersService.setItemComplete(
       req.user.organizationId,
@@ -269,6 +279,7 @@ export class ServiceOrdersController {
     UserRole.OWNER,
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
+    UserRole.ACCOUNTING,
     UserRole.TECHNICIAN,
   )
   @UseGuards(RolesGuard)
@@ -280,6 +291,7 @@ export class ServiceOrdersController {
       new ParseEnumPipe(ServiceOrderStatus),
     )
     status: ServiceOrderStatus,
+    @Body('creditDeliveryReason') creditDeliveryReason?: string,
   ) {
     return this.serviceOrdersService.updateStatus(
       req.user.organizationId,
@@ -288,6 +300,7 @@ export class ServiceOrdersController {
       req.user.role,
       req.user.sub,
       req.user.branchId,
+      creditDeliveryReason,
     );
   }
 }

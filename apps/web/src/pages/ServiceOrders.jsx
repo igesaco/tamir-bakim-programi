@@ -1,4 +1,5 @@
-﻿import {
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
+import {
   useEffect,
   useMemo,
   useState,
@@ -41,6 +42,8 @@ export default function ServiceOrders() {
     assignedTechnicianId: '',
     branchId: user?.branchId || '',
   });
+
+  useLiveRefresh(() => load(true));
 
   async function load() {
     if (user?.role === 'TECHNICIAN') {
