@@ -122,6 +122,7 @@ export class VehiclesController {
     UserRole.OWNER,
     UserRole.MANAGER,
     UserRole.SERVICE_ADVISOR,
+    UserRole.ACCOUNTING,
   )
 @Permission(PermissionKey.VEHICLE_UPDATE)
   @Patch(':id')

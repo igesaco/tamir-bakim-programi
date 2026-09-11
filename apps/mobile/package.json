@@ -12,6 +12,7 @@
     "check:android": "expo export --platform android --output-dir dist/android",
     "check:ios": "expo export --platform ios --output-dir dist/ios",
     "test:config": "node --test scripts/app-config.test.cjs",
+    "test:ocr": "node --test scripts/document-ocr.test.cjs",
     "brand:assets": "node scripts/generate-brand-assets.cjs",
     "postinstall": "node scripts/generate-brand-assets.cjs"
   },
@@ -19,6 +20,8 @@
     "axios": "^1.12.2",
     "expo": "~57.0.17",
     "expo-build-properties": "~57.0.17",
+    "expo-crypto": "~57.0.2",
+    "expo-file-system": "~57.0.6",
     "expo-image-picker": "~57.0.16",
     "expo-mlkit-ocr": "^0.2.7",
     "expo-secure-store": "~57.0.3",

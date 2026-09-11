@@ -145,6 +145,8 @@ export class JwtStrategy extends PassportStrategy(
           platformUser.id,
         platformRole:
           platformUser.role,
+        tokenVersion:
+          user.tokenVersion,
       };
     }
 
@@ -180,6 +182,8 @@ export class JwtStrategy extends PassportStrategy(
       features,
       permissions,
       actorType: 'TENANT',
+      tokenVersion:
+        user.tokenVersion,
     };
   }
 }

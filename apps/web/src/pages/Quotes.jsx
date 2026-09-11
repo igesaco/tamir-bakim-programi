@@ -1,4 +1,5 @@
-﻿import {
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
+import {
   useEffect,
   useMemo,
   useState,
@@ -61,6 +62,8 @@ export default function Quotes() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
+  useLiveRefresh(() => load(true), !busy);
+
   async function load() {
     const [q, c, v, o, p] =
       await Promise.all([
@@ -117,8 +120,9 @@ export default function Quotes() {
             ?.length
         ) {
           setItems(
-            selectedOrder.items.map(
+            selectedOrder.items.filter(item => !item.approvedQuoteId).map(
               (item) => ({
+                serviceOrderItemId: item.id,
                 type:
                   item.type,
                 name:
@@ -289,6 +293,7 @@ export default function Quotes() {
           undefined,
         notes: form.notes || undefined,
         items: items.map((item) => ({
+          serviceOrderItemId: item.serviceOrderItemId,
           type: item.type,
           name: item.name.trim(),
           description:

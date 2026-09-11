@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
@@ -54,6 +55,10 @@ export class MobileIntakeItemDto {
 }
 
 export class CreateMobileIntakeDto {
+  @IsOptional()
+  @IsUUID()
+  requestKey?: string;
+
   @IsOptional()
   @IsString()
   branchId?: string;

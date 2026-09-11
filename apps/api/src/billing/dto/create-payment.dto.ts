@@ -3,6 +3,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Min,
 } from 'class-validator';
 import {
@@ -11,6 +12,10 @@ import {
 } from '@prisma/client';
 
 export class CreatePaymentDto {
+  @IsOptional()
+  @IsUUID()
+  requestKey?: string;
+
   @IsString()
   customerId: string;
 

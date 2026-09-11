@@ -89,9 +89,7 @@ export class VehiclesService {
           organizationId,
           branchId,
           customerId: dto.customerId,
-          plate: dto.plate
-            .trim()
-            .toUpperCase(),
+          plate: dto.plate.replace(/\s+/g, '').toLocaleUpperCase('tr-TR'),
           vin: normalizedVin,
           brand: dto.brand,
           model: dto.model,
@@ -100,6 +98,7 @@ export class VehiclesService {
           transmission: dto.transmission,
           color: dto.color,
           mileage: dto.mileage ?? 0,
+          mileageUpdatedAt: new Date(),
           notes: dto.notes,
         },
         include: {
@@ -257,9 +256,7 @@ export class VehiclesService {
             dto.customerId,
           branchId,
           plate: dto.plate
-            ? dto.plate
-                .trim()
-                .toUpperCase()
+            ? dto.plate.replace(/\s+/g, '').toLocaleUpperCase('tr-TR')
             : undefined,
           vin:
             dto.vin !== undefined
@@ -277,6 +274,10 @@ export class VehiclesService {
             dto.transmission,
           color: dto.color,
           mileage: dto.mileage,
+          mileageUpdatedAt:
+            dto.mileage === undefined
+              ? undefined
+              : new Date(),
           notes: dto.notes,
           qrActive: dto.qrActive,
         },
@@ -396,166 +397,10 @@ export class VehiclesService {
     };
   }
 
-  async findPublicByQr(
-    qrToken: string,
-  ) {
-    const vehicle =
-      await this.prisma.vehicle.findFirst({
-        where: {
-          qrToken,
-          qrActive: true,
-        },
-        select: {
-          id: true,
-          plate: true,
-          brand: true,
-          model: true,
-          modelYear: true,
-          fuelType: true,
-          transmission: true,
-          mileage: true,
-          qrToken: true,
-          organization: {
-            select: {
-              id: true,
-              name: true,
-              phone: true,
-              whatsappPhone: true,
-              email: true,
-              address: true,
-            },
-          },
-          maintenanceRecords: {
-            select: {
-              id: true,
-              performedAt: true,
-              mileage: true,
-              items: {
-                select: {
-                  name: true,
-                  description: true,
-                },
-              },
-            },
-            orderBy: {
-              performedAt: 'desc',
-            },
-            take: 5,
-          },
-          maintenancePlans: {
-            where: {
-              status: 'ACTIVE',
-            },
-            select: {
-              id: true,
-              title: true,
-              nextDueKm: true,
-              nextDueDate: true,
-            },
-            orderBy: [
-              {
-                nextDueDate: 'asc',
-              },
-              {
-                nextDueKm: 'asc',
-              },
-            ],
-          },
-        },
-      });
-
-    if (!vehicle) {
-      throw new NotFoundException(
-        'QR kod geçersiz veya pasif.',
-      );
-    }
-
-    const {
-      maintenanceRecords,
-      maintenancePlans,
-      organization,
-      ...publicVehicle
-    } = vehicle;
-
-    const now =
-      new Date();
-
-    const dueSoonAt =
-      new Date(
-        now.getTime() +
-          30 *
-            24 *
-            60 *
-            60 *
-            1000,
-      );
-
-    const enrichedPlans =
-      maintenancePlans.map(
-        (plan) => {
-          const kmRemaining =
-            plan.nextDueKm ===
-              null ||
-            plan.nextDueKm ===
-              undefined
-              ? null
-              : plan.nextDueKm -
-                publicVehicle.mileage;
-
-          const kmOverdue =
-            kmRemaining !== null &&
-            kmRemaining <= 0;
-
-          const dateOverdue =
-            Boolean(
-              plan.nextDueDate &&
-                plan.nextDueDate <
-                  now,
-            );
-
-          const kmDueSoon =
-            kmRemaining !== null &&
-            kmRemaining > 0 &&
-            kmRemaining <= 1000;
-
-          const dateDueSoon =
-            Boolean(
-              plan.nextDueDate &&
-                plan.nextDueDate >=
-                  now &&
-                plan.nextDueDate <=
-                  dueSoonAt,
-            );
-
-          const alertStatus =
-            kmOverdue ||
-            dateOverdue
-              ? 'OVERDUE'
-              : kmDueSoon ||
-                  dateDueSoon
-                ? 'DUE_SOON'
-                : 'UPCOMING';
-
-          return {
-            ...plan,
-            alertStatus,
-            remainingKm:
-              kmRemaining,
-          };
-        },
-      );
-
-    return {
-      vehicle: publicVehicle,
-      serviceProvider:
-        organization,
-      lastMaintenanceRecord:
-        maintenanceRecords[0] ??
-        null,
-      maintenanceHistory:
-        maintenanceRecords,
-      maintenancePlans:
-        enrichedPlans,
-    };
+  async findPublicByQr(qrToken: string) {
+    const vehicle = await this.prisma.vehicle.findFirst({ where: { qrToken, qrActive: true, organization: { active: true } },
+      select: { organization: { select: { id: true, name: true, phone: true, whatsappPhone: true, email: true, address: true } } } });
+    if (!vehicle) throw new NotFoundException('QR kod geçersiz veya pasif.');
+    return { serviceProvider: vehicle.organization };
   }
 }

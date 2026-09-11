@@ -1,3 +1,4 @@
+import { MediaContentController } from './media-content.controller';
 import { Module } from '@nestjs/common';
 
 import { RolesGuard } from '../auth/roles.guard';
@@ -9,6 +10,6 @@ import { MediaService } from './media.service';
     MediaService,
     RolesGuard,
   ],
-  controllers: [MediaController],
+  controllers: [MediaController, MediaContentController],
 })
 export class MediaModule {}

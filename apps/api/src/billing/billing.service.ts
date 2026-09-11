@@ -1,3 +1,6 @@
+import { atomic } from '../workflow/transaction';
+import { syncPending } from '../workflow/finance';
+import { createHash } from 'crypto';
 import {
   BadRequestException,
   Injectable,
@@ -23,8 +26,19 @@ export class BillingService {
     actorRole: UserRole,
     dto: CreatePaymentDto,
   ) {
+    if (dto.status && dto.status !== PaymentStatus.PAID) throw new BadRequestException('Tahsilat ödenmiş olarak kaydedilmelidir.');
+    const requestHash = createHash('sha256').update(JSON.stringify(dto)).digest('hex');
+    dto = { ...dto };
+    return atomic(this.prisma, organizationId, async tx => {
+      if (dto.requestKey) {
+        const previous = await tx.payment.findUnique({ where: { organizationId_requestKey: { organizationId, requestKey: dto.requestKey } } });
+        if (previous) {
+          if (previous.requestHash !== requestHash) throw new BadRequestException('Tekrar isteğinin içeriği değişti. Yeni işlem başlatın.');
+          return previous;
+        }
+      }
     const customer =
-      await this.prisma.customer.findFirst({
+      await tx.customer.findFirst({
         where: {
           id: dto.customerId,
           organizationId,
@@ -43,7 +57,7 @@ export class BillingService {
 
     if (dto.serviceOrderId) {
       const order =
-        await this.prisma.serviceOrder.findFirst({
+        await tx.serviceOrder.findFirst({
           where: {
             id: dto.serviceOrderId,
             organizationId,
@@ -57,12 +71,20 @@ export class BillingService {
         );
       }
 
+      if (order.status === 'CANCELLED') throw new BadRequestException('İptal edilen iş emrine tahsilat girilemez.');
+      if (!dto.quoteId) {
+        const quotes = await tx.quote.findMany({ where: { organizationId, serviceOrderId: order.id } });
+        const approved = quotes.filter(q => q.status === 'APPROVED');
+        if (approved.length > 1) throw new BadRequestException('Tahsilat yapılacak teklifi seçin.');
+        if (quotes.length && !approved.length) throw new BadRequestException('Teklif onayı gerekli.');
+        dto.quoteId = approved[0]?.id;
+      }
       branchId = order.branchId;
     }
 
     if (dto.quoteId) {
       const quote =
-        await this.prisma.quote.findFirst({
+        await tx.quote.findFirst({
           where: {
             id: dto.quoteId,
             organizationId,
@@ -78,7 +100,6 @@ export class BillingService {
 
       if (
         dto.serviceOrderId &&
-        quote.serviceOrderId &&
         quote.serviceOrderId !==
           dto.serviceOrderId
       ) {
@@ -87,6 +108,8 @@ export class BillingService {
         );
       }
 
+      if (quote.status !== 'APPROVED') throw new BadRequestException('Tahsilat için teklif onayı gerekli.');
+      dto.serviceOrderId = quote.serviceOrderId || undefined;
       branchId = quote.branchId;
     }
 
@@ -97,7 +120,7 @@ export class BillingService {
     }
 
     const branch =
-      await this.prisma.branch.findFirst({
+      await tx.branch.findFirst({
         where: {
           id: branchId,
           organizationId,
@@ -113,7 +136,8 @@ export class BillingService {
 
     if (
       actorRole !== UserRole.OWNER &&
-      actorRole !== UserRole.MANAGER
+      actorRole !== UserRole.MANAGER &&
+      actorRole !== UserRole.ACCOUNTING
     ) {
       throw new BadRequestException(
         'Tahsilat oluşturma yetkiniz yok.',
@@ -122,7 +146,7 @@ export class BillingService {
 
     if (dto.quoteId) {
       const quote =
-        await this.prisma.quote.findFirst({
+        await tx.quote.findFirst({
           where: {
             id: dto.quoteId,
             organizationId,
@@ -139,7 +163,7 @@ export class BillingService {
       }
 
       const paid =
-        await this.prisma.payment.aggregate({
+        await tx.payment.aggregate({
           where: {
             organizationId,
             quoteId: dto.quoteId,
@@ -170,7 +194,7 @@ export class BillingService {
       }
     } else if (dto.serviceOrderId) {
       const items =
-        await this.prisma.serviceOrderItem.findMany({
+        await tx.serviceOrderItem.findMany({
           where: {
             serviceOrderId:
               dto.serviceOrderId,
@@ -207,9 +231,9 @@ export class BillingService {
           0,
         );
 
-      if (orderTotal > 0) {
+      if (orderTotal >= 0) {
         const paid =
-          await this.prisma.payment.aggregate({
+          await tx.payment.aggregate({
             where: {
               organizationId,
               serviceOrderId:
@@ -247,9 +271,11 @@ export class BillingService {
       dto.status ??
       PaymentStatus.PAID;
 
-    return this.prisma.payment.create({
+    const result = await tx.payment.create({
       data: {
         organizationId,
+        requestKey: dto.requestKey,
+        requestHash,
         branchId,
         customerId:
           dto.customerId,
@@ -277,6 +303,9 @@ export class BillingService {
         quote: true,
       },
     });
+    if (dto.quoteId) await syncPending(tx, organizationId, dto.quoteId);
+    return result;
+    });
   }
 
   async updateStatus(
@@ -284,8 +313,9 @@ export class BillingService {
     id: string,
     status: PaymentStatus,
   ) {
+    return atomic(this.prisma, organizationId, async tx => {
     const payment =
-      await this.prisma.payment.findFirst({
+      await tx.payment.findFirst({
         where: {
           id,
           organizationId,
@@ -298,6 +328,8 @@ export class BillingService {
       );
     }
 
+    if (payment.status === status) return payment;
+    if (payment.status !== PaymentStatus.PAID) throw new BadRequestException('Yalnızca ödenmiş tahsilat iptal/iade edilebilir.');
     if (
       status !== PaymentStatus.CANCELLED &&
       status !== PaymentStatus.REFUNDED
@@ -307,7 +339,7 @@ export class BillingService {
       );
     }
 
-    return this.prisma.payment.update({
+    const result = await tx.payment.update({
       where: { id },
       data: {
         status,
@@ -320,6 +352,9 @@ export class BillingService {
         serviceOrder: true,
         quote: true,
       },
+    });
+    if (payment.quoteId) await syncPending(tx, organizationId, payment.quoteId);
+    return result;
     });
   }
 

@@ -1,3 +1,6 @@
+import { Prisma } from '@prisma/client';
+import { createHash } from 'crypto';
+import { atomic } from '../workflow/transaction';
 import {
   BadRequestException,
   ForbiddenException,
@@ -179,6 +182,14 @@ export class InspectionsService {
     userId: string,
     dto: CreateMobileIntakeDto,
   ) {
+    const features =
+      await this.entitlementsService.getEffectiveFeatures(
+        organizationId,
+      );
+    const quotesEnabled =
+      features.includes(FeatureKey.QUOTES);
+
+    return atomic(this.prisma, organizationId, async tx => {
     const legacyResult =
       await this.createMobileIntake(
         organizationId,
@@ -186,6 +197,7 @@ export class InspectionsService {
         actorRole,
         userId,
         dto,
+        tx,
       );
 
     const orderId =
@@ -203,16 +215,24 @@ export class InspectionsService {
       );
     }
 
-    return this.prisma.$transaction(
-      async (tx) => {
+    if (legacyResult.replayed) {
+      return {
+        ...legacyResult,
+        flowVersion: 'V3',
+        nextStep: quotesEnabled
+          ? 'QUOTE_PRICING'
+          : 'TECHNICIAN_ASSIGNMENT',
+      };
+    }
         const order =
           await tx.serviceOrder.update({
             where: {
               id: orderId,
             },
             data: {
-              status:
-                ServiceOrderStatus.QUOTE_WAITING,
+              status: quotesEnabled
+                ? ServiceOrderStatus.QUOTE_WAITING
+                : ServiceOrderStatus.APPROVED,
             },
             include: {
               customer: true,
@@ -289,10 +309,12 @@ export class InspectionsService {
                     NotificationChannel.IN_APP,
                   status:
                     NotificationStatus.PENDING,
-                  title:
-                    'Yeni araç kabulü fiyatlandırma bekliyor',
-                  message:
-                    `${order.vehicle.plate} plakalı araç için ${order.orderNumber} iş emri oluşturuldu. Teklif / proforma hazırlanması gerekiyor.`,
+                  title: quotesEnabled
+                    ? 'Yeni araç kabulü fiyatlandırma bekliyor'
+                    : 'Yeni araç kabulü teknisyen bekliyor',
+                  message: quotesEnabled
+                    ? `${order.vehicle.plate} plakalı araç için ${order.orderNumber} iş emri oluşturuldu. Teklif / proforma hazırlanması gerekiyor.`
+                    : `${order.vehicle.plate} plakalı araç için ${order.orderNumber} iş emri oluşturuldu. Teknisyen ataması yapabilirsiniz.`,
                 }),
               ),
           });
@@ -317,8 +339,9 @@ export class InspectionsService {
                 NotificationStatus.PENDING,
               title:
                 'Aracınız servise kabul edildi',
-              message:
-                `${order.vehicle.plate} plakalı aracınız için teknik ön kabul tamamlandı. Fiyatlandırma hazırlanıyor.`,
+              message: quotesEnabled
+                ? `${order.vehicle.plate} plakalı aracınız için teknik ön kabul tamamlandı. Fiyatlandırma hazırlanıyor.`
+                : `${order.vehicle.plate} plakalı aracınız servise kabul edildi. Teknik işlem planı hazırlandı.`,
             },
           });
         }
@@ -329,8 +352,9 @@ export class InspectionsService {
           inspection,
           serviceOrder:
             order,
-          nextStep:
-            'QUOTE_PRICING',
+          nextStep: quotesEnabled
+            ? 'QUOTE_PRICING'
+            : 'TECHNICIAN_ASSIGNMENT',
         };
       },
     );
@@ -342,6 +366,7 @@ export class InspectionsService {
     actorRole: UserRole,
     userId: string,
     dto: CreateMobileIntakeDto,
+    txClient?: Prisma.TransactionClient,
   ) {
     await this.ensureMobileIntakeAccess(
       organizationId,
@@ -420,8 +445,15 @@ export class InspectionsService {
       );
     }
 
-    return this.prisma.$transaction(
-      async (tx) => {
+    const requestHash = createHash('sha256').update(JSON.stringify(dto)).digest('hex');
+    const work = async (tx: Prisma.TransactionClient) => {
+        if (dto.requestKey) {
+          const previous = await tx.serviceOrder.findUnique({ where: { organizationId_requestKey: { organizationId, requestKey: dto.requestKey } }, include: { customer: true, vehicle: true, items: true, inspections: { include: { items: true, media: true } } } });
+          if (previous) {
+            if (previous.requestHash !== requestHash || previous.branchId !== resolvedBranchId) throw new BadRequestException('Tekrar isteğinin içeriği değişti. Kaydedilmiş kabulü kontrol edin.');
+            return { customer: previous.customer, vehicle: previous.vehicle, inspection: previous.inspections[0], serviceOrder: previous, replayed: true };
+          }
+        }
         let customer:
           any = null;
 
@@ -572,22 +604,11 @@ export class InspectionsService {
               '',
             );
 
-          vehicle =
-            await tx.vehicle.findFirst({
-              where: {
-                organizationId,
-                OR: [
-                  {
-                    plate:
-                      rawPlate,
-                  },
-                  {
-                    plate:
-                      compactPlate,
-                  },
-                ],
-              },
-            });
+          const plateMatches = await tx.$queryRaw<Array<{ id: string }>>`
+            SELECT id FROM "Vehicle" WHERE "organizationId" = ${organizationId}
+            AND upper(regexp_replace(translate(plate, 'İı', 'II'), '[[:space:]]', '', 'g')) = ${compactPlate.replace(/İ/g, 'I')}`;
+          if (plateMatches.length > 1) throw new BadRequestException('Bu plaka birden fazla eski kayıtta var. Araç kaydını açıkça seçin.');
+          vehicle = plateMatches.length ? await tx.vehicle.findUnique({ where: { id: plateMatches[0].id } }) : null;
 
           if (
             vehicle &&
@@ -658,6 +679,8 @@ export class InspectionsService {
               data: {
                 mileage:
                   dto.mileage,
+                mileageUpdatedAt:
+                  new Date(),
               },
             });
         }
@@ -685,6 +708,8 @@ export class InspectionsService {
           await tx.serviceOrder.create({
             data: {
               organizationId,
+              requestKey: dto.requestKey,
+              requestHash,
               branchId:
                 resolvedBranchId,
               customerId:
@@ -881,6 +906,7 @@ export class InspectionsService {
           });
 
         return {
+          replayed: false,
           customer,
           vehicle,
           inspection:
@@ -888,8 +914,8 @@ export class InspectionsService {
           serviceOrder:
             result?.serviceOrder,
         };
-      },
-    );
+      };
+    return txClient ? work(txClient) : atomic(this.prisma, organizationId, work);
   }
 
   async create(

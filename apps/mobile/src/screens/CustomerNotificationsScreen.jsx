@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
 import {
   Pressable,
   ScrollView,
@@ -35,6 +36,8 @@ export default function CustomerNotificationsScreen() {
     useState(true);
   const [error, setError] =
     useState('');
+
+  useLiveRefresh(() => load());
 
   async function load() {
     const data =

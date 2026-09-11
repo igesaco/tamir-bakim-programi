@@ -1,3 +1,4 @@
+import { CompletePlanDto } from './dto/complete-plan.dto';
 import {
   Body,
   Controller,
@@ -109,12 +110,14 @@ export class MaintenanceController {
   completePlan(
     @Req() req: any,
     @Param('id') id: string,
+    @Body() dto: CompletePlanDto,
   ) {
     return this.maintenanceService.completePlan(
       req.user.organizationId,
       id,
       req.user.role,
       req.user.branchId,
+      dto,
     );
   }
 

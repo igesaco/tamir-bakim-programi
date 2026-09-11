@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - workflowD-service-sync
+      - main
   pull_request:
     branches:
       - main
@@ -83,6 +84,14 @@ jobs:
       - name: API production build
         working-directory: apps/api
         run: npm run build
+
+      - name: API unit tests
+        working-directory: apps/api
+        run: npm test -- --runInBand
+
+      - name: Transaction and service workflow regression
+        working-directory: apps/api
+        run: node workflow-smoke.cjs
 
       - name: API lint
         working-directory: apps/api
@@ -179,7 +188,7 @@ jobs:
           cache: npm
           cache-dependency-path: apps/mobile/package-lock.json
       - name: Mobile configuration isolation tests
-        run: npm run test:config
+        run: npm run test:config && npm run test:ocr
       - name: Mobile install
         run: npm ci --no-audit --no-fund
       - name: Export ${{ matrix.platform }} bundle

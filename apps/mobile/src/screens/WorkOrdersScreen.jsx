@@ -1,3 +1,5 @@
+import { nextStatuses } from '../utils/order-transitions';
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
 import {
   Image,
   Modal,
@@ -112,6 +114,12 @@ export default function WorkOrdersScreen() {
       'SERVICE_ORDER_WORKLOG',
     );
 
+  const canCompleteItems =
+    hasPermission(
+      user,
+      'SERVICE_ORDER_ITEM_COMPLETE',
+    );
+
   const canUploadMedia =
     canUse(user, {
       feature: 'MEDIA',
@@ -123,6 +131,8 @@ export default function WorkOrdersScreen() {
     'TECHNICIAN'
       ? technicianStatuses
       : managerStatuses;
+
+  useLiveRefresh(async () => { await load(); await refreshSelected(); }, !busy && !detailBusy);
 
   async function load() {
     const response =
@@ -747,7 +757,9 @@ export default function WorkOrdersScreen() {
                   </Text>
 
                   <Text style={styles.sectionHint}>
-                    Her işlemi tamamlandıkça işaretleyin. Son işlem tamamlandığında araç otomatik olarak kalite kontrol aşamasına geçer.
+                    {canCompleteItems
+                      ? 'Her işlemi tamamlandıkça işaretleyin. Son işlem tamamlandığında araç otomatik olarak kalite kontrol aşamasına geçer.'
+                      : 'Onaylı işlem listesi takip amaçlı gösteriliyor.'}
                   </Text>
 
                   <View style={styles.taskList}>
@@ -755,12 +767,10 @@ export default function WorkOrdersScreen() {
                       (item) => (
                         <Pressable
                           key={item.id}
-                          disabled={busy}
-                          onPress={() =>
-                            toggleTask(
-                              item,
-                            )
-                          }
+                          disabled={busy || !canCompleteItems}
+                          onPress={canCompleteItems
+                            ? () => toggleTask(item)
+                            : undefined}
                           style={[
                             styles.taskRow,
                             item.completed &&
@@ -812,7 +822,7 @@ export default function WorkOrdersScreen() {
                   </Text>
 
                   <View style={styles.statusGrid}>
-                    {allowedStatuses.map(
+                    {allowedStatuses.filter(status => status === selected?.status || (nextStatuses[selected?.status] || []).includes(status)).map(
                       (status) => (
                         <Pressable
                           key={status}

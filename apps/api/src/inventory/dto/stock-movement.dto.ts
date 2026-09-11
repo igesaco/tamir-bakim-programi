@@ -6,6 +6,10 @@ import {
 } from 'class-validator';
 
 export class StockMovementDto {
+  @IsOptional()
+  @IsString()
+  serviceOrderItemId?: string;
+
   @IsString()
   partId: string;
 
