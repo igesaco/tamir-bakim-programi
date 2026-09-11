@@ -758,6 +758,61 @@ export default function CustomerDetail() {
     );
   }
 
+  function selectQuoteOrder(orderId) {
+    const order = orders.find(
+      (item) => item.id === orderId,
+    );
+
+    if (!order) {
+      setQuoteForm((current) => ({
+        ...current,
+        serviceOrderId: '',
+      }));
+      setQuoteItems([
+        emptyQuoteItem(),
+      ]);
+      return;
+    }
+
+    const availableItems =
+      order.items?.filter(
+        (item) => !item.approvedQuoteId,
+      ) || [];
+
+    setQuoteForm({
+      vehicleId: order.vehicleId,
+      serviceOrderId: order.id,
+      notes: order.complaint
+        ? `Müşteri talebi: ${order.complaint}`
+        : '',
+    });
+    setQuoteItems(
+      availableItems.length
+        ? availableItems.map(
+            (item) => ({
+              serviceOrderItemId:
+                item.id,
+              type: item.type,
+              name: item.name,
+              description:
+                item.description || '',
+              quantity:
+                Number(item.quantity) || 1,
+              unitPrice:
+                Number(item.unitPrice) > 0
+                  ? Number(item.unitPrice)
+                  : '',
+              discountAmount:
+                Number(item.discountAmount) || 0,
+              vatRate:
+                Number(item.vatRate) || 20,
+            }),
+          )
+        : [emptyQuoteItem()],
+    );
+    setSelectedPackageId('');
+  }
+
   async function addQuote(e) {
     e.preventDefault();
     beginAction();
@@ -770,8 +825,7 @@ export default function CustomerDetail() {
           vehicleId:
             quoteForm.vehicleId,
           serviceOrderId:
-            quoteForm.serviceOrderId ||
-            undefined,
+            quoteForm.serviceOrderId,
           notes:
             quoteForm.notes ||
             undefined,
@@ -1005,9 +1059,15 @@ export default function CustomerDetail() {
   const selectedQuoteOrders =
     orders.filter(
       (order) =>
-        !quoteForm.vehicleId ||
-        order.vehicleId ===
-          quoteForm.vehicleId,
+        ![
+          'DELIVERED',
+          'CANCELLED',
+        ].includes(order.status) &&
+        (
+          !quoteForm.vehicleId ||
+          order.vehicleId ===
+          quoteForm.vehicleId
+        ),
     );
 
   return (
@@ -1822,15 +1882,19 @@ export default function CustomerDetail() {
                   value={
                     quoteForm.vehicleId
                   }
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setQuoteForm({
                       ...quoteForm,
                       vehicleId:
                         e.target.value,
                       serviceOrderId:
                         '',
-                    })
-                  }
+                    });
+                    setQuoteItems([
+                      emptyQuoteItem(),
+                    ]);
+                    setSelectedPackageId('');
+                  }}
                   required
                 >
                   <option value="">
@@ -1860,15 +1924,14 @@ export default function CustomerDetail() {
                     quoteForm.serviceOrderId
                   }
                   onChange={(e) =>
-                    setQuoteForm({
-                      ...quoteForm,
-                      serviceOrderId:
-                        e.target.value,
-                    })
+                    selectQuoteOrder(
+                      e.target.value,
+                    )
                   }
+                  required
                 >
                   <option value="">
-                    İş emri (opsiyonel)
+                    İş emri seç
                   </option>
 
                   {selectedQuoteOrders.map(
@@ -1946,6 +2009,16 @@ export default function CustomerDetail() {
                   >
                     + Kalem Ekle
                   </button>
+                </div>
+
+                <div className="quote-item-labels" aria-hidden="true">
+                  <span>Tür</span>
+                  <span>İşlem / Parça</span>
+                  <span>Miktar</span>
+                  <span>Birim Fiyat</span>
+                  <span>İndirim</span>
+                  <span>KDV %</span>
+                  <span></span>
                 </div>
 
                 {quoteItems.map(
@@ -2145,10 +2218,20 @@ export default function CustomerDetail() {
 
               <button
                 className="primary-button"
-                disabled={busy}
+                disabled={
+                  busy ||
+                  !quoteForm.serviceOrderId ||
+                  quoteTotals.total <= 0
+                }
               >
                 Teklif Oluştur
               </button>
+
+              {quoteTotals.total <= 0 && (
+                <p className="form-hint error-text">
+                  Teklif oluşturmak için en az bir kaleme fiyat girin.
+                </p>
+              )}
             </form>
           </div>
 

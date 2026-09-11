@@ -1,4 +1,5 @@
 ﻿import {
+  useEffect,
   useState,
 } from 'react';
 import {
@@ -125,10 +126,11 @@ export default function CustomerPortal() {
 
   const [identity, setIdentity] =
     useState({
-      nationalId: '',
-      plate: '',
       phone: '',
     });
+
+  const [deliveryChannel, setDeliveryChannel] =
+    useState('WHATSAPP');
 
   const [
     challenge,
@@ -157,24 +159,38 @@ export default function CustomerPortal() {
         await portalRequest(
           fromMaintenanceCard
             ? '/customer-portal/access/qr/start'
-            : '/customer-portal/access/start',
+            : '/customer-portal/access/phone/start',
           {
             method: 'POST',
-            body:
-              fromMaintenanceCard
-                ? {
-                    phone:
-                      identity.phone,
-                    qrToken,
-                  }
-                : identity,
+            body: {
+              phone:
+                identity.phone,
+              channel:
+                deliveryChannel,
+              ...(fromMaintenanceCard
+                ? { qrToken }
+                : {}),
+            },
           },
         );
 
       setChallenge(
         result,
       );
-      setStep('otp');
+      if (
+        result.deliveryChannel ===
+          'WHATSAPP' &&
+        !result.developmentCode
+      ) {
+        setStep('whatsapp');
+        window.open(
+          result.whatsappUrl,
+          '_blank',
+          'noopener,noreferrer',
+        );
+      } else {
+        setStep('otp');
+      }
     } catch (err) {
       setError(
         err.message,
@@ -226,6 +242,80 @@ export default function CustomerPortal() {
     }
   }
 
+  useEffect(() => {
+    if (
+      step !== 'whatsapp' ||
+      !challenge?.challengeId
+    ) {
+      return undefined;
+    }
+
+    let stopped = false;
+    let checking = false;
+    let completed = false;
+
+    const check = async () => {
+      if (
+        stopped ||
+        checking ||
+        completed
+      ) {
+        return;
+      }
+
+      checking = true;
+      try {
+        const result =
+          await portalRequest(
+            '/customer-portal/access/whatsapp/status',
+            {
+              method: 'POST',
+              body: {
+                challengeId:
+                  challenge.challengeId,
+                client: 'WEB',
+              },
+            },
+          );
+
+        if (
+          !stopped &&
+          result.confirmed
+        ) {
+          completed = true;
+          const portalData =
+            await portalRequest(
+              '/customer-portal/me',
+              {
+                token: result.token,
+              },
+            );
+          setData(portalData);
+          setStep('account');
+        }
+      } catch (err) {
+        if (!stopped) {
+          setError(err.message);
+        }
+      } finally {
+        checking = false;
+      }
+    };
+
+    check();
+    const timer =
+      window.setInterval(
+        check,
+        challenge.pollingIntervalMs ||
+          2000,
+      );
+
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+    };
+  }, [step, challenge]);
+
   return (
     <div className="customer-portal-page">
       <header className="customer-portal-header">
@@ -256,78 +346,64 @@ export default function CustomerPortal() {
             </h1>
 
             <p>
-              {fromMaintenanceCard
-                ? 'Bakım kartındaki aracın sahibi olduğunuzu, servis kaydındaki telefon numaranızla doğrulayın.'
-                : 'T.C. kimlik numaranız ve araç plakanız ile doğrulama başlatın.'}
+              Servis kaydındaki telefon numaranızı kullanın. T.C. kimlik numarası istenmez.
             </p>
 
             <form
               onSubmit={start}
               className="customer-portal-form"
             >
-              {fromMaintenanceCard ? (
-                <label>
-                  Telefon Numarası
-                  <input
-                    inputMode="tel"
-                    placeholder="05xx xxx xx xx"
-                    value={
-                      identity.phone
-                    }
-                    onChange={(event) =>
-                      setIdentity({
-                        ...identity,
-                        phone:
-                          event.target.value,
-                      })
-                    }
-                    required
-                  />
-                </label>
-              ) : (
-                <label>
-                  T.C. Kimlik No
-                  <input
-                    inputMode="numeric"
-                    maxLength="11"
-                    value={
-                      identity.nationalId
-                    }
-                    onChange={(event) =>
-                      setIdentity({
-                        ...identity,
-                        nationalId:
-                          event.target.value
-                            .replace(
-                              /\D/g,
-                              '',
-                            ),
-                      })
-                    }
-                    required
-                  />
-                </label>
-              )}
+              <label>
+                Telefon Numarası
+                <input
+                  inputMode="tel"
+                  placeholder="05xx xxx xx xx"
+                  value={identity.phone}
+                  onChange={(event) =>
+                    setIdentity({
+                      phone:
+                        event.target.value,
+                    })
+                  }
+                  required
+                />
+              </label>
 
-              {!fromMaintenanceCard && (
-                <label>
-                  Plaka
-                  <input
-                    value={
-                      identity.plate
-                    }
-                    onChange={(event) =>
-                      setIdentity({
-                        ...identity,
-                        plate:
-                          event.target.value
-                            .toUpperCase(),
-                      })
-                    }
-                    required
-                  />
-                </label>
-              )}
+              <div className="portal-channel-picker">
+                <button
+                  type="button"
+                  className={
+                    deliveryChannel ===
+                    'WHATSAPP'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() =>
+                    setDeliveryChannel(
+                      'WHATSAPP',
+                    )
+                  }
+                >
+                  WhatsApp — ücretsiz
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    deliveryChannel ===
+                    'SMS'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() =>
+                    setDeliveryChannel(
+                      'SMS',
+                    )
+                  }
+                >
+                  SMS
+                </button>
+              </div>
 
               {error && (
                 <div className="page-message error-message">
@@ -341,22 +417,56 @@ export default function CustomerPortal() {
               >
                 {busy
                   ? 'Kontrol ediliyor...'
-                  : 'Doğrulama Kodu Gönder'}
+                  : deliveryChannel ===
+                      'WHATSAPP'
+                    ? 'WhatsApp ile Doğrula'
+                    : 'SMS Kodu Gönder'}
               </button>
             </form>
 
             <div className="customer-portal-security">
-              {fromMaintenanceCard
-                ? 'QR kod yalnızca dijital bakım kartını açar. Telefon eşleşmesi ve SMS doğrulaması olmadan kişisel bilgiler gösterilmez.'
-                : 'Cari ve ödeme bilgileri yalnızca SMS doğrulaması sonrasında gösterilir.'}
+              Kişisel ve finansal bilgiler, kayıtlı telefon WhatsApp veya SMS ile doğrulanmadan gösterilmez.
             </div>
+          </section>
+        )}
+
+        {step === 'whatsapp' && (
+          <section className="customer-portal-auth-card">
+            <span className="platform-kicker">
+              WHATSAPP DOĞRULAMA
+            </span>
+
+            <h1>Mesajı gönderin</h1>
+
+            <p>
+              Açılan WhatsApp ekranındaki hazır mesajı değiştirmeden gönderin. Bu sayfa doğrulamayı otomatik algılayacaktır.
+            </p>
+
+            <a
+              className="primary-button portal-whatsapp-link"
+              href={challenge?.whatsappUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              WhatsApp'ı Aç
+            </a>
+
+            <div className="customer-portal-security">
+              Kod uygulamadan gönderilmez; kayıtlı numaranızdan gelen mesaj doğrulanır. Bu nedenle ücretli OTP mesajı gerekmez.
+            </div>
+
+            {error && (
+              <div className="page-message error-message">
+                {error}
+              </div>
+            )}
           </section>
         )}
 
         {step === 'otp' && (
           <section className="customer-portal-auth-card">
             <span className="platform-kicker">
-              SMS DOĞRULAMA
+              {deliveryChannel} DOĞRULAMA
             </span>
 
             <h1>

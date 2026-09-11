@@ -30,7 +30,6 @@ import ServiceOrderDetail from './pages/ServiceOrderDetail';
 import DeliveryReport from './pages/DeliveryReport';
 
 import Quotes from './pages/Quotes';
-import PricingQueue from './pages/PricingQueue';
 import QuoteProforma from './pages/QuoteProforma';
 import Maintenance from './pages/Maintenance';
 import Inventory from './pages/Inventory';
@@ -305,15 +304,7 @@ export default function App() {
 
             <Route
               path="pricing"
-              element={
-                <ForRoles
-                  roles={PRICING_ROLES}
-                  feature="QUOTES"
-                  permission="SERVICE_ORDER_VIEW"
-                >
-                  <PricingQueue />
-                </ForRoles>
-              }
+              element={<Navigate to="/quotes" replace />}
             />
 
             <Route

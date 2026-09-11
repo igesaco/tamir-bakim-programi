@@ -54,20 +54,6 @@ const menu = [
     ],
   },
   {
-    path: '/pricing',
-    label: 'Fiyatlandırma',
-    short: 'Fİ',
-    icon: 'cash',
-    feature: 'QUOTES',
-    permission: 'SERVICE_ORDER_VIEW',
-    roles: [
-      'OWNER',
-      'MANAGER',
-      'SERVICE_ADVISOR',
-      'ACCOUNTING',
-    ],
-  },
-  {
     path: '/quotes',
     label: 'Teklif / Proforma',
     short: 'TF',
@@ -402,17 +388,6 @@ function getPageInfo(
 
   if (
     pathname.startsWith(
-      '/pricing',
-    )
-  ) {
-    return {
-      label: 'Fiyatlandırma',
-      icon: 'cash',
-    };
-  }
-
-  if (
-    pathname.startsWith(
       '/quotes',
     )
   ) {
@@ -556,7 +531,11 @@ export default function DashboardLayout() {
             : [];
 
         return Array.isArray(parsed)
-          ? parsed
+          ? parsed.filter(
+              (tab) =>
+                tab?.path !==
+                '/pricing',
+            )
           : [];
       } catch {
         return [];

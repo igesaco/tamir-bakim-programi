@@ -533,9 +533,11 @@ model CustomerPortalChallenge {
   vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
   codeHash  String
+  channel   String   @default("SMS")
   expiresAt DateTime
   attempts  Int      @default(0)
   verifiedAt DateTime?
+  whatsappConfirmedAt DateTime?
 
   createdAt DateTime @default(now())
 

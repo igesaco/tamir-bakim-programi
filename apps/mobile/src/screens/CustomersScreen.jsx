@@ -315,7 +315,7 @@ export default function CustomersScreen({
           />
 
           <Field
-            label="T.C. Kimlik No (müşteri portalı için)"
+            label="T.C. Kimlik No (opsiyonel)"
             keyboardType="number-pad"
             maxLength={11}
             value={form.nationalId}

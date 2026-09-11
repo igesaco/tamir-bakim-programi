@@ -1,11 +1,13 @@
 import {
   KeyboardAvoidingView,
+  Linking,
   Platform,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import {
+  useEffect,
   useState,
 } from 'react';
 
@@ -31,6 +33,7 @@ export default function CustomerLoginScreen({
 }) {
   const {
     startCustomerAccess,
+    checkWhatsappAccess,
     verifyCustomerAccess,
   } = useAuth();
 
@@ -46,27 +49,45 @@ export default function CustomerLoginScreen({
   const [code, setCode] =
     useState('');
 
+  const [deliveryChannel, setDeliveryChannel] =
+    useState('WHATSAPP');
+
   const [busy, setBusy] =
     useState(false);
 
   const [error, setError] =
     useState('');
 
-  async function sendCode() {
+  async function sendCode(
+    channel,
+  ) {
     setBusy(true);
     setError('');
+    setDeliveryChannel(channel);
 
     try {
       const result =
         await startCustomerAccess(
           phone,
           qrToken,
+          channel,
         );
 
       setChallenge(
         result,
       );
-      setStep('otp');
+      if (
+        result.deliveryChannel ===
+          'WHATSAPP' &&
+        !result.developmentCode
+      ) {
+        setStep('whatsapp');
+        await Linking.openURL(
+          result.whatsappUrl,
+        );
+      } else {
+        setStep('otp');
+      }
     } catch (err) {
       setError(
         err?.message ||
@@ -76,6 +97,70 @@ export default function CustomerLoginScreen({
       setBusy(false);
     }
   }
+
+  useEffect(() => {
+    if (
+      step !== 'whatsapp' ||
+      !challenge?.challengeId
+    ) {
+      return undefined;
+    }
+
+    let stopped = false;
+    let checking = false;
+    let completed = false;
+
+    const check = async () => {
+      if (
+        stopped ||
+        checking ||
+        completed
+      ) {
+        return;
+      }
+
+      checking = true;
+      try {
+        const result =
+          await checkWhatsappAccess(
+            challenge.challengeId,
+          );
+
+        if (
+          !stopped &&
+          result.confirmed
+        ) {
+          completed = true;
+          setStep('complete');
+        }
+      } catch (err) {
+        if (!stopped) {
+          setError(
+            err?.message ||
+              'WhatsApp doğrulaması kontrol edilemedi.',
+          );
+        }
+      } finally {
+        checking = false;
+      }
+    };
+
+    check();
+    const timer = setInterval(
+      check,
+      challenge.pollingIntervalMs ||
+        2000,
+    );
+
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [
+    step,
+    challenge,
+    checkWhatsappAccess,
+  ]);
 
   async function verifyCode() {
     setBusy(true);
@@ -114,7 +199,9 @@ export default function CustomerLoginScreen({
       <Text style={styles.title}>
         {step === 'phone'
           ? 'Aracınıza bağlanın'
-          : 'SMS kodunu girin'}
+          : step === 'whatsapp'
+            ? 'Mesajı gönderin'
+            : 'Doğrulama kodunu girin'}
       </Text>
 
       <Text style={styles.subtitle}>
@@ -122,7 +209,9 @@ export default function CustomerLoginScreen({
           ? qrToken
             ? 'Bakım kartındaki aracın sahibi olduğunuzu servis kaydındaki telefon numaranızla doğrulayın.'
             : 'Servis kaydında bulunan telefon numaranızı girin. Bağlı araçlarınız otomatik olarak hesabınızda görünür.'
-          : `Kod ${challenge?.maskedPhone || 'telefonunuza'} gönderildi.`}
+          : step === 'whatsapp'
+            ? 'Açılan WhatsApp ekranındaki hazır mesajı değiştirmeden gönderin. Uygulama doğrulamayı otomatik algılar.'
+            : `Kod ${challenge?.maskedPhone || 'telefonunuza'} gönderildi.`}
       </Text>
 
       <View style={styles.card}>
@@ -141,8 +230,8 @@ export default function CustomerLoginScreen({
             <Button
               title={
                 busy
-                  ? 'Kod gönderiliyor...'
-                  : 'SMS Kodu Gönder'
+                  ? 'Hazırlanıyor...'
+                  : 'WhatsApp ile Ücretsiz Doğrula'
               }
               disabled={
                 busy ||
@@ -151,8 +240,46 @@ export default function CustomerLoginScreen({
                   '',
                 ).length < 10
               }
-              onPress={sendCode}
+              onPress={() =>
+                sendCode('WHATSAPP')
+              }
             />
+
+            <View style={styles.gap} />
+
+            <Button
+              title="SMS Kodu Gönder"
+              tone="ghost"
+              disabled={
+                busy ||
+                phone.replace(
+                  /\D/g,
+                  '',
+                ).length < 10
+              }
+              onPress={() =>
+                sendCode('SMS')
+              }
+            />
+          </>
+        ) : step === 'whatsapp' ? (
+          <>
+            <Button
+              title="WhatsApp'ı Aç"
+              onPress={() =>
+                Linking.openURL(
+                  challenge.whatsappUrl,
+                )
+              }
+            />
+
+            <View style={styles.gap} />
+
+            <Message text={error} />
+
+            <Text style={styles.waitingText}>
+              Mesajınız bekleniyor…
+            </Text>
           </>
         ) : (
           <>
@@ -295,6 +422,12 @@ const styles =
     },
     gap: {
       height: 8,
+    },
+    waitingText: {
+      marginTop: 12,
+      color: colors.muted,
+      fontSize: 12,
+      textAlign: 'center',
     },
     back: {
       marginTop: 10,
