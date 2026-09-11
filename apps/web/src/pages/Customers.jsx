@@ -442,7 +442,7 @@ export default function Customers() {
             <input
               inputMode="numeric"
               maxLength="11"
-              placeholder="T.C. Kimlik No (portal için)"
+              placeholder="T.C. Kimlik No (opsiyonel)"
               value={form.nationalId}
               onChange={(e) =>
                 setForm({
@@ -777,7 +777,7 @@ export default function Customers() {
                 <div className="sub-text">
                   {editing.nationalIdLast4
                     ? `Kayıtlı T.C. son 4 hane: ${editing.nationalIdLast4}`
-                    : 'Müşteri portalı için T.C. kimlik numarası tanımlayın.'}
+                    : 'Yalnızca fatura veya resmi kayıt gerekiyorsa ekleyin.'}
                 </div>
               </div>
 

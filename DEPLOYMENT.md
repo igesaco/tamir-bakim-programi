@@ -24,9 +24,26 @@ NODE_ENV=production
 SWAGGER_ENABLED=false
 CORS_ORIGINS=https://tamir-bakim-programi.onrender.com
 ALLOW_PUBLIC_REGISTRATION=false
+CUSTOMER_PORTAL_JWT_SECRET=<private random value, minimum 32 characters>
+WHATSAPP_WEBHOOK_VERIFY_TOKEN=<private random value>
+WHATSAPP_APP_SECRET=<Meta app secret>
+# Optional paid SMS fallback:
+PORTAL_OTP_WEBHOOK_URL=<SMS provider webhook URL>
 ```
 
 Do not commit or share production secrets.
+
+### Free WhatsApp phone verification
+
+The free flow does not send an outbound OTP. The customer opens WhatsApp from the app and sends the prefilled `TB-123456` challenge from the phone number registered on the customer record. Meta delivers that inbound message to:
+
+```text
+GET/POST https://tamir-bakim-api.onrender.com/customer-portal/whatsapp/webhook
+```
+
+Configure this URL for WhatsApp `messages` webhooks in the Meta app. Use the same value for Meta's verify token and `WHATSAPP_WEBHOOK_VERIFY_TOKEN`. The API verifies every POST with `WHATSAPP_APP_SECRET` before accepting a phone number.
+
+Set each organization's WhatsApp number in Settings. The number must belong to the WhatsApp Business account whose messages are delivered to the webhook.
 
 ### Media persistence
 

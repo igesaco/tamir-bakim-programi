@@ -1384,10 +1384,12 @@
    CUSTOMER VEHICLE MEDIA
    ========================================================= */
 .customer-vehicle-photo-strip {
+  width: 100%;
+  min-width: 0;
   padding: 10px 0 2px;
   display: grid;
   grid-template-columns:
-    repeat(3, minmax(0, 1fr));
+    repeat(auto-fit, minmax(90px, 1fr));
   gap: 7px;
 }
 
@@ -1421,6 +1423,7 @@
 }
 
 .customer-vehicle-no-photo {
+  min-width: 0;
   margin: 8px 0 2px;
   padding: 10px;
   border: 1px dashed #303942;

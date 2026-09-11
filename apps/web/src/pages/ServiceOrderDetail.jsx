@@ -265,15 +265,58 @@ export default function ServiceOrderDetail() {
   }
 
   async function toggleItem(item) {
-    await api.patch(
-      `/service-orders/${id}/items/${item.id}/complete`,
-      {
-        completed:
-          !item.completed,
-      },
-    );
+    setItemBusy(true);
+    setItemError('');
 
-    await load();
+    try {
+      await api.patch(
+        `/service-orders/${id}/items/${item.id}/complete`,
+        {
+          completed:
+            !item.completed,
+        },
+      );
+
+      await load();
+    } catch (error) {
+      setItemError(
+        apiMessage(
+          error,
+          'İşlem durumu güncellenemedi.',
+        ),
+      );
+    } finally {
+      setItemBusy(false);
+    }
+  }
+
+  function itemCompletionBlockReason(item) {
+    if (!canCompleteItems) {
+      return 'Bu işlem için tamamlama yetkiniz yok.';
+    }
+
+    if (
+      ![
+        'IN_PROGRESS',
+        'PART_WAITING',
+        'QUALITY_CONTROL',
+      ].includes(order?.status)
+    ) {
+      return 'Teklif onaylanıp iş başlatıldıktan sonra tamamlanabilir.';
+    }
+
+    const approvalRequired =
+      order?.approvalRequired ||
+      (order?.quotes?.length > 0);
+    const approved =
+      item.approved ||
+      Boolean(item.approvedQuoteId);
+
+    if (approvalRequired && !approved) {
+      return 'Bu ek işlem için müşteri onayı bekleniyor.';
+    }
+
+    return '';
   }
 
   async function removeItem(item) {
@@ -1484,6 +1527,13 @@ export default function ServiceOrderDetail() {
                       </td>
 
                       <td>
+                        {(() => {
+                          const blockReason =
+                            itemCompletionBlockReason(
+                              item,
+                            );
+
+                          return (
                         <button
                           className={
                             item.completed
@@ -1493,12 +1543,18 @@ export default function ServiceOrderDetail() {
                           onClick={() =>
                             toggleItem(item)
                           }
-                          disabled={!canCompleteItems}
+                          disabled={
+                            itemBusy ||
+                            Boolean(blockReason)
+                          }
+                          title={blockReason}
                         >
                           {item.completed
                             ? 'Tamamlandı'
                             : 'Bekliyor'}
                         </button>
+                          );
+                        })()}
                       </td>
 
                       <td>

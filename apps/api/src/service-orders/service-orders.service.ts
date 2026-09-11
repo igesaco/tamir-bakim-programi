@@ -369,10 +369,17 @@ export class ServiceOrdersService {
                 description: true,
                 quantity: true,
                 completed: true,
+                approvedQuoteId: true,
               },
               orderBy: {
                 createdAt: 'asc',
               },
+            },
+            quotes: {
+              select: {
+                id: true,
+              },
+              take: 1,
             },
             media: {
               orderBy: {
@@ -411,7 +418,28 @@ export class ServiceOrdersService {
         );
       }
 
-      return technicianOrder;
+      const {
+        quotes,
+        ...safeOrder
+      } = technicianOrder;
+
+      return {
+        ...safeOrder,
+        approvalRequired:
+          quotes.length > 0,
+        items: safeOrder.items.map(
+          ({
+            approvedQuoteId,
+            ...item
+          }) => ({
+            ...item,
+            approved:
+              Boolean(
+                approvedQuoteId,
+              ),
+          }),
+        ),
+      };
     }
 
     const order =

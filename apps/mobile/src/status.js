@@ -3,7 +3,7 @@ export const serviceStatusLabels = {
   ARRIVED: 'Geldi',
   ACCEPTED: 'Araç Kabul Edildi',
   INSPECTION: 'Teknik İnceleme',
-  QUOTE_WAITING: 'Fiyatlandırma Bekleniyor',
+  QUOTE_WAITING: 'Teklif Bekleniyor',
   APPROVED: 'İş Emri Onaylandı',
   IN_PROGRESS: 'Servis İşlemi Başladı',
   PART_WAITING: 'Parça Bekleniyor',

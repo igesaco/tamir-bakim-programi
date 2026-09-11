@@ -2,10 +2,14 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
+  HttpCode,
   Param,
   Patch,
   Post,
   Req,
+  Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -16,6 +20,7 @@ import { StartPortalQrAccessDto } from './dto/start-portal-qr-access.dto';
 import { StartPortalPhoneAccessDto } from './dto/start-portal-phone-access.dto';
 import { VerifyPortalAccessDto } from './dto/verify-portal-access.dto';
 import { UpdateCustomerMileageDto } from './dto/update-customer-mileage.dto';
+import { CheckWhatsappAccessDto } from './dto/check-whatsapp-access.dto';
 
 @Controller('customer-portal')
 export class CustomerPortalController {
@@ -56,6 +61,49 @@ export class CustomerPortalController {
   ) {
     return this.customerPortalService.verify(
       dto,
+    );
+  }
+
+  @Post('access/whatsapp/status')
+  checkWhatsappAccess(
+    @Body() dto: CheckWhatsappAccessDto,
+  ) {
+    return this.customerPortalService.checkWhatsappAccess(
+      dto,
+    );
+  }
+
+  @Get('whatsapp/webhook')
+  verifyWhatsappWebhook(
+    @Query('hub.mode') mode: string,
+    @Query('hub.verify_token') token: string,
+    @Query('hub.challenge') challenge: string,
+    @Res() response: any,
+  ) {
+    const value =
+      this.customerPortalService.verifyWhatsappWebhook(
+        mode,
+        token,
+        challenge,
+      );
+
+    response
+      .type('text/plain')
+      .send(value);
+  }
+
+  @Post('whatsapp/webhook')
+  @HttpCode(200)
+  whatsappWebhook(
+    @Req() request: any,
+    @Headers('x-hub-signature-256')
+    signature: string | undefined,
+    @Body() payload: any,
+  ) {
+    return this.customerPortalService.handleWhatsappWebhook(
+      payload,
+      request.rawBody,
+      signature,
     );
   }
 

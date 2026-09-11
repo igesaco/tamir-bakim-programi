@@ -2,10 +2,12 @@ import { useLiveRefresh } from '../hooks/useLiveRefresh';
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
   Link,
+  useNavigate,
   useSearchParams,
 } from 'react-router-dom';
 
@@ -33,8 +35,10 @@ function money(value) {
 }
 
 export default function Quotes() {
+  const navigate = useNavigate();
   const [searchParams] =
     useSearchParams();
+  const hydratedOrderRef = useRef('');
 
   const [quotes, setQuotes] = useState([]);
   const [customers, setCustomers] =
@@ -62,7 +66,70 @@ export default function Quotes() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  useLiveRefresh(() => load(true), !busy);
+  function itemsFromOrder(order) {
+    const availableItems =
+      order.items?.filter(
+        (item) => !item.approvedQuoteId,
+      ) || [];
+
+    if (!availableItems.length) {
+      return [emptyItem()];
+    }
+
+    return availableItems.map((item) => ({
+      serviceOrderItemId: item.id,
+      type: item.type,
+      name: item.name,
+      description: item.description || '',
+      quantity: Number(item.quantity) || 1,
+      unitPrice:
+        Number(item.unitPrice) > 0
+          ? Number(item.unitPrice)
+          : '',
+      discountAmount:
+        Number(item.discountAmount) || 0,
+      vatRate:
+        Number(item.vatRate) || 20,
+    }));
+  }
+
+  function selectOrder(
+    order,
+    { syncUrl = false } = {},
+  ) {
+    if (!order) {
+      setForm((current) => ({
+        ...current,
+        serviceOrderId: '',
+      }));
+      setItems([emptyItem()]);
+      hydratedOrderRef.current = '';
+      if (syncUrl) {
+        navigate('/quotes', {
+          replace: true,
+        });
+      }
+      return;
+    }
+
+    setForm({
+      customerId: order.customerId,
+      vehicleId: order.vehicleId,
+      serviceOrderId: order.id,
+      notes: order.complaint
+        ? `Müşteri talebi: ${order.complaint}`
+        : '',
+    });
+    setItems(itemsFromOrder(order));
+    setSelectedPackageId('');
+    hydratedOrderRef.current = order.id;
+    if (syncUrl) {
+      navigate(
+        `/quotes?order=${order.id}`,
+        { replace: true },
+      );
+    }
+  }
 
   async function load() {
     const [q, c, v, o, p] =
@@ -93,7 +160,10 @@ export default function Quotes() {
         'order',
       );
 
-    if (orderId) {
+    if (
+      orderId &&
+      hydratedOrderRef.current !== orderId
+    ) {
       const selectedOrder =
         o.data.find(
           (order) =>
@@ -102,57 +172,12 @@ export default function Quotes() {
         );
 
       if (selectedOrder) {
-        setForm({
-          customerId:
-            selectedOrder.customerId,
-          vehicleId:
-            selectedOrder.vehicleId,
-          serviceOrderId:
-            selectedOrder.id,
-          notes:
-            selectedOrder.complaint
-              ? `Müşteri talebi: ${selectedOrder.complaint}`
-              : '',
-        });
-
-        if (
-          selectedOrder.items
-            ?.length
-        ) {
-          setItems(
-            selectedOrder.items.filter(item => !item.approvedQuoteId).map(
-              (item) => ({
-                serviceOrderItemId: item.id,
-                type:
-                  item.type,
-                name:
-                  item.name,
-                description:
-                  item.description ||
-                  '',
-                quantity:
-                  Number(
-                    item.quantity,
-                  ) || 1,
-                unitPrice:
-                  Number(
-                    item.unitPrice,
-                  ) || '',
-                discountAmount:
-                  Number(
-                    item.discountAmount,
-                  ) || 0,
-                vatRate:
-                  Number(
-                    item.vatRate,
-                  ) || 20,
-              }),
-            ),
-          );
-        }
+        selectOrder(selectedOrder);
       }
     }
   }
+
+  useLiveRefresh(() => load(), !busy);
 
   useEffect(() => {
     load().catch((err) => {
@@ -172,12 +197,26 @@ export default function Quotes() {
 
   const filteredOrders = orders.filter(
     (order) =>
+      ![
+        'DELIVERED',
+        'CANCELLED',
+      ].includes(order.status) &&
       (!form.customerId ||
         order.customerId ===
           form.customerId) &&
       (!form.vehicleId ||
         order.vehicleId ===
           form.vehicleId),
+  );
+
+  const waitingOrders = useMemo(
+    () =>
+      orders.filter(
+        (order) =>
+          order.status ===
+          'QUOTE_WAITING',
+      ),
+    [orders],
   );
 
   const totals = useMemo(() => {
@@ -321,8 +360,12 @@ export default function Quotes() {
 
       setItems([emptyItem()]);
       setSelectedPackageId('');
+      hydratedOrderRef.current = '';
+      navigate('/quotes', {
+        replace: true,
+      });
 
-      await load();
+      await load(true);
     } catch (err) {
       const message =
         err?.response?.data?.message;
@@ -378,7 +421,64 @@ export default function Quotes() {
         </div>
       )}
 
-      <div className="panel-card">
+      <div className="panel-card quote-work-queue">
+        <div className="card-title-row">
+          <div>
+            <h3>Teklif Bekleyen İşler</h3>
+            <p className="muted-text">
+              Ayrı bir fiyatlandırma ekranı yok. İş emrini seçip aynı kalemleri burada fiyatlandırın.
+            </p>
+          </div>
+
+          <span className="status-badge">
+            {waitingOrders.length} kayıt
+          </span>
+        </div>
+
+        <div className="quote-work-queue-list">
+          {waitingOrders.map((order) => (
+            <div
+              className="quote-work-queue-row"
+              key={order.id}
+            >
+              <div>
+                <strong>{order.vehicle?.plate}</strong>
+                <span>{order.orderNumber}</span>
+              </div>
+
+              <div>
+                <strong>
+                  {order.customer?.firstName}{' '}
+                  {order.customer?.lastName}
+                </strong>
+                <span>
+                  {order.items?.length || 0} işlem kalemi
+                </span>
+              </div>
+
+              <button
+                type="button"
+                className="small-button"
+                onClick={() =>
+                  selectOrder(order, {
+                    syncUrl: true,
+                  })
+                }
+              >
+                Teklif Hazırla
+              </button>
+            </div>
+          ))}
+
+          {!waitingOrders.length && (
+            <div className="empty-state">
+              Teklif bekleyen iş emri yok.
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="panel-card spaced-card">
         <h3>Yeni Teklif / Proforma</h3>
 
         <form
@@ -388,15 +488,18 @@ export default function Quotes() {
           <div className="form-grid">
             <select
               value={form.customerId}
-              onChange={(e) =>
+              onChange={(e) => {
                 setForm({
                   ...form,
                   customerId:
                     e.target.value,
                   vehicleId: '',
                   serviceOrderId: '',
-                })
-              }
+                });
+                setItems([emptyItem()]);
+                setSelectedPackageId('');
+                hydratedOrderRef.current = '';
+              }}
               required
             >
               <option value="">
@@ -416,14 +519,17 @@ export default function Quotes() {
 
             <select
               value={form.vehicleId}
-              onChange={(e) =>
+              onChange={(e) => {
                 setForm({
                   ...form,
                   vehicleId:
                     e.target.value,
                   serviceOrderId: '',
-                })
-              }
+                });
+                setItems([emptyItem()]);
+                setSelectedPackageId('');
+                hydratedOrderRef.current = '';
+              }}
               required
             >
               <option value="">
@@ -446,16 +552,19 @@ export default function Quotes() {
 
             <select
               value={form.serviceOrderId}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  serviceOrderId:
-                    e.target.value,
-                })
-              }
+              onChange={(e) => {
+                const order = orders.find(
+                  (item) =>
+                    item.id === e.target.value,
+                );
+                selectOrder(order, {
+                  syncUrl: true,
+                });
+              }}
+              required
             >
               <option value="">
-                İş emri (opsiyonel)
+                İş emri seç
               </option>
 
               {filteredOrders.map(
@@ -517,6 +626,16 @@ export default function Quotes() {
               >
                 + Kalem Ekle
               </button>
+            </div>
+
+            <div className="quote-item-labels" aria-hidden="true">
+              <span>Tür</span>
+              <span>İşlem / Parça</span>
+              <span>Miktar</span>
+              <span>Birim Fiyat</span>
+              <span>İndirim</span>
+              <span>KDV %</span>
+              <span></span>
             </div>
 
             {items.map((item, index) => (
@@ -682,12 +801,22 @@ export default function Quotes() {
 
           <button
             className="primary-button"
-            disabled={busy}
+            disabled={
+              busy ||
+              !form.serviceOrderId ||
+              totals.total <= 0
+            }
           >
             {busy
               ? 'Oluşturuluyor...'
               : 'Teklif Oluştur'}
           </button>
+
+          {totals.total <= 0 && (
+            <p className="form-hint error-text">
+              Teklif oluşturmak için en az bir kaleme fiyat girin.
+            </p>
+          )}
         </form>
       </div>
 

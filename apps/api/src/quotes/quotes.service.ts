@@ -66,6 +66,8 @@ export class QuotesService {
     let effectiveBranchId =
       vehicle.branchId ??
       branchId;
+    let existingDraftId:
+      string | undefined;
 
     if (!effectiveBranchId) {
       throw new BadRequestException(
@@ -97,12 +99,86 @@ export class QuotesService {
 
       effectiveBranchId =
         serviceOrder.branchId;
+
+      const openQuotes =
+        await tx.quote.findMany({
+          where: {
+            organizationId,
+            serviceOrderId:
+              serviceOrder.id,
+            status: {
+              in: [
+                QuoteStatus.DRAFT,
+                QuoteStatus.SENT,
+                QuoteStatus.PARTIALLY_APPROVED,
+              ],
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          select: {
+            id: true,
+            status: true,
+          },
+        });
+
+      const waitingQuote =
+        openQuotes.find(
+          (quote) =>
+            quote.status !==
+            QuoteStatus.DRAFT,
+        );
+
+      if (
+        waitingQuote
+      ) {
+        throw new BadRequestException(
+          'Bu iş emrinin müşteriye gönderilmiş teklifi onay bekliyor. Yeni teklif oluşturmak için önce mevcut teklif sonuçlanmalıdır.',
+        );
+      }
+
+      existingDraftId =
+        openQuotes.find(
+          (quote) =>
+            quote.status ===
+            QuoteStatus.DRAFT,
+        )?.id;
     }
 
     if (dto.items.some(item => item.serviceOrderItemId)) {
       const ids = dto.items.map(item => item.serviceOrderItemId).filter(Boolean) as string[];
-      const count = await tx.serviceOrderItem.count({ where: { id: { in: ids }, serviceOrderId: dto.serviceOrderId || '__none__', serviceOrder: { organizationId } } });
-      if (new Set(ids).size !== ids.length || count !== ids.length) throw new BadRequestException('Teklif kalemleri iş emriyle eşleşmiyor.');
+      const linkedItems = await tx.serviceOrderItem.findMany({
+        where: {
+          id: { in: ids },
+          serviceOrderId:
+            dto.serviceOrderId ||
+            '__none__',
+          serviceOrder: {
+            organizationId,
+          },
+        },
+        select: {
+          id: true,
+          approvedQuoteId: true,
+        },
+      });
+      if (
+        new Set(ids).size !== ids.length ||
+        linkedItems.length !== ids.length
+      ) {
+        throw new BadRequestException('Teklif kalemleri iş emriyle eşleşmiyor.');
+      }
+      if (
+        linkedItems.some(
+          (item) =>
+            item.approvedQuoteId,
+        )
+      ) {
+        throw new BadRequestException(
+          'Onaylanmış işlem yeniden fiyatlandırılamaz. Ek iş için yeni kalem oluşturun.',
+        );
+      }
     }
 
     const partIds = [
@@ -284,6 +360,62 @@ export class QuotesService {
           0,
         ),
       );
+
+    if (total <= 0) {
+      throw new BadRequestException(
+        'Teklif toplamı 0 TL olamaz. En az bir kaleme fiyat girin.',
+      );
+    }
+
+    if (existingDraftId) {
+      await tx.quote.updateMany({
+        where: {
+          organizationId,
+          serviceOrderId:
+            dto.serviceOrderId,
+          status:
+            QuoteStatus.DRAFT,
+          id: {
+            not: existingDraftId,
+          },
+        },
+        data: {
+          status:
+            QuoteStatus.EXPIRED,
+        },
+      });
+
+      await tx.quoteItem.deleteMany({
+        where: {
+          quoteId:
+            existingDraftId,
+        },
+      });
+
+      return tx.quote.update({
+        where: {
+          id: existingDraftId,
+        },
+        data: {
+          subtotal,
+          discountTotal,
+          taxTotal,
+          total,
+          notes:
+            dto.notes?.trim(),
+          items: {
+            create: items,
+          },
+        },
+        include: {
+          organization: true,
+          branch: true,
+          customer: true,
+          vehicle: true,
+          items: true,
+        },
+      });
+    }
 
     return tx.quote.create({
       data: {

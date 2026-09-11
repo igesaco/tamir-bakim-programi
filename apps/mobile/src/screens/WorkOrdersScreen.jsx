@@ -376,6 +376,31 @@ export default function WorkOrdersScreen() {
     }
   }
 
+  function taskBlockReason(item) {
+    if (!canCompleteItems) {
+      return 'Onaylı işlem listesi takip amaçlı gösteriliyor.';
+    }
+
+    if (
+      ![
+        'IN_PROGRESS',
+        'PART_WAITING',
+        'QUALITY_CONTROL',
+      ].includes(selected?.status)
+    ) {
+      return 'Teklif onaylanıp iş başlatıldıktan sonra işlemler tamamlanabilir.';
+    }
+
+    if (
+      selected?.approvalRequired &&
+      !item.approved
+    ) {
+      return 'Ek işlem için müşteri onayı bekleniyor.';
+    }
+
+    return '';
+  }
+
   async function uploadPhotoAsset(
     asset,
   ) {
@@ -757,18 +782,23 @@ export default function WorkOrdersScreen() {
                   </Text>
 
                   <Text style={styles.sectionHint}>
-                    {canCompleteItems
-                      ? 'Her işlemi tamamlandıkça işaretleyin. Son işlem tamamlandığında araç otomatik olarak kalite kontrol aşamasına geçer.'
-                      : 'Onaylı işlem listesi takip amaçlı gösteriliyor.'}
+                    {taskBlockReason(
+                      selected.items[0],
+                    ) ||
+                      'Her işlemi tamamlandıkça işaretleyin. Son işlem tamamlandığında araç otomatik olarak kalite kontrol aşamasına geçer.'}
                   </Text>
 
                   <View style={styles.taskList}>
                     {selected.items.map(
-                      (item) => (
+                      (item) => {
+                        const blockReason =
+                          taskBlockReason(item);
+
+                        return (
                         <Pressable
                           key={item.id}
-                          disabled={busy || !canCompleteItems}
-                          onPress={canCompleteItems
+                          disabled={busy || Boolean(blockReason)}
+                          onPress={!blockReason
                             ? () => toggleTask(item)
                             : undefined}
                           style={[
@@ -809,7 +839,8 @@ export default function WorkOrdersScreen() {
                             ) : null}
                           </View>
                         </Pressable>
-                      ),
+                        );
+                      },
                     )}
                   </View>
                 </View>

@@ -31,6 +31,11 @@ import { StartPortalAccessDto } from './dto/start-portal-access.dto';
 import { StartPortalQrAccessDto } from './dto/start-portal-qr-access.dto';
 import { StartPortalPhoneAccessDto } from './dto/start-portal-phone-access.dto';
 import { VerifyPortalAccessDto } from './dto/verify-portal-access.dto';
+import { CheckWhatsappAccessDto } from './dto/check-whatsapp-access.dto';
+import {
+  extractWhatsappCode,
+  validWhatsappSignature,
+} from './whatsapp-verification';
 
 @Injectable()
 export class CustomerPortalService {
@@ -81,6 +86,10 @@ export class CustomerPortalService {
   private async sendOtp(
     phone: string,
     code: string,
+    channel:
+      | 'SMS'
+      | 'WHATSAPP' = 'SMS',
+    whatsappPhone?: string | null,
   ) {
     const testPhone =
       process.env.CUSTOMER_PORTAL_TEST_PHONE
@@ -103,8 +112,44 @@ export class CustomerPortalService {
       isTestPhone
     ) {
       return {
+        deliveryChannel:
+          channel,
         developmentCode:
           code,
+      };
+    }
+
+    if (channel === 'WHATSAPP') {
+      if (
+        !process.env.WHATSAPP_APP_SECRET ||
+        !process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN
+      ) {
+        throw new ServiceUnavailableException(
+          'WhatsApp doğrulaması henüz etkinleştirilmemiş. Lütfen SMS seçeneğini kullanın.',
+        );
+      }
+
+      const destination =
+        this.normalizePhone(
+          whatsappPhone || '',
+        );
+
+      if (destination.length < 10) {
+        throw new ServiceUnavailableException(
+          'İşletmenin WhatsApp doğrulama numarası henüz ayarlanmamış.',
+        );
+      }
+
+      const message =
+        `Tamir Bakım giriş doğrulaması: TB-${code}`;
+
+      return {
+        deliveryChannel:
+          'WHATSAPP',
+        whatsappUrl:
+          `https://wa.me/90${destination}?text=${encodeURIComponent(message)}`,
+        pollingIntervalMs:
+          2000,
       };
     }
 
@@ -306,6 +351,8 @@ export class CustomerPortalService {
   async startFromPhone(
     dto: StartPortalPhoneAccessDto,
   ) {
+    const channel =
+      dto.channel || 'SMS';
     const normalized =
       this.normalizePhone(
         dto.phone,
@@ -339,6 +386,11 @@ export class CustomerPortalService {
           },
         },
         include: {
+          organization: {
+            select: {
+              whatsappPhone: true,
+            },
+          },
           vehicles: {
             orderBy: {
               createdAt: 'desc',
@@ -437,6 +489,7 @@ export class CustomerPortalService {
           vehicleId:
             vehicle.id,
           codeHash,
+          channel,
           expiresAt:
             new Date(
               Date.now() +
@@ -450,6 +503,9 @@ export class CustomerPortalService {
         await this.sendOtp(
           customer.phone,
           code,
+          channel,
+          customer.organization
+            .whatsappPhone,
         );
 
       return {
@@ -479,6 +535,8 @@ export class CustomerPortalService {
   async startFromQr(
     dto: StartPortalQrAccessDto,
   ) {
+    const channel =
+      dto.channel || 'SMS';
     const vehicle =
       await this.prisma.vehicle.findFirst({
         where: {
@@ -494,6 +552,11 @@ export class CustomerPortalService {
         },
         include: {
           customer: true,
+          organization: {
+            select: {
+              whatsappPhone: true,
+            },
+          },
         },
       });
 
@@ -580,6 +643,7 @@ export class CustomerPortalService {
           vehicleId:
             vehicle.id,
           codeHash,
+          channel,
           expiresAt:
             new Date(
               Date.now() +
@@ -593,6 +657,9 @@ export class CustomerPortalService {
         await this.sendOtp(
           vehicle.customer.phone!,
           code,
+          channel,
+          vehicle.organization
+            .whatsappPhone,
         );
 
       return {
@@ -619,6 +686,238 @@ export class CustomerPortalService {
     }
   }
 
+  verifyWhatsappWebhook(
+    mode: string,
+    token: string,
+    challenge: string,
+  ) {
+    const expected =
+      process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
+
+    if (
+      mode !== 'subscribe' ||
+      !expected ||
+      token !== expected
+    ) {
+      throw new ForbiddenException(
+        'WhatsApp webhook doğrulaması geçersiz.',
+      );
+    }
+
+    return challenge;
+  }
+
+  async handleWhatsappWebhook(
+    payload: any,
+    rawBody: Buffer | undefined,
+    signature: string | undefined,
+  ) {
+    const appSecret =
+      process.env.WHATSAPP_APP_SECRET || '';
+
+    if (
+      !validWhatsappSignature(
+        rawBody,
+        signature,
+        appSecret,
+      )
+    ) {
+      throw new ForbiddenException(
+        'WhatsApp webhook imzası geçersiz.',
+      );
+    }
+
+    const messages =
+      (payload?.entry || []).flatMap(
+        (entry: any) =>
+          (entry?.changes || []).flatMap(
+            (change: any) =>
+              change?.value?.messages || [],
+          ),
+      );
+
+    let confirmed = 0;
+
+    for (const message of messages) {
+      const code =
+        extractWhatsappCode(
+          message?.text?.body || '',
+        );
+      const normalized =
+        this.normalizePhone(
+          message?.from || '',
+        );
+
+      if (
+        !code ||
+        normalized.length < 10
+      ) {
+        continue;
+      }
+
+      const challenges =
+        await this.prisma.customerPortalChallenge.findMany({
+          where: {
+            channel: 'WHATSAPP',
+            verifiedAt: null,
+            whatsappConfirmedAt: null,
+            expiresAt: {
+              gt: new Date(),
+            },
+            customer: {
+              phone: {
+                endsWith:
+                  normalized.slice(-4),
+              },
+            },
+          },
+          include: {
+            customer: {
+              select: {
+                phone: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 50,
+        });
+
+      for (const candidate of challenges) {
+        if (
+          !candidate.customer.phone ||
+          this.normalizePhone(
+            candidate.customer.phone,
+          ) !== normalized
+        ) {
+          continue;
+        }
+
+        if (
+          !(await bcrypt.compare(
+            code,
+            candidate.codeHash,
+          ))
+        ) {
+          continue;
+        }
+
+        const result =
+          await this.prisma.customerPortalChallenge.updateMany({
+            where: {
+              id: candidate.id,
+              verifiedAt: null,
+              whatsappConfirmedAt: null,
+              expiresAt: {
+                gt: new Date(),
+              },
+            },
+            data: {
+              whatsappConfirmedAt:
+                new Date(),
+            },
+          });
+
+        confirmed += result.count;
+        break;
+      }
+    }
+
+    return {
+      received: true,
+      confirmed,
+    };
+  }
+
+  async checkWhatsappAccess(
+    dto: CheckWhatsappAccessDto,
+  ) {
+    const challenge =
+      await this.prisma.customerPortalChallenge.findUnique({
+        where: {
+          id: dto.challengeId,
+        },
+        include: {
+          customer: true,
+        },
+      });
+
+    if (
+      !challenge ||
+      challenge.channel !==
+        'WHATSAPP' ||
+      challenge.expiresAt <
+        new Date()
+    ) {
+      throw new BadRequestException(
+        'WhatsApp doğrulama isteği geçersiz veya süresi dolmuş.',
+      );
+    }
+
+    if (!challenge.whatsappConfirmedAt) {
+      return {
+        confirmed: false,
+      };
+    }
+
+    const claimed =
+      await this.prisma.customerPortalChallenge.updateMany({
+        where: {
+          id: challenge.id,
+          verifiedAt: null,
+          whatsappConfirmedAt: {
+            not: null,
+          },
+        },
+        data: {
+          verifiedAt: new Date(),
+        },
+      });
+
+    if (claimed.count !== 1) {
+      throw new BadRequestException(
+        'WhatsApp doğrulaması daha önce kullanılmış.',
+      );
+    }
+
+    const mobileSession =
+      dto.client === 'MOBILE';
+    const token =
+      await this.jwtService.signAsync(
+        {
+          actorType:
+            mobileSession
+              ? 'CUSTOMER_APP'
+              : 'CUSTOMER_PORTAL',
+          customerId:
+            challenge.customerId,
+          vehicleId:
+            challenge.vehicleId,
+          organizationId:
+            challenge.customer.organizationId,
+        },
+        {
+          secret:
+            process.env.CUSTOMER_PORTAL_JWT_SECRET ||
+            process.env.JWT_SECRET,
+          expiresIn:
+            mobileSession
+              ? '30d'
+              : '30m',
+        },
+      );
+
+    return {
+      confirmed: true,
+      token,
+      expiresInSeconds:
+        mobileSession
+          ? 2592000
+          : 1800,
+    };
+  }
+
   async verify(
     dto: VerifyPortalAccessDto,
   ) {
@@ -643,6 +942,18 @@ export class CustomerPortalService {
     ) {
       throw new BadRequestException(
         'Doğrulama isteği geçersiz veya süresi dolmuş.',
+      );
+    }
+
+    if (
+      challenge.channel ===
+        'WHATSAPP' &&
+      !challenge.whatsappConfirmedAt &&
+      process.env.NODE_ENV ===
+        'production'
+    ) {
+      throw new BadRequestException(
+        'WhatsApp mesajı henüz doğrulanmadı.',
       );
     }
 

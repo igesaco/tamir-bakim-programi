@@ -254,6 +254,7 @@ export function AuthProvider({
   async function startCustomerAccess(
     phone,
     qrToken = '',
+    channel = 'WHATSAPP',
   ) {
     return apiRequest(
       qrToken
@@ -265,12 +266,55 @@ export function AuthProvider({
           ? {
               phone,
               qrToken,
+              channel,
             }
           : {
               phone,
+              channel,
             },
       },
     );
+  }
+
+  async function checkWhatsappAccess(
+    challengeId,
+  ) {
+    const result =
+      await apiRequest(
+        '/customer-portal/access/whatsapp/status',
+        {
+          method: 'POST',
+          body: {
+            challengeId,
+            client: 'MOBILE',
+          },
+        },
+      );
+
+    if (!result.confirmed) {
+      return result;
+    }
+
+    await SecureStore.setItemAsync(
+      CUSTOMER_TOKEN_KEY,
+      result.token,
+    );
+    await SecureStore.setItemAsync(
+      SESSION_TYPE_KEY,
+      'customer',
+    );
+
+    const portalData =
+      await loadCustomerSession(
+        result.token,
+      );
+
+    setSessionType('customer');
+
+    return {
+      ...result,
+      portalData,
+    };
   }
 
   async function verifyCustomerAccess(
@@ -377,6 +421,7 @@ export function AuthProvider({
       refreshUser,
       refreshCustomer,
       startCustomerAccess,
+      checkWhatsappAccess,
       verifyCustomerAccess,
       customerRequest,
     }),
