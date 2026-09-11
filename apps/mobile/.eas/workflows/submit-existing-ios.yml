@@ -1,0 +1,18 @@
+name: Submit existing iOS build to TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        required: true
+        description: EAS iOS build ID to submit
+
+jobs:
+  submit_ios:
+    name: Upload existing build to TestFlight
+    type: submit
+    environment: production
+    params:
+      profile: production
+      build_id: ${{ inputs.build_id }}
