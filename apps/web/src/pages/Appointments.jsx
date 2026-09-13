@@ -1,10 +1,14 @@
 ﻿import { useEffect, useState } from 'react';
 import api from '../api/client';
+import ActionNotice from '../components/ActionNotice';
 
 export default function Appointments() {
   const [appointments, setAppointments] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
 
   const [form, setForm] = useState({
     customerId: '',
@@ -27,7 +31,7 @@ export default function Appointments() {
   }
 
   useEffect(() => {
-    load();
+    load().catch(() => setError('Randevular yüklenemedi. Lütfen tekrar deneyin.'));
   }, []);
 
   const filteredVehicles = vehicles.filter(
@@ -36,21 +40,26 @@ export default function Appointments() {
 
   async function submit(e) {
     e.preventDefault();
-
-    await api.post('/appointments', {
-      ...form,
-      startAt: new Date(form.startAt).toISOString(),
-    });
-
-    setForm({
-      customerId: '',
-      vehicleId: '',
-      startAt: '',
-      serviceType: '',
-      customerNote: '',
-    });
-
-    await load();
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const date = new Date(form.startAt);
+      if (!Number.isFinite(date.getTime()) || date <= new Date()) {
+        setError('Gelecekteki bir randevu tarihini seçin.');
+        return;
+      }
+      await api.post('/appointments', { ...form, startAt: date.toISOString() });
+      setForm({ customerId: '', vehicleId: '', startAt: '', serviceType: '', customerNote: '' });
+      await load();
+      setMessage('Randevu oluşturuldu; müşterinin kaydına eklendi.');
+    } catch (err) {
+      const detail = err?.response?.data?.message;
+      setError(Array.isArray(detail) ? detail.join(', ') : detail || 'Randevu oluşturulamadı.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -61,6 +70,8 @@ export default function Appointments() {
           <p>Servis randevularını planlayın.</p>
         </div>
       </div>
+
+      <ActionNotice message={message} error={error} />
 
       <div className="content-grid">
         <div className="panel-card">

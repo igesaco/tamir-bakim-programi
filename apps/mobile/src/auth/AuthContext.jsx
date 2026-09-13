@@ -241,8 +241,8 @@ export function AuthProvider({
       'staff',
     );
 
-    const current =
-      await refreshUser();
+    const current = response.data.user;
+    setUser(current);
 
     setSessionType(
       'staff',

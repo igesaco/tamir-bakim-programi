@@ -7,6 +7,7 @@ import {
 
 import api from '../api/client';
 import { statusLabel } from '../utils/status';
+import ActionNotice from '../components/ActionNotice';
 
 function money(value) {
   return Number(value || 0).toLocaleString(
@@ -145,6 +146,7 @@ export default function Cashier() {
             form.customerId,
           branchId:
             form.branchId ||
+            customers.find((customer) => customer.id === form.customerId)?.branchId ||
             undefined,
           serviceOrderId:
             form.serviceOrderId ||
@@ -323,17 +325,7 @@ export default function Cashier() {
         </div>
       </div>
 
-      {message && (
-        <div className="page-message success-message">
-          {message}
-        </div>
-      )}
-
-      {error && (
-        <div className="page-message error-message">
-          {error}
-        </div>
-      )}
+      <ActionNotice message={message} error={error} />
 
       <div className="content-grid spaced-card">
         <div className="panel-card">
@@ -351,6 +343,7 @@ export default function Cashier() {
                   ...form,
                   customerId:
                     e.target.value,
+                  branchId: customers.find((customer) => customer.id === e.target.value)?.branchId || '',
                   serviceOrderId: '',
                   quoteId: '',
                   amount: '',
@@ -394,12 +387,7 @@ export default function Cashier() {
                 Şube seç
               </option>
 
-              {branches
-                .filter(
-                  (branch) =>
-                    branch.active,
-                )
-                .map((branch) => (
+              {branches.map((branch) => (
                   <option
                     key={branch.id}
                     value={branch.id}
@@ -421,7 +409,9 @@ export default function Cashier() {
                 İş emri (opsiyonel)
               </option>
 
-              {filteredOrders.map(
+              {filteredOrders.filter((order) => order.status !== 'CANCELLED' &&
+                (!quotes.some((quote) => quote.serviceOrderId === order.id) ||
+                  quotes.some((quote) => quote.serviceOrderId === order.id && quote.status === 'APPROVED'))).map(
                 (order) => (
                   <option
                     key={order.id}
@@ -439,6 +429,10 @@ export default function Cashier() {
               )}
             </select>
 
+            {form.customerId && filteredQuotes.length > 0 && !filteredQuotes.some((quote) => quote.status === 'APPROVED') && (
+              <p className="form-hint full">Bu müşterinin teklifleri henüz onaylanmamış. Teklife bağlı tahsilat için müşteri onayını bekleyin.</p>
+            )}
+
             <select
               value={form.quoteId}
               onChange={(e) =>
@@ -451,7 +445,7 @@ export default function Cashier() {
                 Teklif / Proforma (opsiyonel)
               </option>
 
-              {filteredQuotes.map(
+              {filteredQuotes.filter((quote) => quote.status === 'APPROVED').map(
                 (quote) => (
                   <option
                     key={quote.id}

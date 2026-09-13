@@ -13,6 +13,7 @@ import api, {
   API_URL,
 } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import ActionNotice from '../components/ActionNotice';
 import { statusLabel } from '../utils/status';
 
 const tabs = [
@@ -216,6 +217,8 @@ export default function CustomerDetail() {
       method: 'CASH',
       reference: '',
     });
+
+  const approvedQuotes = quotes.filter((quote) => quote.status === 'APPROVED');
 
   const [contactForm, setContactForm] =
     useState({
@@ -948,6 +951,8 @@ export default function CustomerDetail() {
         {
           customerId: id,
           branchId:
+            quotes.find((quote) => quote.id === paymentForm.quoteId)?.branchId ||
+            orders.find((order) => order.id === paymentForm.serviceOrderId)?.branchId ||
             customer.branchId ||
             undefined,
           serviceOrderId:
@@ -1142,17 +1147,7 @@ export default function CustomerDetail() {
         )}
       </div>
 
-      {message && (
-        <div className="page-message success-message spaced-card">
-          {message}
-        </div>
-      )}
-
-      {error && (
-        <div className="page-message error-message spaced-card">
-          {error}
-        </div>
-      )}
+      <ActionNotice message={message} error={error} />
 
       <div className="customer-workspace-tabs spaced-card">
         {tabs
@@ -2505,6 +2500,9 @@ export default function CustomerDetail() {
             <div className="customer-workspace-grid spaced-card">
               <div className="panel-card">
                 <h3>Tahsilat Gir</h3>
+                {!approvedQuotes.length && quotes.length > 0 && (
+                  <p className="form-hint">Teklif henüz müşteri tarafından onaylanmadı. Teklife bağlı tahsilat için önce onay gerekli; taslak/gönderildi teklifler burada seçilemez.</p>
+                )}
 
                 <form
                   className="form-grid"
@@ -2528,7 +2526,9 @@ export default function CustomerDetail() {
                       İş emri (opsiyonel)
                     </option>
 
-                    {orders.map(
+                    {orders.filter((order) => order.status !== 'CANCELLED' &&
+                      (!quotes.some((quote) => quote.serviceOrderId === order.id) ||
+                        approvedQuotes.some((quote) => quote.serviceOrderId === order.id))).map(
                       (order) => (
                         <option
                           key={
@@ -2571,7 +2571,7 @@ export default function CustomerDetail() {
                       (opsiyonel)
                     </option>
 
-                    {quotes.map(
+                    {approvedQuotes.map(
                       (quote) => (
                         <option
                           key={

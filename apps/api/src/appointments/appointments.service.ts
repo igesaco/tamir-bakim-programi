@@ -42,12 +42,6 @@ export class AppointmentsService {
     userId: string,
     dto: CreateAppointmentDto,
   ) {
-    if (!branchId) {
-      throw new BadRequestException(
-        'Şube seçimi gerekli.',
-      );
-    }
-
     const vehicle =
       await this.prisma.vehicle.findFirst({
         where: {
@@ -67,10 +61,20 @@ export class AppointmentsService {
       );
     }
 
+    const appointmentBranchId = role === UserRole.SERVICE_ADVISOR
+      ? branchId : vehicle.branchId ?? branchId;
+    if (!appointmentBranchId) {
+      throw new BadRequestException('Araç için aktif bir şube seçimi gerekli.');
+    }
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: appointmentBranchId, organizationId, active: true },
+    });
+    if (!branch) throw new BadRequestException('Randevu şubesi aktif değil.');
+
     return this.prisma.appointment.create({
       data: {
         organizationId,
-        branchId,
+        branchId: appointmentBranchId,
         customerId:
           dto.customerId,
         vehicleId:

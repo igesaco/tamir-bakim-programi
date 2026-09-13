@@ -83,6 +83,19 @@ export class CustomerPortalService {
     return `*** *** ** ${digits.slice(-2)}`;
   }
 
+  // Telephone punctuation varies between office imports and mobile entries.
+  // Keep the lookup parameterized; never authenticate on a partial number.
+  private async customerIdsForPhone(phone: string) {
+    const normalized = this.normalizePhone(phone);
+    if (normalized.length !== 10) return [] as string[];
+    const matches = await this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT c."id" FROM "Customer" c
+      WHERE RIGHT(regexp_replace(c."phone", '[^0-9]', '', 'g'), 10) = ${normalized}
+        AND c."portalEnabled" = true
+    `;
+    return matches.map((match) => match.id);
+  }
+
   private async sendOtp(
     phone: string,
     code: string,
@@ -364,19 +377,12 @@ export class CustomerPortalService {
       );
     }
 
-    const candidates = [
-      normalized,
-      `0${normalized}`,
-      `90${normalized}`,
-      `+90${normalized}`,
-    ];
+    const matchingCustomerIds = await this.customerIdsForPhone(normalized);
 
     const customers =
       await this.prisma.customer.findMany({
         where: {
-          phone: {
-            in: candidates,
-          },
+          id: { in: matchingCustomerIds },
           portalEnabled: true,
           organization: {
             active: true,
@@ -755,6 +761,8 @@ export class CustomerPortalService {
         continue;
       }
 
+      const matchingCustomerIds = await this.customerIdsForPhone(normalized);
+      if (!matchingCustomerIds.length) continue;
       const challenges =
         await this.prisma.customerPortalChallenge.findMany({
           where: {
@@ -764,12 +772,7 @@ export class CustomerPortalService {
             expiresAt: {
               gt: new Date(),
             },
-            customer: {
-              phone: {
-                endsWith:
-                  normalized.slice(-4),
-              },
-            },
+            customerId: { in: matchingCustomerIds },
           },
           include: {
             customer: {

@@ -11,6 +11,7 @@ import { colors, spacing } from '../theme';
 
 const emptyForm = () => ({ firstName: '', lastName: '', phone: '', email: '', plate: '', brand: '', model: '', modelYear: '', vin: '', mileage: '', complaint: '', internalNote: '', fuelLevel: '', existingDamage: '', valuablesNote: '' });
 const emptyItem = () => ({ type: 'LABOR', name: '', quantity: '1' });
+const stages = ['Müşteri', 'Araç', 'Kabul', 'İşlemler ve Onay'];
 const normalizedPlate = value => String(value || '').replace(/\s+/g, '').toLocaleUpperCase('tr-TR');
 const apiMessage = (e, fallback) => { const m = e?.response?.data?.message; return Array.isArray(m) ? m.join(', ') : m || e?.message || fallback; };
 
@@ -20,6 +21,7 @@ export default function QuickIntakeScreen({ initialCustomerId = '', initialVehic
   const [branches, setBranches] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [search, setSearch] = useState('');
+  const [stage, setStage] = useState(0);
   const [customerId, setCustomerId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
   const [branchId, setBranchId] = useState(user?.branchId || '');
@@ -39,7 +41,7 @@ export default function QuickIntakeScreen({ initialCustomerId = '', initialVehic
     writes.current = writes.current.catch(() => {}).then(() => FileSystem.writeAsStringAsync(draftFile, JSON.stringify(value)));
     return writes.current;
   };
-  const snapshot = { customerId, vehicleId, branchId, form, items, photos, requestKey, submitted };
+  const snapshot = { customerId, vehicleId, branchId, form, items, photos, requestKey, submitted, stage };
   const latest = useRef(snapshot);
   latest.current = snapshot;
 
@@ -53,6 +55,7 @@ export default function QuickIntakeScreen({ initialCustomerId = '', initialVehic
             setCustomerId(saved.customerId || ''); setVehicleId(saved.vehicleId || '');
             setBranchId(saved.branchId || user?.branchId || ''); setForm({ ...emptyForm(), ...saved.form });
             setItems(saved.items || [emptyItem()]); setPhotos(saved.photos || []);
+            setStage(Math.max(0, Math.min(stages.length - 1, Number(saved.stage) || 0)));
             setRequestKey(saved.requestKey); setSubmitted(saved.submitted || null);
             setMessage('Kaydedilen kabul taslağı geri yüklendi.');
           }
@@ -76,7 +79,7 @@ export default function QuickIntakeScreen({ initialCustomerId = '', initialVehic
 
   useEffect(() => {
     if (ready) persist(snapshot).catch(() => setError('Taslak cihaza kaydedilemedi. Depolama alanını kontrol edin.'));
-  }, [ready, customerId, vehicleId, branchId, form, items, photos, requestKey, submitted]);
+  }, [ready, customerId, vehicleId, branchId, form, items, photos, requestKey, submitted, stage]);
 
   const matches = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('tr-TR');
@@ -99,7 +102,18 @@ export default function QuickIntakeScreen({ initialCustomerId = '', initialVehic
   }
   function reset() {
     setCustomerId(''); setVehicleId(''); setForm(emptyForm()); setItems([emptyItem()]); setPhotos([]);
-    setSubmitted(null); setRequestKey(Crypto.randomUUID()); setSearch('');
+    setSubmitted(null); setRequestKey(Crypto.randomUUID()); setSearch(''); setStage(0);
+  }
+  function nextStage() {
+    setError('');
+    if (stage === 0 && (!branchId || (!customerId && form.firstName.trim().length < 2))) {
+      setError('Şube ve müşteri adını tamamlayın.'); return;
+    }
+    if (stage === 1 && (!vehicleId && (!form.plate.trim() || !form.brand.trim() || !form.model.trim()) ||
+      !Number.isFinite(Number(form.mileage)) || Number(form.mileage) < 0 || !form.mileage.trim())) {
+      setError('Araç bilgileri ve güncel kabul kilometresini tamamlayın.'); return;
+    }
+    setStage(current => Math.min(current + 1, stages.length - 1));
   }
   async function capture(kind = 'photo', library = false) {
     setError(''); setBusy(true);
@@ -160,7 +174,7 @@ export default function QuickIntakeScreen({ initialCustomerId = '', initialVehic
         await persist({ ...latest.current, submitted: result, photos: remainingPhotos });
       }
       reset();
-      await persist({ ...latest.current, form: emptyForm(), customerId: '', vehicleId: '', items: [emptyItem()], photos: [], submitted: null, requestKey: Crypto.randomUUID() });
+      await persist({ ...latest.current, form: emptyForm(), customerId: '', vehicleId: '', items: [emptyItem()], photos: [], submitted: null, requestKey: Crypto.randomUUID(), stage: 0 });
       for (const photo of photos) FileSystem.deleteAsync(photo.uri, { idempotent: true }).catch(() => {});
       setMessage('Kabul ve fotoğraflar kaydedildi. Ofis aynı iş emrini görebilir.');
       Alert.alert('Kabul tamamlandı', 'İş emri ve fotoğraflar kaydedildi.');
@@ -173,9 +187,13 @@ export default function QuickIntakeScreen({ initialCustomerId = '', initialVehic
       <ScreenTitle title="Araç Kabul" subtitle="Bir kez kaydet; ofis ve teknik ekip aynı iş emrinde devam etsin." />
       <Message text={error} /><Message text={message} tone="success" />
       {submitted && <Text style={styles.info}>İş emri kaydedildi. Kalan fotoğrafları göndermek için tekrar deneyin.</Text>}
+      {!submitted && <Card><Text style={styles.heading}>{stage + 1} / {stages.length} · {stages[stage]}</Text>
+        <Text style={styles.info}>{stages.map((label, index) => `${index === stage ? '●' : '○'} ${label}`).join('  ·  ')}</Text>
+      </Card>}
       <View pointerEvents={busy || submitted ? 'none' : 'auto'}>
+        {stage === 0 && <>
         <Card><Text style={styles.heading}>Şube</Text>{branches.map(b => <Button key={b.id} title={`${b.id === branchId ? '✓ ' : ''}${b.name}`} tone="ghost" onPress={() => setBranchId(b.id)} />)}</Card>
-        <Card><Text style={styles.heading}>Müşteri ve araç</Text>
+        <Card><Text style={styles.heading}>Müşteri bilgileri</Text>
           <Field label="Müşteri / plaka ara" value={search} onChangeText={setSearch} />
           <Button title="Listeyi yenile" tone="ghost" onPress={() => api.get('/customers').then(r => setCustomers(r.data)).catch(e => setError(apiMessage(e, 'Liste alınamadı.')))} />
           {matches.map(c => <Pressable key={c.id} onPress={() => selectCustomer(c)}><Text style={styles.info}>{c.firstName} {c.lastName} • {(c.vehicles || []).map(v => v.plate).join(', ')}</Text></Pressable>)}
@@ -183,17 +201,19 @@ export default function QuickIntakeScreen({ initialCustomerId = '', initialVehic
           <Button title="Kimlikten ad/soyad oku" tone="ghost" disabled={!!customerId} onPress={() => capture('identity')} />
           {field('firstName','Ad')}{field('lastName','Soyad')}{field('phone','Telefon (isteğe bağlı)',{ keyboardType: 'phone-pad' })}{field('email','E-posta (isteğe bağlı)',{ autoCapitalize: 'none' })}
           {customerId && <Text style={styles.info}>Kayıtlı müşterinin iletişim bilgisi ofisteki müşteri ekranından tamamlanabilir.</Text>}
+        </Card></>}
+        {stage === 1 && <Card><Text style={styles.heading}>Araç bilgileri</Text>
           {(customers.find(c => c.id === customerId)?.vehicles || []).map(v => <Button key={v.id} title={`${v.id === vehicleId ? '✓ ' : ''}${v.plate}`} tone="ghost" onPress={() => selectCustomer(customers.find(c => c.id === customerId), v.id)} />)}
           <Button title="Bu müşteriye yeni araç" tone="ghost" onPress={newVehicle} />
           <Button title="Ruhsat oku" tone="ghost" disabled={!!vehicleId} onPress={() => capture('registration')} />
           {field('plate','Plaka')}{field('brand','Marka')}{field('model','Model')}{field('modelYear','Model yılı',{ keyboardType: 'number-pad' })}{field('vin','Şasi / VIN')}{field('mileage','Güncel kabul KM',{ keyboardType: 'number-pad' })}
-        </Card>
-        <Card><Text style={styles.heading}>Kabul kontrolü</Text>
+        </Card>}
+        {stage === 2 && <Card><Text style={styles.heading}>Kabul kontrolü</Text>
           {field('complaint','Müşteri talebi',{ multiline: true })}{field('fuelLevel','Yakıt seviyesi')}{field('existingDamage','Mevcut hasarlar',{ multiline: true })}{field('valuablesNote','Araçta bırakılan eşyalar')}{field('internalNote','İç servis notu',{ multiline: true })}
           <Button title="Kabul fotoğrafı çek" onPress={() => capture()} /><Button title="Galeriden fotoğraf ekle" tone="ghost" onPress={() => capture('photo', true)} />
           {photos.map(photo => <View key={photo.requestKey}><Image source={{ uri: photo.uri }} style={styles.photo} /><Button title="Fotoğrafı kaldır" tone="ghost" onPress={() => setPhotos(current => current.filter(p => p.requestKey !== photo.requestKey))} /></View>)}
-        </Card>
-        <Card><Text style={styles.heading}>Yapılacak işlemler</Text>
+        </Card>}
+        {stage === 3 && <Card><Text style={styles.heading}>Yapılacak işlemler</Text>
           {templates.map(t => <Button key={t.code} title={`+ ${t.name}`} tone="ghost" onPress={() => setItems(current => [...current.filter(i => i.name.trim()), ...t.items.map(i => ({ type: i.type, name: i.name, quantity: String(i.quantity) }))])} />)}
           {items.map((item,index) => <View key={index}>
             <Field label="İşlem" value={item.name} onChangeText={value => setItems(current => current.map((i,n) => n === index ? { ...i, name: value } : i))} />
@@ -201,9 +221,15 @@ export default function QuickIntakeScreen({ initialCustomerId = '', initialVehic
             <Button title={`${item.type === 'PART' ? 'Parça' : 'İşçilik'} • türü değiştir`} tone="ghost" onPress={() => setItems(current => current.map((i,n) => n === index ? { ...i, type: i.type === 'PART' ? 'LABOR' : 'PART' } : i))} />
             <Button title="Kalemi kaldır" tone="ghost" onPress={() => setItems(current => current.filter((_,n) => n !== index))} />
           </View>)}<Button title="+ İşlem ekle" tone="ghost" onPress={() => setItems(current => [...current, emptyItem()])} />
-        </Card>
+        </Card>}
       </View>
-      <Button title={busy ? 'Kaydediliyor...' : submitted ? 'Kalan fotoğrafları gönder' : 'Aracı kabul et'} onPress={submit} disabled={busy || !ready} />
+      {!submitted && stage === 3 && <Card><Text style={styles.heading}>Son kontrol</Text>
+        <Text style={styles.info}>{form.firstName} {form.lastName} · {form.plate} · {form.mileage} KM · {photos.length} fotoğraf · {items.filter(item => item.name.trim()).length} işlem</Text>
+        <Text style={styles.info}>Kaydettiğinizde müşteri, araç, kabul ve iş emri tek seferde oluşur.</Text>
+      </Card>}
+      {!submitted && stage > 0 && <Button title="← Önceki aşama" tone="ghost" disabled={busy} onPress={() => { setError(''); setStage(current => current - 1); }} />}
+      {!submitted && stage < stages.length - 1 && <Button title="Sonraki aşama →" disabled={busy || !ready} onPress={nextStage} />}
+      {(submitted || stage === stages.length - 1) && <Button title={busy ? 'Kaydediliyor...' : submitted ? 'Kalan fotoğrafları gönder' : 'Onayla ve aracı kabul et'} onPress={submit} disabled={busy || !ready} />}
     </ScrollView>
   </KeyboardAvoidingView>;
 }

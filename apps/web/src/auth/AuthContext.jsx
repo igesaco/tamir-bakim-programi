@@ -87,14 +87,9 @@ export function AuthProvider({
       'tenant',
     );
 
-    const me =
-      await api.get(
-        '/users/me',
-      );
+    setUser(response.data.user);
 
-    setUser(me.data);
-
-    return me.data;
+    return response.data.user;
   }
 
   async function platformLogin(

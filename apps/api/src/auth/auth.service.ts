@@ -10,6 +10,8 @@ import * as bcrypt from 'bcrypt';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
+import { EntitlementsService } from '../entitlements/entitlements.service';
+import { PermissionsService } from '../permissions/permissions.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
@@ -19,6 +21,8 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly entitlementsService: EntitlementsService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   private publicRegistrationEnabled() {
@@ -176,6 +180,11 @@ export class AuthService {
     const token =
       await this.createToken(user);
 
+    const [features, permissions] = await Promise.all([
+      this.entitlementsService.getEffectiveFeatures(user.organizationId),
+      this.permissionsService.getEffectivePermissions(user.organizationId, user.role),
+    ]);
+
     return {
       token,
       user: {
@@ -192,6 +201,11 @@ export class AuthService {
           user.organizationId,
         branchId:
           user.branchId,
+        organization: user.organization,
+        branch: user.branch,
+        features,
+        permissions,
+        actorType: 'TENANT',
       },
     };
   }
