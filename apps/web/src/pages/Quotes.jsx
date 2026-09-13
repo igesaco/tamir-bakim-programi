@@ -12,6 +12,7 @@ import {
 } from 'react-router-dom';
 
 import api from '../api/client';
+import ActionNotice from '../components/ActionNotice';
 import { statusLabel } from '../utils/status';
 
 const emptyItem = () => ({
@@ -415,11 +416,7 @@ export default function Quotes() {
         </div>
       </div>
 
-      {error && (
-        <div className="page-message error-message">
-          {error}
-        </div>
-      )}
+      <ActionNotice error={error} />
 
       <div className="panel-card quote-work-queue">
         <div className="card-title-row">

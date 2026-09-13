@@ -53,7 +53,8 @@ export class BillingService {
 
     let branchId =
       dto.branchId ??
-      actorBranchId;
+      actorBranchId ??
+      customer.branchId;
 
     if (dto.serviceOrderId) {
       const order =
@@ -110,7 +111,7 @@ export class BillingService {
 
       if (quote.status !== 'APPROVED') throw new BadRequestException('Tahsilat için teklif onayı gerekli.');
       dto.serviceOrderId = quote.serviceOrderId || undefined;
-      branchId = quote.branchId;
+      branchId = quote.branchId ?? branchId;
     }
 
     if (!branchId) {

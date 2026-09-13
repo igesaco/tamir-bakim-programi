@@ -13,6 +13,8 @@ import {
 } from 'react';
 
 import api from '../api/client';
+import { useAuth } from '../auth/AuthContext';
+import { canUse } from '../permissions';
 import {
   mediaUrl,
   photoLabel,
@@ -21,6 +23,7 @@ import {
   Button,
   Card,
   Empty,
+  Field,
   Loading,
   Message,
   ScreenTitle,
@@ -66,8 +69,16 @@ export default function StaffCustomerDetailScreen({
   onBack,
   onStartIntake,
 }) {
+  const { user } = useAuth();
   const [customer, setCustomer] =
     useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [appointmentVehicleId, setAppointmentVehicleId] = useState('');
+  const [appointmentDate, setAppointmentDate] = useState('');
+  const [appointmentService, setAppointmentService] = useState('');
+  const [appointmentBusy, setAppointmentBusy] = useState(false);
+  const [appointmentMessage, setAppointmentMessage] = useState('');
+  const mayManageAppointments = canUse(user, { feature: 'APPOINTMENTS', permission: 'APPOINTMENT_MANAGE' });
   const [loading, setLoading] =
     useState(true);
   const [refreshing, setRefreshing] =
@@ -78,14 +89,42 @@ export default function StaffCustomerDetailScreen({
   async function load() {
     setError('');
 
-    const response =
-      await api.get(
-        `/customers/${customerId}`,
-      );
+    const [response, appointmentResponse] = await Promise.all([
+      api.get(`/customers/${customerId}`),
+      canUse(user, { feature: 'APPOINTMENTS', permission: 'APPOINTMENT_VIEW' })
+        ? api.get('/appointments').catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+    ]);
 
     setCustomer(
       response.data,
     );
+    setAppointments(appointmentResponse.data.filter(item => item.customerId === customerId));
+    setAppointmentVehicleId(current => current || response.data.vehicles?.[0]?.id || '');
+  }
+
+  async function createAppointment() {
+    const parsed = new Date(appointmentDate.trim().replace(' ', 'T'));
+    if (!appointmentVehicleId || !Number.isFinite(parsed.getTime()) || parsed <= new Date()) {
+      setError('Araç ve gelecekte bir tarih/saat seçin. Örnek: 2026-09-20 14:30');
+      return;
+    }
+    setAppointmentBusy(true);
+    setError('');
+    setAppointmentMessage('');
+    try {
+      await api.post('/appointments', {
+        customerId, vehicleId: appointmentVehicleId,
+        startAt: parsed.toISOString(), serviceType: appointmentService.trim() || undefined,
+      });
+      setAppointmentDate('');
+      setAppointmentService('');
+      await load();
+      setAppointmentMessage('Randevu oluşturuldu. Müşteri ve ofis aynı kaydı görebilir.');
+    } catch (err) {
+      setError(apiMessage(err, 'Randevu oluşturulamadı.'));
+    } finally {
+      setAppointmentBusy(false);
+    }
   }
 
   useEffect(() => {
@@ -207,6 +246,28 @@ export default function StaffCustomerDetailScreen({
               }
             />
           </View>
+
+          {mayManageAppointments && (
+            <Card>
+              <Text style={styles.sectionTitle}>Randevu Al</Text>
+              <Message text={appointmentMessage} tone="success" />
+              {(customer.vehicles || []).map(vehicle => (
+                <Button key={vehicle.id} title={`${appointmentVehicleId === vehicle.id ? '✓ ' : ''}${vehicle.plate}`}
+                  tone="ghost" onPress={() => setAppointmentVehicleId(vehicle.id)} />
+              ))}
+              <Field label="Tarih ve saat (YYYY-AA-GG SS:DD)" placeholder="2026-09-20 14:30"
+                value={appointmentDate} onChangeText={setAppointmentDate} />
+              <Field label="Yapılacak işlem" placeholder="Örn. yağ bakımı"
+                value={appointmentService} onChangeText={setAppointmentService} />
+              <Button title={appointmentBusy ? 'Kaydediliyor...' : 'Randevu Oluştur'}
+                disabled={appointmentBusy || !customer.vehicles?.length} onPress={createAppointment} />
+              {appointments.map(item => (
+                <Text style={styles.contactSecondary} key={item.id}>
+                  {new Date(item.startAt).toLocaleString('tr-TR')} · {item.vehicle?.plate} · {item.serviceType || 'Servis'} · {item.status}
+                </Text>
+              ))}
+            </Card>
+          )}
 
           <Text style={styles.sectionTitle}>
             Araçlar

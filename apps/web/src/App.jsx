@@ -1,4 +1,5 @@
-﻿import {
+﻿import { lazy, Suspense } from 'react';
+import {
   BrowserRouter,
   Navigate,
   Route,
@@ -13,38 +14,38 @@ import DashboardLayout from './layouts/DashboardLayout';
 
 import Login from './pages/Login';
 import PlatformLogin from './pages/PlatformLogin';
-import PlatformAdmin from './pages/PlatformAdmin';
-import Dashboard from './pages/Dashboard';
+const PlatformAdmin = lazy(() => import('./pages/PlatformAdmin'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
 
-import Customers from './pages/Customers';
-import CustomerDetail from './pages/CustomerDetail';
+const Customers = lazy(() => import('./pages/Customers'));
+const CustomerDetail = lazy(() => import('./pages/CustomerDetail'));
 
-import Vehicles from './pages/Vehicles';
-import VehicleDetail from './pages/VehicleDetail';
-import VehicleQrPrint from './pages/VehicleQrPrint';
+const Vehicles = lazy(() => import('./pages/Vehicles'));
+const VehicleDetail = lazy(() => import('./pages/VehicleDetail'));
+const VehicleQrPrint = lazy(() => import('./pages/VehicleQrPrint'));
 
-import Appointments from './pages/Appointments';
+const Appointments = lazy(() => import('./pages/Appointments'));
 
-import ServiceOrders from './pages/ServiceOrders';
-import ServiceOrderDetail from './pages/ServiceOrderDetail';
-import DeliveryReport from './pages/DeliveryReport';
+const ServiceOrders = lazy(() => import('./pages/ServiceOrders'));
+const ServiceOrderDetail = lazy(() => import('./pages/ServiceOrderDetail'));
+const DeliveryReport = lazy(() => import('./pages/DeliveryReport'));
 
-import Quotes from './pages/Quotes';
-import QuoteProforma from './pages/QuoteProforma';
-import Maintenance from './pages/Maintenance';
-import Inventory from './pages/Inventory';
-import Suppliers from './pages/Suppliers';
-import Users from './pages/Users';
-import Branches from './pages/Branches';
-import Notifications from './pages/Notifications';
-import Reports from './pages/Reports';
-import Cashier from './pages/Cashier';
-import Settings from './pages/Settings';
-import Account from './pages/Account';
+const Quotes = lazy(() => import('./pages/Quotes'));
+const QuoteProforma = lazy(() => import('./pages/QuoteProforma'));
+const Maintenance = lazy(() => import('./pages/Maintenance'));
+const Inventory = lazy(() => import('./pages/Inventory'));
+const Suppliers = lazy(() => import('./pages/Suppliers'));
+const Users = lazy(() => import('./pages/Users'));
+const Branches = lazy(() => import('./pages/Branches'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Cashier = lazy(() => import('./pages/Cashier'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Account = lazy(() => import('./pages/Account'));
 
-import PublicVehicle from './pages/PublicVehicle';
-import CustomerPortal from './pages/CustomerPortal';
-import CustomerAppRedirect from './pages/CustomerAppRedirect';
+const PublicVehicle = lazy(() => import('./pages/PublicVehicle'));
+const CustomerPortal = lazy(() => import('./pages/CustomerPortal'));
+const CustomerAppRedirect = lazy(() => import('./pages/CustomerAppRedirect'));
 
 const SERVICE_ROLES = [
   'OWNER',
@@ -118,6 +119,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <Suspense fallback={<div className="loading-screen">Ekran yükleniyor...</div>}>
         <Routes>
           <Route
             path="/login"
@@ -453,6 +455,7 @@ export default function App() {
             }
           />
         </Routes>
+        </Suspense>
       </AuthProvider>
     </BrowserRouter>
   );

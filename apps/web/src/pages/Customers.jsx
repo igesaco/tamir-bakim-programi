@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 
 import api from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import ActionNotice from '../components/ActionNotice';
 
 function getApiMessage(error) {
   const message =
@@ -318,17 +319,7 @@ export default function Customers() {
         </div>
       </div>
 
-      {message && (
-        <div className="page-message success-message">
-          {message}
-        </div>
-      )}
-
-      {error && (
-        <div className="page-message error-message">
-          {error}
-        </div>
-      )}
+      <ActionNotice message={message} error={error} />
 
       <div className="content-grid">
         <div className="panel-card">
