@@ -278,7 +278,7 @@ export default function CustomerLoginScreen({
             <Message text={error} />
 
             <Text style={styles.waitingText}>
-              Mesajınız bekleniyor…
+              Mesajı gönderdikten sonra işletme personelinin onayı bekleniyor…
             </Text>
           </>
         ) : (

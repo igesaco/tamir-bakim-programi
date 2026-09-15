@@ -4,6 +4,7 @@ import {
 
 import {
   extractWhatsappCode,
+  normalizeManualWhatsappCode,
   validWhatsappSignature,
 } from './whatsapp-verification';
 
@@ -16,6 +17,18 @@ describe('WhatsApp verification helpers', () => {
     ).toBe('482913');
     expect(
       extractWhatsappCode('kod 482913'),
+    ).toBe('');
+  });
+
+  it('normalizes staff-entered manual approval codes', () => {
+    expect(
+      normalizeManualWhatsappCode('TB-482913'),
+    ).toBe('482913');
+    expect(
+      normalizeManualWhatsappCode('482913'),
+    ).toBe('482913');
+    expect(
+      normalizeManualWhatsappCode('TB-12345'),
     ).toBe('');
   });
 

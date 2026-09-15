@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const bcrypt = require('bcrypt');
 const { randomUUID } = require('node:crypto');
 const { writeFile } = require('node:fs/promises');
 const { join } = require('node:path');
@@ -31,6 +32,13 @@ const db = new PrismaService();
  const appointments = new AppointmentsService(db);
  const portal = new CustomerPortalService(db, {}, {});
  assert((await portal.customerIdsForPhone('05050376752')).includes(customer.id),'Formatted registered phone matches customer login');
+ const whatsappCode = '482913';
+ const whatsappChallenge = await db.customerPortalChallenge.create({data:{customerId:customer.id,vehicleId:vehicle.id,codeHash:await bcrypt.hash(whatsappCode,10),channel:'WHATSAPP',expiresAt:new Date(Date.now()+300000)}});
+ await assert.rejects(portal.manualConfirmWhatsapp(randomUUID(),`TB-${whatsappCode}`,'05050376752'),/eşleşen kod/i,'Another organization cannot approve the challenge');
+ await assert.rejects(portal.manualConfirmWhatsapp(organizationId,`TB-${whatsappCode}`,'05000000000'),/eşleşen kod/i,'A different sender phone cannot approve the challenge');
+ const whatsappApproval = await portal.manualConfirmWhatsapp(organizationId,`TB-${whatsappCode}`,'05050376752');
+ assert.equal(whatsappApproval.confirmed,true,'Staff can approve the exact WhatsApp sender and code');
+ assert((await db.customerPortalChallenge.findUnique({where:{id:whatsappChallenge.id}})).whatsappConfirmedAt,'The waiting customer challenge becomes claimable');
  const booked = await appointments.create(organizationId,null,'OWNER',tech.id,{customerId:customer.id,vehicleId:vehicle.id,startAt:new Date(Date.now()+86400000).toISOString(),serviceType:'Bakım'});
  assert.equal(booked.branchId,branchId,'Owner appointment uses vehicle branch even without an assigned user branch');
  const quote = await quotes.create(organizationId, branchId, 'OWNER', { customerId: customer.id, vehicleId: vehicle.id, serviceOrderId: order.id,
@@ -78,5 +86,5 @@ const db = new PrismaService();
  assert.equal(await db.mediaObject.count({where:{mediaId:media.id}}),1);
  const mediaAccess = new URL(mediaLink(media.id,{organizationId,sub:tech.id,role:'TECHNICIAN',tokenVersion:0}),'https://example.invalid/').searchParams.get('access');
  const content = await mediaService.readContent(media.id,mediaAccess); assert.equal(Buffer.from(content.body).toString(),'persistent-private-photo');
- console.log('PASS: quote identity/reapproval, transition gates, concurrent payments/retries/balances, completion/delivery/history/plan renewal, concurrent stock, persistent signed media isolation.');
+ console.log('PASS: free WhatsApp approval isolation, quote identity/reapproval, transition gates, concurrent payments/retries/balances, completion/delivery/history/plan renewal, concurrent stock, persistent signed media isolation.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>db.$disconnect());

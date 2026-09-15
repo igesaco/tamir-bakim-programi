@@ -13,6 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { UserRole } from '@prisma/client';
 
 import { CustomerPortalService } from './customer-portal.service';
 import { StartPortalAccessDto } from './dto/start-portal-access.dto';
@@ -21,6 +22,9 @@ import { StartPortalPhoneAccessDto } from './dto/start-portal-phone-access.dto';
 import { VerifyPortalAccessDto } from './dto/verify-portal-access.dto';
 import { UpdateCustomerMileageDto } from './dto/update-customer-mileage.dto';
 import { CheckWhatsappAccessDto } from './dto/check-whatsapp-access.dto';
+import { ManualConfirmWhatsappDto } from './dto/manual-confirm-whatsapp.dto';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('customer-portal')
 export class CustomerPortalController {
@@ -70,6 +74,24 @@ export class CustomerPortalController {
   ) {
     return this.customerPortalService.checkWhatsappAccess(
       dto,
+    );
+  }
+
+  @Post('access/whatsapp/manual-confirm')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+  )
+  manualConfirmWhatsapp(
+    @Req() req: any,
+    @Body() dto: ManualConfirmWhatsappDto,
+  ) {
+    return this.customerPortalService.manualConfirmWhatsapp(
+      req.user.organizationId,
+      dto.code,
+      dto.senderPhone,
     );
   }
 

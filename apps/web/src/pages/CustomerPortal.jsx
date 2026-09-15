@@ -439,7 +439,7 @@ export default function CustomerPortal() {
             <h1>Mesajı gönderin</h1>
 
             <p>
-              Açılan WhatsApp ekranındaki hazır mesajı değiştirmeden gönderin. Bu sayfa doğrulamayı otomatik algılayacaktır.
+              Açılan WhatsApp ekranındaki hazır mesajı değiştirmeden gönderin. İşletme personeli kodu onayladığında bu sayfa girişinizi otomatik tamamlayacaktır.
             </p>
 
             <a
@@ -452,7 +452,7 @@ export default function CustomerPortal() {
             </a>
 
             <div className="customer-portal-security">
-              Kod uygulamadan gönderilmez; kayıtlı numaranızdan gelen mesaj doğrulanır. Bu nedenle ücretli OTP mesajı gerekmez.
+              İşletme size ücretli SMS veya WhatsApp mesajı göndermez. Kodu kendi WhatsApp hesabınızdan siz iletirsiniz.
             </div>
 
             {error && (

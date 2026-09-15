@@ -8,6 +8,11 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [whatsappCode, setWhatsappCode] = useState('');
+  const [whatsappSenderPhone, setWhatsappSenderPhone] = useState('');
+  const [whatsappMessage, setWhatsappMessage] = useState('');
+  const [whatsappError, setWhatsappError] = useState('');
+  const [whatsappBusy, setWhatsappBusy] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
@@ -114,6 +119,37 @@ export default function Settings() {
     }
   }
 
+  async function confirmWhatsapp(e) {
+    e.preventDefault();
+    setWhatsappMessage('');
+    setWhatsappError('');
+    setWhatsappBusy(true);
+
+    try {
+      const response = await api.post(
+        '/customer-portal/access/whatsapp/manual-confirm',
+        {
+          code: whatsappCode.trim(),
+          senderPhone: whatsappSenderPhone.trim(),
+        },
+      );
+      setWhatsappMessage(
+        `${response.data.customer} (${response.data.plate}) için giriş onaylandı.`,
+      );
+      setWhatsappCode('');
+      setWhatsappSenderPhone('');
+    } catch (err) {
+      const detail = err?.response?.data?.message;
+      setWhatsappError(
+        Array.isArray(detail)
+          ? detail.join(', ')
+          : detail || 'WhatsApp kodu onaylanamadı.',
+      );
+    } finally {
+      setWhatsappBusy(false);
+    }
+  }
+
   return (
     <>
       <div className="page-heading">
@@ -124,6 +160,49 @@ export default function Settings() {
       </div>
 
       <div className="settings-grid">
+        {['OWNER', 'MANAGER', 'SERVICE_ADVISOR'].includes(user?.role) && (
+          <div className="panel-card">
+            <h3>WhatsApp Müşteri Giriş Onayı</h3>
+            <p className="muted-text">
+              WhatsApp'ta mesajı gönderen numarayı ve TB- ile başlayan kodu girin. Numara müşteri kaydıyla eşleşmeden giriş açılmaz.
+            </p>
+            <form className="form-grid" onSubmit={confirmWhatsapp}>
+              <input
+                className="full"
+                placeholder="TB-123456"
+                value={whatsappCode}
+                onChange={(e) =>
+                  setWhatsappCode(
+                    e.target.value.toUpperCase().replace(/[^TB\d-]/g, ''),
+                  )
+                }
+                required
+              />
+              <input
+                className="full"
+                inputMode="tel"
+                placeholder="Mesajı gönderen telefon (05xx...)"
+                value={whatsappSenderPhone}
+                onChange={(e) =>
+                  setWhatsappSenderPhone(e.target.value.replace(/[^\d+ ()-]/g, ''))
+                }
+                required
+              />
+              <button
+                className="primary-button full"
+                disabled={whatsappBusy}
+              >
+                {whatsappBusy ? 'Onaylanıyor...' : 'Müşteri Girişini Onayla'}
+              </button>
+              {whatsappMessage && (
+                <div className="success-message full">{whatsappMessage}</div>
+              )}
+              {whatsappError && (
+                <div className="error-message full">{whatsappError}</div>
+              )}
+            </form>
+          </div>
+        )}
         <div className="panel-card">
           <h3>İşletme Bilgileri</h3>
 

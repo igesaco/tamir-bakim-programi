@@ -34,6 +34,7 @@ import { VerifyPortalAccessDto } from './dto/verify-portal-access.dto';
 import { CheckWhatsappAccessDto } from './dto/check-whatsapp-access.dto';
 import {
   extractWhatsappCode,
+  normalizeManualWhatsappCode,
   validWhatsappSignature,
 } from './whatsapp-verification';
 
@@ -133,15 +134,6 @@ export class CustomerPortalService {
     }
 
     if (channel === 'WHATSAPP') {
-      if (
-        !process.env.WHATSAPP_APP_SECRET ||
-        !process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN
-      ) {
-        throw new ServiceUnavailableException(
-          'WhatsApp doğrulaması henüz etkinleştirilmemiş. Lütfen SMS seçeneğini kullanın.',
-        );
-      }
-
       const destination =
         this.normalizePhone(
           whatsappPhone || '',
@@ -163,6 +155,9 @@ export class CustomerPortalService {
           `https://wa.me/90${destination}?text=${encodeURIComponent(message)}`,
         pollingIntervalMs:
           2000,
+        manualApprovalRequired:
+          !process.env.WHATSAPP_APP_SECRET ||
+          !process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
       };
     }
 
@@ -919,6 +914,114 @@ export class CustomerPortalService {
           ? 2592000
           : 1800,
     };
+  }
+
+  async manualConfirmWhatsapp(
+    organizationId: string,
+    rawCode: string,
+    senderPhone: string,
+  ) {
+    const code =
+      normalizeManualWhatsappCode(rawCode);
+
+    if (code.length !== 6) {
+      throw new BadRequestException(
+        'WhatsApp doğrulama kodu geçersiz.',
+      );
+    }
+
+    const normalizedSender =
+      this.normalizePhone(senderPhone);
+
+    if (normalizedSender.length !== 10) {
+      throw new BadRequestException(
+        'Mesajı gönderen WhatsApp numarası geçersiz.',
+      );
+    }
+
+    const challenges =
+      await this.prisma.customerPortalChallenge.findMany({
+        where: {
+          channel: 'WHATSAPP',
+          verifiedAt: null,
+          whatsappConfirmedAt: null,
+          expiresAt: {
+            gt: new Date(),
+          },
+          customer: {
+            organizationId,
+          },
+        },
+        include: {
+          customer: {
+            select: {
+              firstName: true,
+              lastName: true,
+              phone: true,
+            },
+          },
+          vehicle: {
+            select: {
+              plate: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 50,
+      });
+
+    for (const challenge of challenges) {
+      if (
+        this.normalizePhone(
+          challenge.customer.phone || '',
+        ) !== normalizedSender
+      ) {
+        continue;
+      }
+
+      if (
+        !(await bcrypt.compare(
+          code,
+          challenge.codeHash,
+        ))
+      ) {
+        continue;
+      }
+
+      const confirmed =
+        await this.prisma.customerPortalChallenge.updateMany({
+          where: {
+            id: challenge.id,
+            verifiedAt: null,
+            whatsappConfirmedAt: null,
+            expiresAt: {
+              gt: new Date(),
+            },
+          },
+          data: {
+            whatsappConfirmedAt: new Date(),
+          },
+        });
+
+      if (confirmed.count !== 1) {
+        continue;
+      }
+
+      return {
+        confirmed: true,
+        customer:
+          `${challenge.customer.firstName} ${challenge.customer.lastName}`.trim(),
+        phone:
+          this.maskPhone(challenge.customer.phone || ''),
+        plate: challenge.vehicle.plate,
+      };
+    }
+
+    throw new BadRequestException(
+      'Aktif bir giriş isteğiyle eşleşen kod bulunamadı veya kodun süresi doldu.',
+    );
   }
 
   async verify(
