@@ -4,11 +4,14 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useState } from 'react';
 
 import { useAuth } from '../auth/AuthContext';
 import {
   Button,
   Card,
+  Field,
+  Message,
   ScreenTitle,
 } from '../components/UI';
 import {
@@ -33,7 +36,30 @@ export default function AccountScreen() {
   const {
     user,
     logout,
+    confirmWhatsappCustomer,
   } = useAuth();
+  const [whatsappCode, setWhatsappCode] = useState('');
+  const [whatsappSenderPhone, setWhatsappSenderPhone] = useState('');
+  const [whatsappMessage, setWhatsappMessage] = useState('');
+  const [whatsappBusy, setWhatsappBusy] = useState(false);
+
+  async function confirmWhatsapp() {
+    setWhatsappMessage('');
+    setWhatsappBusy(true);
+    try {
+      const result = await confirmWhatsappCustomer(
+        whatsappCode.trim(),
+        whatsappSenderPhone.trim(),
+      );
+      setWhatsappMessage(`${result.customer} (${result.plate}) için giriş onaylandı.`);
+      setWhatsappCode('');
+      setWhatsappSenderPhone('');
+    } catch (error) {
+      setWhatsappMessage(error.message || 'Kod onaylanamadı.');
+    } finally {
+      setWhatsappBusy(false);
+    }
+  }
 
   return (
     <ScrollView
@@ -85,6 +111,48 @@ export default function AccountScreen() {
           </Text>
         </View>
       </Card>
+
+      {['OWNER', 'MANAGER', 'SERVICE_ADVISOR'].includes(user?.role) ? (
+        <Card style={styles.security}>
+          <Text style={styles.securityTitle}>WhatsApp Müşteri Girişi</Text>
+          <Text style={styles.securityText}>
+            WhatsApp'ta mesajı gönderen numarayı ve TB- ile başlayan kodu girin.
+          </Text>
+          <View style={styles.codeForm}>
+            <Field
+              label="WhatsApp kodu"
+              placeholder="TB-123456"
+              autoCapitalize="characters"
+              value={whatsappCode}
+              onChangeText={(value) =>
+                setWhatsappCode(value.toUpperCase().replace(/[^TB\d-]/g, ''))
+              }
+            />
+            <Field
+              label="Mesajı gönderen telefon"
+              placeholder="05xx xxx xx xx"
+              keyboardType="phone-pad"
+              value={whatsappSenderPhone}
+              onChangeText={setWhatsappSenderPhone}
+            />
+            <Button
+              title={whatsappBusy ? 'Onaylanıyor...' : 'Müşteri Girişini Onayla'}
+              disabled={
+                whatsappBusy ||
+                whatsappCode.replace(/\D/g, '').length !== 6 ||
+                whatsappSenderPhone.replace(/\D/g, '').length < 10
+              }
+              onPress={confirmWhatsapp}
+            />
+          </View>
+          <View style={styles.messageGap}>
+            <Message
+              text={whatsappMessage}
+              tone={whatsappMessage.includes('onaylandı') ? 'success' : 'error'}
+            />
+          </View>
+        </Card>
+      ) : null}
 
       <Card style={styles.security}>
         <Text style={styles.securityTitle}>
@@ -158,5 +226,11 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 10,
     lineHeight: 16,
+  },
+  codeForm: {
+    marginTop: 14,
+  },
+  messageGap: {
+    marginTop: 12,
   },
 });

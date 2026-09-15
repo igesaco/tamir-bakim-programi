@@ -11,6 +11,18 @@ export function extractWhatsappCode(
     '';
 }
 
+export function normalizeManualWhatsappCode(
+  input: string,
+) {
+  const code =
+    extractWhatsappCode(input) ||
+    input.replace(/\D/g, '');
+
+  return code.length === 6
+    ? code
+    : '';
+}
+
 export function validWhatsappSignature(
   rawBody: Buffer | undefined,
   signature: string | undefined,

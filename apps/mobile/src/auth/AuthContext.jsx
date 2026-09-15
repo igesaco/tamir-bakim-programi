@@ -356,6 +356,22 @@ export function AuthProvider({
     return portalData;
   }
 
+  async function confirmWhatsappCustomer(code, senderPhone) {
+    const token =
+      await SecureStore.getItemAsync(
+        STAFF_TOKEN_KEY,
+      );
+
+    return apiRequest(
+      '/customer-portal/access/whatsapp/manual-confirm',
+      {
+        method: 'POST',
+        token,
+        body: { code, senderPhone },
+      },
+    );
+  }
+
   async function customerRequest(
     path,
     options = {},
@@ -423,6 +439,7 @@ export function AuthProvider({
       startCustomerAccess,
       checkWhatsappAccess,
       verifyCustomerAccess,
+      confirmWhatsappCustomer,
       customerRequest,
     }),
     [
