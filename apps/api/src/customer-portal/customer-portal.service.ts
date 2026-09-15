@@ -136,7 +136,9 @@ export class CustomerPortalService {
     if (channel === 'WHATSAPP') {
       const destination =
         this.normalizePhone(
-          whatsappPhone || '',
+          process.env.WHATSAPP_BUSINESS_PHONE ||
+            whatsappPhone ||
+            '',
         );
 
       if (destination.length < 10) {
