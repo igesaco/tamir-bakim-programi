@@ -733,7 +733,7 @@ model ServiceOrder {
   workLogs                 ServiceOrderWorkLog[]
   notifications            Notification[]
   payments                 Payment[]
-  serviceOrderWorkSessions ServiceOrderWorkSession[]
+  workSessions            ServiceOrderWorkSession[]
   inventoryReservations    InventoryReservation[]
   procurementRequests      ProcurementRequest[]
 

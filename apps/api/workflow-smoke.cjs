@@ -29,6 +29,9 @@ const db = new PrismaService();
  const order = await db.serviceOrder.create({ data: { organizationId, branchId, customerId: customer.id, vehicleId: vehicle.id, mileage: 50000, orderNumber: randomUUID(), assignedTechnicianId: tech.id,
  items: { create: { name: 'Bakım', type: 'LABOR', quantity: 1, unitPrice: 0, totalPrice: 0 } } }, include: { items: true } });
  const quotes = new QuotesService(db), billing = new BillingService(db), orders = new ServiceOrdersService(db);
+ await db.serviceOrderWorkSession.create({data:{organizationId,branchId,serviceOrderId:order.id,serviceOrderItemId:order.items[0].id,technicianId:tech.id,status:'STOPPED',startedAt:new Date(Date.now()-60000),stoppedAt:new Date(),durationMinutes:1}});
+ const orderDetail = await orders.findOne(organizationId,order.id,'OWNER',tech.id,branchId);
+ assert.equal(orderDetail.workSessions.length,1,'Service order detail exposes technician work sessions');
  const appointments = new AppointmentsService(db);
  const portal = new CustomerPortalService(db, {}, {});
  assert((await portal.customerIdsForPhone('05050376752')).includes(customer.id),'Formatted registered phone matches customer login');
@@ -86,5 +89,5 @@ const db = new PrismaService();
  assert.equal(await db.mediaObject.count({where:{mediaId:media.id}}),1);
  const mediaAccess = new URL(mediaLink(media.id,{organizationId,sub:tech.id,role:'TECHNICIAN',tokenVersion:0}),'https://example.invalid/').searchParams.get('access');
  const content = await mediaService.readContent(media.id,mediaAccess); assert.equal(Buffer.from(content.body).toString(),'persistent-private-photo');
- console.log('PASS: free WhatsApp approval isolation, quote identity/reapproval, transition gates, concurrent payments/retries/balances, completion/delivery/history/plan renewal, concurrent stock, persistent signed media isolation.');
+ console.log('PASS: work-order detail sessions, free WhatsApp approval isolation, quote identity/reapproval, transition gates, concurrent payments/retries/balances, completion/delivery/history/plan renewal, concurrent stock, persistent signed media isolation.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>db.$disconnect());
