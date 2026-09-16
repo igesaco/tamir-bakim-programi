@@ -29,7 +29,7 @@ const db = new PrismaService();
  const order = await db.serviceOrder.create({ data: { organizationId, branchId, customerId: customer.id, vehicleId: vehicle.id, mileage: 50000, orderNumber: randomUUID(), assignedTechnicianId: tech.id,
  items: { create: { name: 'Bakım', type: 'LABOR', quantity: 1, unitPrice: 0, totalPrice: 0 } } }, include: { items: true } });
  const quotes = new QuotesService(db), billing = new BillingService(db), orders = new ServiceOrdersService(db);
- await db.serviceOrderWorkSession.create({data:{organizationId,branchId,serviceOrderId:order.id,serviceOrderItemId:order.items[0].id,technicianId:tech.id,status:'STOPPED',startedAt:new Date(Date.now()-60000),stoppedAt:new Date(),durationMinutes:1}});
+ await db.serviceOrderWorkSession.create({data:{organizationId,serviceOrderId:order.id,serviceOrderItemId:order.items[0].id,technicianId:tech.id,status:'STOPPED',startedAt:new Date(Date.now()-60000),stoppedAt:new Date(),durationMinutes:1}});
  const orderDetail = await orders.findOne(organizationId,order.id,'OWNER',tech.id,branchId);
  assert.equal(orderDetail.workSessions.length,1,'Service order detail exposes technician work sessions');
  const appointments = new AppointmentsService(db);
