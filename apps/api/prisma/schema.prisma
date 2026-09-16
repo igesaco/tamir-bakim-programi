@@ -416,7 +416,6 @@ model Branch {
   notifications         Notification[]
   payments              Payment[]
   auditLogs             AuditLog[]
-  workSessions          ServiceOrderWorkSession[]
   inventoryReservations InventoryReservation[]
   procurementRequests   ProcurementRequest[]
 
@@ -733,7 +732,7 @@ model ServiceOrder {
   workLogs                 ServiceOrderWorkLog[]
   notifications            Notification[]
   payments                 Payment[]
-  serviceOrderWorkSessions ServiceOrderWorkSession[]
+  workSessions            ServiceOrderWorkSession[]
   inventoryReservations    InventoryReservation[]
   procurementRequests      ProcurementRequest[]
 
@@ -832,9 +831,6 @@ model ServiceOrderWorkSession {
   note               String?
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
-  branch             Branch?           @relation(fields: [branchId], references: [id])
-  branchId           String?
-
   @@index([organizationId])
   @@index([serviceOrderId])
   @@index([technicianId, status])
