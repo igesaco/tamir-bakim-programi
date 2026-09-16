@@ -22,6 +22,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { ImportCustomersDto } from './dto/import-customers.dto';
 
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(
@@ -49,6 +50,22 @@ export class CustomersController {
       req.user.branchId,
       req.user.role,
       dto,
+    );
+  }
+
+  @Permission(PermissionKey.CUSTOMER_CREATE)
+  @Post('import/preview')
+  previewImport(@Req() req: any, @Body() dto: ImportCustomersDto) {
+    return this.customersService.previewImport(
+      req.user.organizationId, req.user.branchId, req.user.role, dto.rows,
+    );
+  }
+
+  @Permission(PermissionKey.CUSTOMER_CREATE)
+  @Post('import/commit')
+  commitImport(@Req() req: any, @Body() dto: ImportCustomersDto) {
+    return this.customersService.commitImport(
+      req.user.organizationId, req.user.branchId, req.user.role, dto.rows,
     );
   }
 

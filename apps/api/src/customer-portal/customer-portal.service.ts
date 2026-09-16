@@ -5,6 +5,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -16,6 +17,7 @@ import {
   PaymentStatus,
   QuoteStatus,
   ServiceOrderStatus,
+  AppointmentStatus,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import {
@@ -32,6 +34,7 @@ import { StartPortalQrAccessDto } from './dto/start-portal-qr-access.dto';
 import { StartPortalPhoneAccessDto } from './dto/start-portal-phone-access.dto';
 import { VerifyPortalAccessDto } from './dto/verify-portal-access.dto';
 import { CheckWhatsappAccessDto } from './dto/check-whatsapp-access.dto';
+import { CreateCustomerAppointmentDto } from './dto/create-customer-appointment.dto';
 import {
   extractWhatsappCode,
   normalizeManualWhatsappCode,
@@ -105,6 +108,15 @@ export class CustomerPortalService {
       | 'WHATSAPP' = 'SMS',
     whatsappPhone?: string | null,
   ) {
+    if (
+      channel === 'WHATSAPP' &&
+      process.env.WHATSAPP_VERIFICATION_ENABLED !== 'true'
+    ) {
+      throw new ServiceUnavailableException(
+        'WhatsApp doğrulaması geliştirme süresince devre dışıdır.',
+      );
+    }
+
     const testPhone =
       process.env.CUSTOMER_PORTAL_TEST_PHONE
         ? this.normalizePhone(
@@ -158,6 +170,7 @@ export class CustomerPortalService {
         pollingIntervalMs:
           2000,
         manualApprovalRequired:
+          process.env.WHATSAPP_WEBHOOK_ENABLED !== 'true' ||
           !process.env.WHATSAPP_APP_SECRET ||
           !process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
       };
@@ -1304,6 +1317,7 @@ export class CustomerPortalService {
           transmission: true,
           mileage: true,
           mileageUpdatedAt: true,
+          branchId: true,
           media: {
             where: {
               customerVisible: true,
@@ -1340,6 +1354,7 @@ export class CustomerPortalService {
       maintenanceHistory,
       maintenancePlans,
       activeServiceOrders,
+      appointments,
     ] = await Promise.all([
       this.prisma.payment.findMany({
         where: {
@@ -1507,6 +1522,7 @@ export class CustomerPortalService {
               notes: false,
               sentAt: true,
               approvedAt: true,
+              approvedTotal: true,
               items: {
                 select: {
                   id: true,
@@ -1517,6 +1533,8 @@ export class CustomerPortalService {
                   totalPrice: true,
                   vatAmount: true,
                   grossTotal: true,
+                  approved: true,
+                  decidedAt: true,
                 },
               },
             },
@@ -1531,11 +1549,42 @@ export class CustomerPortalService {
         },
         take: 5,
       }),
+      this.prisma.appointment.findMany({
+        where: { organizationId, customerId, vehicleId },
+        select: {
+          id: true, startAt: true, endAt: true, estimatedDurationMinutes: true,
+          serviceType: true, customerNote: true, status: true,
+          branch: { select: { name: true } },
+        },
+        orderBy: { startAt: 'desc' },
+        take: 20,
+      }),
     ]);
 
-    const approvedQuotes = await this.prisma.quote.findMany({ where: { organizationId, customerId, vehicleId, status: QuoteStatus.APPROVED }, select: { total: true } });
+    const approvedQuotes = await this.prisma.quote.findMany({
+      where: {
+        organizationId, customerId, vehicleId,
+        status: { in: [QuoteStatus.APPROVED, QuoteStatus.PARTIALLY_APPROVED] },
+      },
+      select: { total: true, approvedTotal: true },
+    });
+    const warranties = await this.prisma.serviceOrderItem.findMany({
+      where: {
+        serviceOrder: {
+          organizationId, customerId, vehicleId, status: ServiceOrderStatus.DELIVERED,
+        },
+        warrantyStartedAt: { not: null },
+      },
+      select: {
+        id: true, name: true, description: true, warrantyMonths: true, warrantyKm: true,
+        warrantyStartedAt: true, warrantyExpiresAt: true,
+        serviceOrder: { select: { orderNumber: true, mileage: true, deliveredAt: true } },
+      },
+      orderBy: { warrantyStartedAt: 'desc' },
+      take: 30,
+    });
     const legacyOrders = await this.prisma.serviceOrder.findMany({ where: { organizationId, customerId, vehicleId, status: { not: ServiceOrderStatus.CANCELLED }, quotes: { none: {} } }, include: { items: true } });
-    const billed = approvedQuotes.reduce((sum, q) => sum + Number(q.total), 0)
+    const billed = approvedQuotes.reduce((sum, q) => sum + Number(q.approvedTotal ?? q.total), 0)
       + legacyOrders.reduce((sum, order) => sum + order.items.reduce((n, i) => n + (Number(i.grossTotal) || Number(i.totalPrice) + Number(i.vatAmount)), 0), 0);
 
     const paid =
@@ -1638,8 +1687,49 @@ export class CustomerPortalService {
       maintenanceHistory,
       maintenancePlans:
         customerMaintenancePlans,
+      warranties,
       payments,
+      appointments,
     };
+  }
+
+  async createCustomerAppointment(
+    customerId: string,
+    vehicleId: string,
+    organizationId: string,
+    dto: CreateCustomerAppointmentDto,
+  ) {
+    const vehicle = await this.prisma.vehicle.findFirst({
+      where: { id: vehicleId, customerId, organizationId },
+      select: { branchId: true },
+    });
+    if (!vehicle) throw new NotFoundException('Araç bulunamadı.');
+    if (!vehicle.branchId) {
+      throw new BadRequestException('Randevu için aracın bağlı olduğu şube belirlenmelidir.');
+    }
+    const startAt = new Date(dto.startAt);
+    if (!Number.isFinite(startAt.getTime()) || startAt <= new Date()) {
+      throw new BadRequestException('Gelecekteki bir randevu zamanı seçin.');
+    }
+    const estimatedDurationMinutes = dto.estimatedDurationMinutes ?? 60;
+    const endAt = new Date(startAt.getTime() + estimatedDurationMinutes * 60_000);
+    const duplicate = await this.prisma.appointment.findFirst({
+      where: {
+        organizationId, customerId, vehicleId,
+        status: { notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW] },
+        startAt: { gte: new Date(startAt.getTime() - 15 * 60_000), lte: new Date(startAt.getTime() + 15 * 60_000) },
+      },
+    });
+    if (duplicate) throw new BadRequestException('Bu saate yakın açık bir randevunuz zaten var.');
+    return this.prisma.appointment.create({
+      data: {
+        organizationId, branchId: vehicle.branchId, customerId, vehicleId,
+        startAt, endAt, estimatedDurationMinutes,
+        serviceType: dto.serviceType, customerNote: dto.customerNote,
+        status: AppointmentStatus.REQUESTED,
+      },
+      include: { branch: true },
+    });
   }
   approveCustomerQuote(customerId: string, organizationId: string, quoteId: string) {
     return atomic(this.prisma, organizationId, async tx => {
@@ -1647,6 +1737,43 @@ export class CustomerPortalService {
       const { remaining } = await quoteBalance(tx, organizationId, quoteId);
       const order = quote.serviceOrderId ? await tx.serviceOrder.findUnique({ where: { id: quote.serviceOrderId } }) : null;
       return { quote, serviceOrderStatus: order?.status, pendingAmount: remaining };
+    });
+  }
+
+  decideCustomerQuoteItems(
+    customerId: string,
+    organizationId: string,
+    quoteId: string,
+    decisions: Array<{ itemId: string; approved: boolean }>,
+  ) {
+    return atomic(this.prisma, organizationId, async tx => {
+      const quote = await tx.quote.findFirst({
+        where: { id: quoteId, organizationId, customerId },
+        include: { items: true },
+      });
+      if (!quote) throw new NotFoundException('Teklif bulunamadı.');
+      if (quote.status !== QuoteStatus.SENT) throw new BadRequestException('Yalnızca onay bekleyen teklif için karar verilebilir.');
+      const decisionMap = new Map(decisions.map(item => [item.itemId, item.approved]));
+      if (decisionMap.size !== quote.items.length || quote.items.some(item => !decisionMap.has(item.id))) {
+        throw new BadRequestException('Teklifin her kalemi için kabul veya ret seçimi yapın.');
+      }
+      const now = new Date();
+      for (const item of quote.items) {
+        await tx.quoteItem.update({
+          where: { id: item.id }, data: { approved: decisionMap.get(item.id), decidedAt: now },
+        });
+      }
+      const approvedCount = decisions.filter(item => item.approved).length;
+      const status = approvedCount === 0
+        ? QuoteStatus.REJECTED
+        : approvedCount === decisions.length
+          ? QuoteStatus.APPROVED
+          : QuoteStatus.PARTIALLY_APPROVED;
+      const updated = await applyQuoteStatus(tx, organizationId, quoteId, status, { customerId });
+      const { remaining } = await quoteBalance(tx, organizationId, quoteId);
+      const order = updated.serviceOrderId
+        ? await tx.serviceOrder.findUnique({ where: { id: updated.serviceOrderId } }) : null;
+      return { quote: updated, serviceOrderStatus: order?.status, pendingAmount: remaining };
     });
   }
 

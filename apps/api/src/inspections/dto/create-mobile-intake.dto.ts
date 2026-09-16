@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsEmail,
+  IsDateString,
   IsEnum,
   IsInt,
   IsNumber,
@@ -161,6 +162,10 @@ export class CreateMobileIntakeDto {
   @IsString()
   @MaxLength(2000)
   internalNote?: string;
+
+  @IsOptional()
+  @IsDateString()
+  estimatedDeliveryAt?: string;
 
   @IsOptional()
   @IsArray()

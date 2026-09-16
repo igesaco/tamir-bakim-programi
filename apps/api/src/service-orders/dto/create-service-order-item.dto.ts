@@ -44,4 +44,15 @@ export class CreateServiceOrderItemDto {
   @Min(0)
   @Max(100)
   vatRate?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(120)
+  warrantyMonths?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  warrantyKm?: number;
 }

@@ -129,8 +129,7 @@ export default function CustomerPortal() {
       phone: '',
     });
 
-  const [deliveryChannel, setDeliveryChannel] =
-    useState('WHATSAPP');
+  const deliveryChannel = 'SMS';
 
   const [
     challenge,
@@ -177,6 +176,25 @@ export default function CustomerPortal() {
       setChallenge(
         result,
       );
+      if (result.developmentCode) {
+        const verified = await portalRequest(
+          '/customer-portal/access/verify',
+          {
+            method: 'POST',
+            body: {
+              challengeId: result.challengeId,
+              code: result.developmentCode,
+            },
+          },
+        );
+        const portalData = await portalRequest(
+          '/customer-portal/me',
+          { token: verified.token },
+        );
+        setData(portalData);
+        setStep('account');
+        return;
+      }
       if (
         result.deliveryChannel ===
           'WHATSAPP' &&
@@ -369,42 +387,6 @@ export default function CustomerPortal() {
                 />
               </label>
 
-              <div className="portal-channel-picker">
-                <button
-                  type="button"
-                  className={
-                    deliveryChannel ===
-                    'WHATSAPP'
-                      ? 'active'
-                      : ''
-                  }
-                  onClick={() =>
-                    setDeliveryChannel(
-                      'WHATSAPP',
-                    )
-                  }
-                >
-                  WhatsApp — ücretsiz
-                </button>
-
-                <button
-                  type="button"
-                  className={
-                    deliveryChannel ===
-                    'SMS'
-                      ? 'active'
-                      : ''
-                  }
-                  onClick={() =>
-                    setDeliveryChannel(
-                      'SMS',
-                    )
-                  }
-                >
-                  SMS
-                </button>
-              </div>
-
               {error && (
                 <div className="page-message error-message">
                   {error}
@@ -417,15 +399,12 @@ export default function CustomerPortal() {
               >
                 {busy
                   ? 'Kontrol ediliyor...'
-                  : deliveryChannel ===
-                      'WHATSAPP'
-                    ? 'WhatsApp ile Doğrula'
-                    : 'SMS Kodu Gönder'}
+                  : 'Geliştirme Girişi'}
               </button>
             </form>
 
             <div className="customer-portal-security">
-              Kişisel ve finansal bilgiler, kayıtlı telefon WhatsApp veya SMS ile doğrulanmadan gösterilmez.
+              WhatsApp doğrulaması geliştirme süresince kapalıdır. Yalnızca tanımlı test telefonu hızlı giriş yapabilir.
             </div>
           </section>
         )}
@@ -439,7 +418,10 @@ export default function CustomerPortal() {
             <h1>Mesajı gönderin</h1>
 
             <p>
-              Açılan WhatsApp ekranındaki hazır mesajı değiştirmeden gönderin. İşletme personeli kodu onayladığında bu sayfa girişinizi otomatik tamamlayacaktır.
+              Açılan WhatsApp ekranındaki hazır mesajı değiştirmeden gönderin.{' '}
+              {challenge?.manualApprovalRequired
+                ? 'Ücretsiz kullanımda işletme personeli kodu onayladığında bu sayfa girişinizi tamamlayacaktır.'
+                : 'Mesaj doğrulandığında bu sayfa girişinizi otomatik tamamlayacaktır.'}
             </p>
 
             <a
@@ -453,6 +435,9 @@ export default function CustomerPortal() {
 
             <div className="customer-portal-security">
               İşletme size ücretli SMS veya WhatsApp mesajı göndermez. Kodu kendi WhatsApp hesabınızdan siz iletirsiniz.
+              {challenge?.manualApprovalRequired
+                ? ' Personel onayı Ayarlar → WhatsApp Müşteri Giriş Onayı alanından yapılır.'
+                : ''}
             </div>
 
             {error && (

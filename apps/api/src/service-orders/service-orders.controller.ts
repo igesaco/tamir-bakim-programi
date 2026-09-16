@@ -28,6 +28,7 @@ import { AssignTechnicianDto } from './dto/assign-technician.dto';
 import { CreateServiceOrderDto } from './dto/create-service-order.dto';
 import { CreateServiceOrderItemDto } from './dto/create-service-order-item.dto';
 import { CreateServiceOrderWorkLogDto } from './dto/create-service-order-work-log.dto';
+import { StartWorkSessionDto } from './dto/start-work-session.dto';
 import { ServiceOrdersService } from './service-orders.service';
 
 @UseGuards(AuthGuard('jwt'))
@@ -86,6 +87,25 @@ export class ServiceOrdersController {
   }
 
 @Permission(PermissionKey.SERVICE_ORDER_VIEW)
+  @Get('board')
+  @Roles(
+    UserRole.OWNER,
+    UserRole.MANAGER,
+    UserRole.SERVICE_ADVISOR,
+    UserRole.TECHNICIAN,
+    UserRole.ACCOUNTING,
+  )
+  @UseGuards(RolesGuard)
+  board(@Req() req: any) {
+    return this.serviceOrdersService.board(
+      req.user.organizationId,
+      req.user.role,
+      req.user.sub,
+      req.user.branchId,
+    );
+  }
+
+@Permission(PermissionKey.SERVICE_ORDER_VIEW)
   @Get(':id/available-parts')
   @Roles(
     UserRole.OWNER,
@@ -127,6 +147,26 @@ export class ServiceOrdersController {
       req.user.role,
       req.user.branchId,
       dto,
+    );
+  }
+
+  @Permission(PermissionKey.SERVICE_ORDER_CREATE)
+  @Post(':id/items/:itemId/warranty-claim')
+  @Roles(UserRole.OWNER, UserRole.MANAGER, UserRole.SERVICE_ADVISOR)
+  @UseGuards(RolesGuard)
+  createWarrantyClaim(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @Body('note') note?: string,
+  ) {
+    return this.serviceOrdersService.createWarrantyClaim(
+      req.user.organizationId,
+      id,
+      itemId,
+      req.user.role,
+      req.user.branchId,
+      note,
     );
   }
 
@@ -224,6 +264,36 @@ export class ServiceOrdersController {
       req.user.sub,
       req.user.branchId,
       dto,
+    );
+  }
+
+@Permission(PermissionKey.SERVICE_ORDER_WORKLOG)
+  @Get(':id/work-sessions')
+  @Roles(UserRole.OWNER, UserRole.MANAGER, UserRole.SERVICE_ADVISOR, UserRole.TECHNICIAN)
+  @UseGuards(RolesGuard)
+  workSessions(@Req() req: any, @Param('id') id: string) {
+    return this.serviceOrdersService.findWorkSessions(
+      req.user.organizationId, id, req.user.role, req.user.sub, req.user.branchId,
+    );
+  }
+
+@Permission(PermissionKey.SERVICE_ORDER_WORKLOG)
+  @Post(':id/work-sessions/start')
+  @Roles(UserRole.OWNER, UserRole.MANAGER, UserRole.SERVICE_ADVISOR, UserRole.TECHNICIAN)
+  @UseGuards(RolesGuard)
+  startWorkSession(@Req() req: any, @Param('id') id: string, @Body() dto: StartWorkSessionDto) {
+    return this.serviceOrdersService.startWorkSession(
+      req.user.organizationId, id, req.user.role, req.user.sub, req.user.branchId, dto,
+    );
+  }
+
+@Permission(PermissionKey.SERVICE_ORDER_WORKLOG)
+  @Patch(':id/work-sessions/:sessionId/stop')
+  @Roles(UserRole.OWNER, UserRole.MANAGER, UserRole.SERVICE_ADVISOR, UserRole.TECHNICIAN)
+  @UseGuards(RolesGuard)
+  stopWorkSession(@Req() req: any, @Param('id') id: string, @Param('sessionId') sessionId: string) {
+    return this.serviceOrdersService.stopWorkSession(
+      req.user.organizationId, id, sessionId, req.user.role, req.user.sub, req.user.branchId,
     );
   }
 

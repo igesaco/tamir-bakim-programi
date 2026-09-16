@@ -737,6 +737,9 @@ export class InspectionsService {
                   ),
               status:
                 ServiceOrderStatus.ACCEPTED,
+              estimatedDeliveryAt: dto.estimatedDeliveryAt
+                ? new Date(dto.estimatedDeliveryAt)
+                : null,
             },
           });
 

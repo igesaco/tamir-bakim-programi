@@ -38,6 +38,41 @@ export default function Reports() {
         </div>
 
         <div className="stat-card">
+          <span>Geciken İş</span>
+          <strong>{dashboard.delayedOrders}</strong>
+        </div>
+
+        <div className="stat-card">
+          <span>Teknisyensiz</span>
+          <strong>{dashboard.unassignedOrders}</strong>
+        </div>
+
+        <div className="stat-card">
+          <span>Parça Bekleyen</span>
+          <strong>{dashboard.partWaitingOrders}</strong>
+        </div>
+
+        <div className="stat-card">
+          <span>Müşteri Onayı</span>
+          <strong>{dashboard.pendingQuotes}</strong>
+        </div>
+
+        <div className="stat-card">
+          <span>Aktif İşçilik</span>
+          <strong>{dashboard.activeWorkSessions}</strong>
+        </div>
+
+        <div className="stat-card">
+          <span>Tedarik Talebi</span>
+          <strong>{dashboard.openProcurementRequests}</strong>
+        </div>
+
+        <div className="stat-card">
+          <span>Garanti Dönüşü</span>
+          <strong>{dashboard.warrantyReturns}</strong>
+        </div>
+
+        <div className="stat-card">
           <span>Araç</span>
           <strong>{dashboard.vehicles}</strong>
         </div>

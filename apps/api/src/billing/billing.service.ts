@@ -109,7 +109,7 @@ export class BillingService {
         );
       }
 
-      if (quote.status !== 'APPROVED') throw new BadRequestException('Tahsilat için teklif onayı gerekli.');
+      if (!['APPROVED', 'PARTIALLY_APPROVED'].includes(quote.status)) throw new BadRequestException('Tahsilat için teklif onayı gerekli.');
       dto.serviceOrderId = quote.serviceOrderId || undefined;
       branchId = quote.branchId ?? branchId;
     }
@@ -154,6 +154,7 @@ export class BillingService {
           },
           select: {
             total: true,
+            approvedTotal: true,
           },
         });
 
@@ -177,7 +178,7 @@ export class BillingService {
         });
 
       const remaining =
-        Number(quote.total) -
+        Number(quote.approvedTotal ?? quote.total) -
         Number(
           paid._sum.amount ?? 0,
         );

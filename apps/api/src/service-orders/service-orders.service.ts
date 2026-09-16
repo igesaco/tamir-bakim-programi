@@ -25,6 +25,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateServiceOrderDto } from './dto/create-service-order.dto';
 import { CreateServiceOrderItemDto } from './dto/create-service-order-item.dto';
 import { CreateServiceOrderWorkLogDto } from './dto/create-service-order-work-log.dto';
+import { StartWorkSessionDto } from './dto/start-work-session.dto';
 
 function money(value: number) {
   return (
@@ -305,6 +306,80 @@ export class ServiceOrdersService {
     });
   }
 
+  async board(
+    organizationId: string,
+    role: UserRole,
+    userId: string,
+    branchId: string | null,
+  ) {
+    const accessWhere = this.buildAccessWhere(
+      organizationId,
+      role,
+      userId,
+      branchId,
+    );
+    const orders = await this.prisma.serviceOrder.findMany({
+      where: {
+        ...accessWhere,
+        status: {
+          notIn: [
+            ServiceOrderStatus.DELIVERED,
+            ServiceOrderStatus.CANCELLED,
+          ],
+        },
+      },
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        complaint: true,
+        estimatedDeliveryAt: true,
+        createdAt: true,
+        updatedAt: true,
+        branch: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        customer: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+        vehicle: {
+          select: {
+            plate: true,
+            brand: true,
+            model: true,
+          },
+        },
+        assignedTechnician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        items: {
+          select: {
+            completed: true,
+          },
+        },
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
+
+    return orders.map(({ items, ...order }) => ({
+      ...order,
+      itemCount: items.length,
+      completedItemCount: items.filter((item) => item.completed).length,
+    }));
+  }
+
   async findOne(
     organizationId: string,
     id: string,
@@ -409,6 +484,13 @@ export class ServiceOrdersService {
                 createdAt: 'desc',
               },
             },
+            workSessions: {
+              include: {
+                technician: { select: { id: true, firstName: true, lastName: true } },
+                serviceOrderItem: { select: { id: true, name: true } },
+              },
+              orderBy: { startedAt: 'desc' },
+            },
           },
         });
 
@@ -477,6 +559,13 @@ export class ServiceOrdersService {
             orderBy: {
               createdAt: 'desc',
             },
+          },
+          workSessions: {
+            include: {
+              technician: { select: { id: true, firstName: true, lastName: true } },
+              serviceOrderItem: { select: { id: true, name: true } },
+            },
+            orderBy: { startedAt: 'desc' },
           },
           payments: true,
         },
@@ -713,6 +802,111 @@ export class ServiceOrdersService {
     });
   }
 
+  async findWorkSessions(
+    organizationId: string,
+    id: string,
+    actorRole: UserRole,
+    actorId: string,
+    actorBranchId: string | null,
+  ) {
+    const order = await this.prisma.serviceOrder.findFirst({
+      where: { id, ...this.buildAccessWhere(organizationId, actorRole, actorId, actorBranchId) },
+      select: { id: true },
+    });
+    if (!order) throw new NotFoundException('İş emri bulunamadı veya bu iş emrine erişim yetkiniz yok.');
+    return this.prisma.serviceOrderWorkSession.findMany({
+      where: { organizationId, serviceOrderId: id },
+      include: {
+        technician: { select: { id: true, firstName: true, lastName: true } },
+        serviceOrderItem: { select: { id: true, name: true, type: true } },
+      },
+      orderBy: { startedAt: 'desc' },
+    });
+  }
+
+  startWorkSession(
+    organizationId: string,
+    id: string,
+    actorRole: UserRole,
+    actorId: string,
+    actorBranchId: string | null,
+    dto: StartWorkSessionDto,
+  ) {
+    return atomic(this.prisma, organizationId, async tx => {
+      const order = await tx.serviceOrder.findFirst({
+        where: { id, ...this.buildAccessWhere(organizationId, actorRole, actorId, actorBranchId) },
+        include: { items: true },
+      });
+      if (!order) throw new NotFoundException('İş emri bulunamadı veya erişim yetkiniz yok.');
+      assertOpen(order.status);
+      if (!new Set<ServiceOrderStatus>([
+        ServiceOrderStatus.APPROVED,
+        ServiceOrderStatus.IN_PROGRESS,
+        ServiceOrderStatus.PART_WAITING,
+      ]).has(order.status)) {
+        throw new BadRequestException('Çalışma süresi yalnızca onaylı ve işlemdeki işlerde başlatılabilir.');
+      }
+      if (actorRole === UserRole.TECHNICIAN && order.assignedTechnicianId !== actorId) {
+        throw new ForbiddenException('Yalnızca size atanmış işte süre başlatabilirsiniz.');
+      }
+      const technicianId = actorRole === UserRole.TECHNICIAN ? actorId : order.assignedTechnicianId;
+      if (!technicianId) throw new BadRequestException('Önce iş emrine teknisyen atayın.');
+      const active = await tx.serviceOrderWorkSession.findFirst({
+        where: { organizationId, technicianId, status: 'ACTIVE' },
+        select: { id: true, serviceOrder: { select: { orderNumber: true } } },
+      });
+      if (active) throw new BadRequestException(`Teknisyenin ${active.serviceOrder.orderNumber} işinde çalışan süresi var. Önce onu durdurun.`);
+      if (dto.serviceOrderItemId) {
+        const item = order.items.find(value => value.id === dto.serviceOrderItemId);
+        if (!item) throw new BadRequestException('Seçilen işlem bu iş emrine ait değil.');
+        if (item.completed) throw new BadRequestException('Tamamlanmış işlem için süre başlatılamaz.');
+        if (!item.approvedQuoteId) throw new BadRequestException('İşlem için müşteri onayı gerekli.');
+      }
+      if (order.status === ServiceOrderStatus.APPROVED) {
+        await tx.serviceOrder.update({ where: { id }, data: { status: ServiceOrderStatus.IN_PROGRESS } });
+      }
+      return tx.serviceOrderWorkSession.create({
+        data: {
+          organizationId, serviceOrderId: id, serviceOrderItemId: dto.serviceOrderItemId,
+          technicianId, note: dto.note?.trim() || null,
+        },
+        include: { technician: true, serviceOrderItem: true },
+      });
+    });
+  }
+
+  stopWorkSession(
+    organizationId: string,
+    id: string,
+    sessionId: string,
+    actorRole: UserRole,
+    actorId: string,
+    actorBranchId: string | null,
+  ) {
+    return atomic(this.prisma, organizationId, async tx => {
+      const order = await tx.serviceOrder.findFirst({
+        where: { id, ...this.buildAccessWhere(organizationId, actorRole, actorId, actorBranchId) },
+        select: { id: true },
+      });
+      if (!order) throw new NotFoundException('İş emri bulunamadı veya erişim yetkiniz yok.');
+      const session = await tx.serviceOrderWorkSession.findFirst({
+        where: { id: sessionId, organizationId, serviceOrderId: id },
+      });
+      if (!session) throw new NotFoundException('Çalışma oturumu bulunamadı.');
+      if (actorRole === UserRole.TECHNICIAN && session.technicianId !== actorId) {
+        throw new ForbiddenException('Başka teknisyenin çalışma süresini durduramazsınız.');
+      }
+      if (session.status === 'STOPPED') return session;
+      const stoppedAt = new Date();
+      const durationMinutes = Math.max(1, Math.ceil((stoppedAt.getTime() - session.startedAt.getTime()) / 60000));
+      return tx.serviceOrderWorkSession.update({
+        where: { id: session.id },
+        data: { status: 'STOPPED', stoppedAt, durationMinutes },
+        include: { technician: true, serviceOrderItem: true },
+      });
+    });
+  }
+
   async assignTechnician(
     organizationId: string,
     id: string,
@@ -898,10 +1092,76 @@ export class ServiceOrdersService {
       const vatAmount = money(totalPrice * vatRate / 100);
       const item = await tx.serviceOrderItem.create({ data: { serviceOrderId: id, partId: part?.id,
         type: dto.type, name: dto.name.trim() || part?.name || '', description: dto.description?.trim(),
-        quantity, unitPrice, discountAmount, totalPrice, vatRate, vatAmount, grossTotal: money(totalPrice + vatAmount) }, include: { part: true } });
+        quantity, unitPrice, discountAmount, totalPrice, vatRate, vatAmount, grossTotal: money(totalPrice + vatAmount),
+        warrantyMonths: dto.warrantyMonths, warrantyKm: dto.warrantyKm }, include: { part: true } });
       await notifyOffice(tx, organizationId, order.branchId, id, 'İşlem listesine kalem eklendi', `${item.name}: fiyatlandırma ve onay kapsamını kontrol edin.`);
       return item;
     });
+  }
+
+  async createWarrantyClaim(
+    organizationId: string,
+    serviceOrderId: string,
+    itemId: string,
+    actorRole: UserRole,
+    actorBranchId: string | null,
+    note?: string,
+  ) {
+    const original = await this.prisma.serviceOrderItem.findFirst({
+      where: {
+        id: itemId,
+        serviceOrderId,
+        serviceOrder: {
+          organizationId,
+          status: ServiceOrderStatus.DELIVERED,
+          ...(actorRole === UserRole.SERVICE_ADVISOR
+            ? { branchId: actorBranchId ?? '__branch_not_assigned__' }
+            : {}),
+        },
+      },
+      include: { serviceOrder: { include: { vehicle: true } } },
+    });
+    if (!original?.warrantyStartedAt) {
+      throw new BadRequestException('Bu kalem için aktif bir garanti kaydı bulunamadı.');
+    }
+    if (original.warrantyExpiresAt && original.warrantyExpiresAt < new Date()) {
+      throw new BadRequestException('Bu kalemin garanti süresi dolmuş.');
+    }
+    const warrantyKmLimit = original.warrantyKm
+      ? original.serviceOrder.mileage + original.warrantyKm
+      : null;
+    if (warrantyKmLimit && original.serviceOrder.vehicle.mileage > warrantyKmLimit) {
+      throw new BadRequestException('Bu kalemin kilometre garantisi dolmuş.');
+    }
+    const orderNumber = `SO-${new Date().toISOString().replace(/\D/g, '').slice(0, 14)}-${Math.floor(1000 + Math.random() * 9000)}`;
+    return atomic(this.prisma, organizationId, async (tx) => tx.serviceOrder.create({
+      data: {
+        organizationId,
+        branchId: original.serviceOrder.branchId,
+        customerId: original.serviceOrder.customerId,
+        vehicleId: original.serviceOrder.vehicleId,
+        orderNumber,
+        mileage: original.serviceOrder.vehicle.mileage,
+        complaint: `Garanti dönüşü: ${original.name}`,
+        internalNote: note || `${original.serviceOrder.orderNumber} iş emrindeki ${original.name} kalemi için garanti kontrolü.`,
+        status: ServiceOrderStatus.ACCEPTED,
+        items: {
+          create: {
+            type: original.type,
+            name: `Garanti kontrolü: ${original.name}`,
+            description: original.description,
+            quantity: original.quantity,
+            unitPrice: 0,
+            totalPrice: 0,
+            vatRate: 0,
+            vatAmount: 0,
+            grossTotal: 0,
+            warrantyClaimOfId: original.id,
+          },
+        },
+      },
+      include: { customer: true, vehicle: true, items: true },
+    }));
   }
 
   setItemComplete(organizationId: string, id: string, itemId: string, actorRole: UserRole,
@@ -1093,6 +1353,15 @@ export class ServiceOrdersService {
       const updated = await tx.serviceOrder.update({ where: { id }, data: { status, deliveredAt,
         creditDeliveryReason: deliveredAt ? typeof creditDeliveryReason === 'string' ? creditDeliveryReason.trim() || null : null : undefined }, include: { items: true, vehicle: true } });
       if (deliveredAt) {
+        for (const item of order.items.filter(value => value.completed && (value.warrantyMonths || value.warrantyKm))) {
+          const warrantyExpiresAt = item.warrantyMonths
+            ? new Date(new Date(deliveredAt).setMonth(deliveredAt.getMonth() + item.warrantyMonths))
+            : null;
+          await tx.serviceOrderItem.update({
+            where: { id: item.id },
+            data: { warrantyStartedAt: deliveredAt, warrantyExpiresAt },
+          });
+        }
         for (const planId of order.maintenancePlanIds) await finishPlan(tx, organizationId, planId, order.mileage, deliveredAt);
         await tx.vehicle.updateMany({
           where: { id: order.vehicleId, mileage: { lte: order.mileage } },

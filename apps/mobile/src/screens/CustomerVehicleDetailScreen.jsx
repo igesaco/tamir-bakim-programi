@@ -1,6 +1,7 @@
 import { useLiveRefresh } from '../hooks/useLiveRefresh';
 import {
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,6 +24,7 @@ import {
   Button,
   Card,
   Empty,
+  Field,
   Loading,
   ScreenTitle,
 } from '../components/UI';
@@ -88,6 +90,12 @@ export default function CustomerVehicleDetailScreen({
     useState('');
   const [quoteBusy, setQuoteBusy] =
     useState(false);
+  const [quoteDecisions, setQuoteDecisions] = useState({});
+  const [appointmentForm, setAppointmentForm] = useState({
+    startAt: '', serviceType: '', customerNote: '', estimatedDurationMinutes: 60,
+  });
+  const [appointmentBusy, setAppointmentBusy] = useState(false);
+  const [appointmentMessage, setAppointmentMessage] = useState('');
 
   useLiveRefresh(() => load(), !quoteBusy);
 
@@ -100,17 +108,21 @@ export default function CustomerVehicleDetailScreen({
     setData(result);
   }
 
-  async function approveQuote(
-    quoteId,
-  ) {
+  async function decideQuote(quote) {
     setQuoteBusy(true);
     setError('');
 
     try {
       await customerRequest(
-        `/customer-portal/quotes/${quoteId}/approve`,
+        `/customer-portal/quotes/${quote.id}/decide-items`,
         {
           method: 'POST',
+          body: {
+            decisions: quote.items.map(item => ({
+              itemId: item.id,
+              approved: quoteDecisions[item.id] !== false,
+            })),
+          },
         },
       );
 
@@ -124,6 +136,38 @@ export default function CustomerVehicleDetailScreen({
       setQuoteBusy(false);
     }
   }
+
+  async function createAppointment() {
+    setAppointmentBusy(true);
+    setAppointmentMessage('');
+    setError('');
+    try {
+      const normalized = appointmentForm.startAt.trim().replace(' ', 'T');
+      const startAt = new Date(normalized);
+      if (!Number.isFinite(startAt.getTime()) || startAt <= new Date()) {
+        throw new Error('Tarihi 2026-09-20 14:30 biçiminde ve gelecekte girin.');
+      }
+      await customerRequest(`/customer-portal/vehicles/${vehicleId}/appointments`, {
+        method: 'POST',
+        body: { ...appointmentForm, startAt: startAt.toISOString() },
+      });
+      setAppointmentForm({ startAt: '', serviceType: '', customerNote: '', estimatedDurationMinutes: 60 });
+      setAppointmentMessage('Randevu talebiniz alındı. Servis onayladığında burada göreceksiniz.');
+      await load();
+    } catch (err) {
+      setError(err?.message || 'Randevu talebi oluşturulamadı.');
+    } finally {
+      setAppointmentBusy(false);
+    }
+  }
+
+  const offeredQuote = data?.currentServiceOrder?.quotes?.[0];
+  useEffect(() => {
+    if (!offeredQuote?.id || offeredQuote.status !== 'SENT') return;
+    setQuoteDecisions(Object.fromEntries(
+      offeredQuote.items.map(item => [item.id, item.approved !== false]),
+    ));
+  }, [offeredQuote?.id, offeredQuote?.status]);
 
   useEffect(() => {
     load()
@@ -176,10 +220,7 @@ export default function CustomerVehicleDetailScreen({
     );
   }
 
-  if (
-    error ||
-    !data
-  ) {
+  if (!data) {
     return (
       <ScrollView
         contentContainerStyle={
@@ -209,13 +250,13 @@ export default function CustomerVehicleDetailScreen({
     currentServiceOrder,
     maintenancePlans = [],
     maintenanceHistory = [],
+    warranties = [],
+    appointments = [],
     payments = [],
     currentAccount,
   } = data;
 
-  const currentQuote =
-    currentServiceOrder
-      ?.quotes?.[0];
+  const currentQuote = offeredQuote;
 
   const serviceMedia =
     currentServiceOrder
@@ -250,6 +291,12 @@ export default function CustomerVehicleDetailScreen({
         title={vehicle.plate}
         subtitle={`${vehicle.brand} ${vehicle.model}`}
       />
+
+      {error ? (
+        <Card style={styles.errorCard}>
+          <Text style={styles.errorText}>{error}</Text>
+        </Card>
+      ) : null}
 
       <Card>
         <Text style={styles.label}>
@@ -303,6 +350,13 @@ export default function CustomerVehicleDetailScreen({
                 {currentServiceOrder.complaint}
               </Text>
             ) : null}
+
+            <Text style={styles.note}>
+              Son güncelleme: {new Date(currentServiceOrder.updatedAt).toLocaleString('tr-TR')}
+              {currentServiceOrder.estimatedDeliveryAt
+                ? ` · Tahmini teslim: ${new Date(currentServiceOrder.estimatedDeliveryAt).toLocaleString('tr-TR')}`
+                : ' · Tahmini teslim zamanı servis tarafından planlanıyor'}
+            </Text>
 
             <View style={styles.progressList}>
               {progressStatuses.map(
@@ -426,16 +480,17 @@ export default function CustomerVehicleDetailScreen({
                     </Text>
 
                     <Text style={styles.itemText}>
-                      {currentQuote.status ===
-                      'APPROVED'
-                        ? 'Onaylandı'
-                        : 'Teklif hazır'}
+                      {currentQuote.status === 'APPROVED'
+                        ? 'Tümü onaylandı'
+                        : currentQuote.status === 'PARTIALLY_APPROVED'
+                          ? 'Seçilen kalemler onaylandı'
+                          : 'Teklif hazır'}
                     </Text>
                   </View>
 
                   <Text style={styles.quoteTotal}>
                     {money(
-                      currentQuote.total,
+                      currentQuote.approvedTotal ?? currentQuote.total,
                     )}{' '}
                     ₺
                   </Text>
@@ -444,23 +499,19 @@ export default function CustomerVehicleDetailScreen({
                 {currentQuote.status ===
                 'SENT' ? (
                   <View style={styles.quoteApproval}>
-                    <Text style={styles.note}>
-                      Bu teklif servis tarafından onayınıza sunuldu. Onay verdiğinizde iş emri işleme hazır hale gelir ve bekleyen ödeme kaydı oluşturulur.
-                    </Text>
+                    <Text style={styles.note}>Her işlem için kabul veya ret seçin. Yalnızca kabul ettiğiniz kalemler işleme ve bakiyenize yansır.</Text>
 
                     <Button
                       title={
                         quoteBusy
                           ? 'Onaylanıyor...'
-                          : 'Teklifi Onayla'
+                          : 'Seçimlerimi Onayla'
                       }
                       disabled={
                         quoteBusy
                       }
                       onPress={() =>
-                        approveQuote(
-                          currentQuote.id,
-                        )
+                        decideQuote(currentQuote)
                       }
                     />
                   </View>
@@ -468,13 +519,20 @@ export default function CustomerVehicleDetailScreen({
 
                 {currentQuote.items?.map(
                   (item) => (
-                    <View
+                    <Pressable
                       key={item.id}
-                      style={styles.quoteRow}
+                      disabled={currentQuote.status !== 'SENT' || quoteBusy}
+                      onPress={() => setQuoteDecisions(current => ({ ...current, [item.id]: current[item.id] === false }))}
+                      style={[styles.quoteRow, currentQuote.status === 'SENT' && quoteDecisions[item.id] === false && styles.quoteRowRejected]}
                     >
-                      <Text style={styles.quoteName}>
-                        {item.name}
-                      </Text>
+                      <View style={styles.flex}>
+                        <Text style={styles.quoteName}>{item.name}</Text>
+                        {currentQuote.status === 'SENT' && (
+                          <Text style={quoteDecisions[item.id] === false ? styles.quoteRejected : styles.quoteAccepted}>
+                            {quoteDecisions[item.id] === false ? 'Reddedilecek · değiştirmek için dokun' : 'Kabul edilecek · değiştirmek için dokun'}
+                          </Text>
+                        )}
+                      </View>
 
                       <Text style={styles.quotePrice}>
                         {money(
@@ -482,7 +540,7 @@ export default function CustomerVehicleDetailScreen({
                         )}{' '}
                         ₺
                       </Text>
-                    </View>
+                    </Pressable>
                   ),
                 )}
               </Card>
@@ -611,6 +669,53 @@ export default function CustomerVehicleDetailScreen({
         </>
       ) : null}
 
+      <Text style={styles.sectionTitle}>Randevu Al</Text>
+      <Card>
+        <Field
+          label="Tarih ve saat"
+          placeholder="2026-09-20 14:30"
+          value={appointmentForm.startAt}
+          onChangeText={(startAt) => setAppointmentForm(current => ({ ...current, startAt }))}
+        />
+        <Field
+          label="İstenen işlem"
+          placeholder="Örn. periyodik bakım"
+          value={appointmentForm.serviceType}
+          onChangeText={(serviceType) => setAppointmentForm(current => ({ ...current, serviceType }))}
+        />
+        <Field
+          label="Not"
+          placeholder="Servise iletmek istediğiniz bilgi"
+          value={appointmentForm.customerNote}
+          onChangeText={(customerNote) => setAppointmentForm(current => ({ ...current, customerNote }))}
+          multiline
+        />
+        {appointmentMessage ? <Text style={styles.successText}>{appointmentMessage}</Text> : null}
+        <Button
+          title={appointmentBusy ? 'Gönderiliyor...' : 'Randevu Talebi Gönder'}
+          disabled={appointmentBusy || !appointmentForm.startAt.trim()}
+          onPress={createAppointment}
+        />
+      </Card>
+
+      {appointments.length ? (
+        <View style={styles.list}>
+          {appointments.slice(0, 5).map(appointment => (
+            <Card key={appointment.id}>
+              <Text style={styles.itemTitle}>
+                {new Date(appointment.startAt).toLocaleString('tr-TR')}
+              </Text>
+              <Text style={styles.itemText}>
+                {appointment.serviceType || 'Servis randevusu'} · {appointment.status}
+              </Text>
+              <Text style={styles.itemText}>
+                {appointment.branch?.name || 'Servis'} · {appointment.estimatedDurationMinutes || 60} dk
+              </Text>
+            </Card>
+          ))}
+        </View>
+      ) : null}
+
       <Text style={styles.sectionTitle}>
         Yaklaşan Bakımlar
       </Text>
@@ -648,6 +753,29 @@ export default function CustomerVehicleDetailScreen({
       ) : (
         <Empty text="Aktif bakım planı bulunmuyor." />
       )}
+
+      <Text style={styles.sectionTitle}>Garanti Cüzdanım</Text>
+      {warranties.length ? (
+        <View style={styles.list}>
+          {warranties.map(warranty => {
+            const expired = warranty.warrantyExpiresAt && new Date(warranty.warrantyExpiresAt) < new Date();
+            const kmLimit = warranty.warrantyKm
+              ? Number(warranty.serviceOrder?.mileage || 0) + Number(warranty.warrantyKm) : null;
+            return (
+              <Card key={warranty.id}>
+                <Text style={styles.itemTitle}>{warranty.name}</Text>
+                <Text style={styles.itemText}>
+                  {expired ? 'Süresi doldu' : 'Garanti aktif'} · {warranty.serviceOrder?.orderNumber}
+                </Text>
+                <Text style={styles.itemText}>
+                  {warranty.warrantyExpiresAt ? `Tarih: ${new Date(warranty.warrantyExpiresAt).toLocaleDateString('tr-TR')}` : 'Tarih sınırı yok'}
+                  {kmLimit ? ` · ${kmLimit.toLocaleString('tr-TR')} KM’ye kadar` : ''}
+                </Text>
+              </Card>
+            );
+          })}
+        </View>
+      ) : <Empty text="Aktif garanti kaydı bulunmuyor." />}
 
       <Text style={styles.sectionTitle}>
         Bakım Geçmişi
@@ -886,6 +1014,35 @@ const styles =
     },
     quotePrice: {
       color: colors.text,
+      fontSize: 9,
+      fontWeight: '800',
+    },
+    quoteRowRejected: {
+      opacity: 0.55,
+    },
+    quoteAccepted: {
+      marginTop: 3,
+      color: colors.success,
+      fontSize: 8,
+      fontWeight: '800',
+    },
+    quoteRejected: {
+      marginTop: 3,
+      color: colors.danger,
+      fontSize: 8,
+      fontWeight: '800',
+    },
+    successText: {
+      marginBottom: 10,
+      color: colors.success,
+      fontSize: 9,
+      fontWeight: '800',
+    },
+    errorCard: {
+      borderColor: colors.danger,
+    },
+    errorText: {
+      color: colors.danger,
       fontSize: 9,
       fontWeight: '800',
     },

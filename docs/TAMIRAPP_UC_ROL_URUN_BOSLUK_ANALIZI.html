@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="TamirApp için tamirci, araç sahibi müşteri ve platform kurucusu bakış açılarından bağımsız ürün boşluk analizi.">
+  <title>TamirApp — Üç Rol Ürün Boşluk Analizi</title>
+  <style>
+    :root {
+      --ink: #132033;
+      --muted: #607089;
+      --paper: #f4f7fb;
+      --card: #ffffff;
+      --line: #dce4ef;
+      --navy: #102a56;
+      --blue: #174ea6;
+      --blue-soft: #e9f1ff;
+      --orange: #f59e0b;
+      --orange-soft: #fff4d9;
+      --green: #14805e;
+      --green-soft: #e5f7f0;
+      --red: #c2413a;
+      --red-soft: #ffebe9;
+      --shadow: 0 18px 50px rgba(16, 42, 86, .09);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 0%, rgba(23, 78, 166, .12), transparent 28rem),
+        radial-gradient(circle at 96% 12%, rgba(245, 158, 11, .12), transparent 24rem),
+        var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    a { color: inherit; }
+    button { font: inherit; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 14px max(20px, calc((100vw - 1180px) / 2));
+      color: #fff;
+      background: rgba(11, 29, 60, .94);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,.12);
+    }
+
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 800; }
+    .brand-mark {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border-radius: 12px;
+      color: #091a36;
+      background: var(--orange);
+      letter-spacing: -.04em;
+    }
+    .topnav { display: flex; flex-wrap: wrap; gap: 6px; }
+    .topnav a {
+      padding: 8px 11px;
+      color: #dbe7fa;
+      border-radius: 10px;
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .topnav a:hover { background: rgba(255,255,255,.1); color: #fff; }
+
+    main { width: min(1180px, calc(100% - 36px)); margin: 0 auto; }
+    section { scroll-margin-top: 90px; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap: 28px;
+      align-items: stretch;
+      padding: 78px 0 42px;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 14px;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { content: ""; width: 28px; height: 3px; border-radius: 9px; background: var(--orange); }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { max-width: 850px; margin-bottom: 20px; font-size: clamp(42px, 7vw, 82px); line-height: .98; letter-spacing: -.055em; }
+    h1 span { color: var(--blue); }
+    .lead { max-width: 780px; color: #40516a; font-size: clamp(17px, 2vw, 21px); }
+    .hero-note {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 26px;
+      color: #fff;
+      background: linear-gradient(145deg, #102a56, #174ea6);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .hero-note strong { display: block; margin-bottom: 14px; color: #ffd176; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
+    .hero-note blockquote { margin: 0 0 30px; font-size: 24px; font-weight: 750; line-height: 1.25; }
+    .hero-note small { color: #bfd2f5; }
+
+    .verdict {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin: 12px 0 58px;
+    }
+    .verdict-card, .card {
+      padding: 26px;
+      background: rgba(255,255,255,.9);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .verdict-card.good { border-top: 5px solid var(--green); }
+    .verdict-card.gap { border-top: 5px solid var(--orange); }
+    .verdict-card h2 { font-size: 22px; }
+    .verdict-card p { margin-bottom: 0; color: var(--muted); }
+
+    .section-head { display: flex; justify-content: space-between; gap: 24px; align-items: end; margin: 64px 0 24px; }
+    .section-head h2 { margin-bottom: 6px; font-size: clamp(30px, 4vw, 48px); letter-spacing: -.04em; }
+    .section-head p { max-width: 670px; margin-bottom: 0; color: var(--muted); }
+
+    .persona-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .persona { position: relative; overflow: hidden; padding: 28px; min-height: 280px; }
+    .persona::after { position: absolute; right: -20px; bottom: -50px; font-size: 150px; font-weight: 900; opacity: .045; }
+    .persona.mechanic::after { content: "01"; }
+    .persona.customer::after { content: "02"; }
+    .persona.founder::after { content: "03"; }
+    .persona .number { color: var(--orange); font-weight: 900; font-size: 12px; letter-spacing: .15em; }
+    .persona h3 { margin: 9px 0 12px; font-size: 27px; }
+    .persona p { color: var(--muted); }
+    .question { padding-top: 14px; border-top: 1px solid var(--line); color: var(--navy) !important; font-weight: 750; }
+
+    .scoreboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px; }
+    .score { padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+    .score b { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    .score strong { font-size: 29px; color: var(--navy); }
+    .bar { height: 7px; margin-top: 12px; overflow: hidden; border-radius: 8px; background: #e8eef6; }
+    .bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--orange), var(--blue)); }
+
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; }
+    .filter {
+      cursor: pointer;
+      padding: 9px 14px;
+      color: var(--muted);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-weight: 750;
+      font-size: 13px;
+    }
+    .filter.active { color: #fff; background: var(--navy); border-color: var(--navy); }
+
+    .gap-list { display: grid; gap: 12px; }
+    .gap-row {
+      display: grid;
+      grid-template-columns: 54px 1.15fr 1.7fr 110px;
+      gap: 18px;
+      align-items: center;
+      padding: 20px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .gap-row:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(16,42,86,.08); }
+    .gap-row.hidden { display: none; }
+    .gap-index { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 13px; background: var(--blue-soft); color: var(--blue); font-weight: 900; }
+    .gap-row h3 { margin-bottom: 4px; font-size: 17px; }
+    .gap-row p { margin: 0; color: var(--muted); font-size: 14px; }
+    .solution { color: #31415a !important; }
+    .tag { justify-self: end; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 900; white-space: nowrap; }
+    .tag.p0 { color: var(--red); background: var(--red-soft); }
+    .tag.p1 { color: #986300; background: var(--orange-soft); }
+    .tag.p2 { color: var(--green); background: var(--green-soft); }
+
+    .conflicts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+    .conflict { padding: 22px; background: #fff; border: 1px solid var(--line); border-radius: 17px; }
+    .conflict strong { display: block; margin-bottom: 8px; color: var(--navy); }
+    .conflict span { color: var(--muted); }
+    .decision { margin-top: 13px; padding: 10px 12px; color: #715000; background: var(--orange-soft); border-radius: 10px; font-size: 13px; font-weight: 700; }
+
+    .roadmap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .phase { padding: 24px; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); }
+    .phase.p0 { border-top: 6px solid var(--red); }
+    .phase.p1 { border-top: 6px solid var(--orange); }
+    .phase.p2 { border-top: 6px solid var(--green); }
+    .phase small { font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+    .phase h3 { margin: 9px 0 14px; font-size: 23px; }
+    .phase ul { margin: 0; padding-left: 19px; color: var(--muted); }
+    .phase li + li { margin-top: 8px; }
+
+    .north-star {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin: 70px 0;
+      padding: 36px;
+      color: #fff;
+      background: linear-gradient(135deg, #0b1d3c 0%, #173c79 100%);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+    }
+    .north-star h2 { color: #ffd176; font-size: 34px; }
+    .north-star p { color: #d7e4fa; }
+    .north-star ol { margin: 0; padding-left: 22px; }
+    .north-star li + li { margin-top: 10px; }
+
+    .dont-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .dont { padding: 20px; background: #fff; border: 1px dashed #b8c4d5; border-radius: 16px; }
+    .dont strong { display: block; margin-bottom: 7px; color: var(--red); }
+    .dont span { color: var(--muted); font-size: 14px; }
+
+    .final-call { margin: 70px 0 40px; padding: 34px; text-align: center; background: var(--orange-soft); border: 1px solid #f5d68e; border-radius: 26px; }
+    .final-call h2 { margin-bottom: 10px; font-size: 33px; }
+    .final-call p { max-width: 820px; margin: 0 auto; color: #6b5530; }
+    footer { padding: 30px 0 50px; color: var(--muted); text-align: center; font-size: 13px; }
+
+    @media (max-width: 900px) {
+      .hero, .verdict, .north-star { grid-template-columns: 1fr; }
+      .persona-grid, .roadmap, .dont-grid { grid-template-columns: 1fr; }
+      .scoreboard { grid-template-columns: repeat(2, 1fr); }
+      .gap-row { grid-template-columns: 46px 1fr; }
+      .gap-row .solution { grid-column: 2; }
+      .gap-row .tag { grid-column: 2; justify-self: start; }
+      .conflicts { grid-template-columns: 1fr; }
+      .topnav { display: none; }
+    }
+
+    @media (max-width: 520px) {
+      main { width: min(100% - 24px, 1180px); }
+      .hero { padding-top: 50px; }
+      .scoreboard { grid-template-columns: 1fr; }
+      .gap-row { padding: 16px; gap: 12px; }
+    }
+
+    @media print {
+      .topbar, .filters { display: none !important; }
+      body { background: #fff; }
+      main { width: 100%; }
+      .hero { padding-top: 20px; }
+      .card, .verdict-card, .gap-row, .phase { box-shadow: none; break-inside: avoid; }
+      section { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">TB</span> TamirApp Ürün İncelemesi</div>
+    <nav class="topnav" aria-label="Rapor bölümleri">
+      <a href="#ozet">Özet</a>
+      <a href="#tamirci">Tamirci</a>
+      <a href="#musteri">Müşteri</a>
+      <a href="#kurucu">Kurucu</a>
+      <a href="#yol-haritasi">Yol Haritası</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="ozet">
+      <div>
+        <p class="eyebrow">Bağımsız ürün boşluk analizi · 15 Eylül 2026</p>
+        <h1>Üç farklı gözle <span>TamirApp</span></h1>
+        <p class="lead">Bir tamirci ürünü her gün kullanır mı? Bir müşteri tekrar açmak ister mi? Bir kurucu bu sistemi yüz işletmeye sorunsuz satabilir mi? Bu rapor eksikleri bu üç soruya göre toplar.</p>
+      </div>
+      <aside class="hero-note">
+        <div>
+          <strong>Temel teşhis</strong>
+          <blockquote>Çekirdek servis akışı var. Eksik olan; hız, saha ergonomisi, müşteri güveni ve ölçeklenebilir SaaS işletim katmanı.</blockquote>
+        </div>
+        <small>Değerlendirme mevcut modüller, iş akışı ve hedef pazar üzerinden yapılmıştır.</small>
+      </aside>
+    </section>
+
+    <section class="verdict" aria-label="Ürün özeti">
+      <article class="verdict-card good">
+        <h2>Bugünkü güçlü taraf</h2>
+        <p>Müşteri, araç, kabul, iş emri, teklif, teknisyen, ödeme, fotoğraf, bakım geçmişi ve QR aynı operasyon zincirinde. Bu, sıradan bir müşteri takip programından daha değerli bir çekirdek.</p>
+      </article>
+      <article class="verdict-card gap">
+        <h2>Bugünkü temel boşluk</h2>
+        <p>Sistemin özellik sayısı yüksek; fakat günlük servis temposunu hızlandıran, müşteriye güven veren ve İGESA'nın desteğe boğulmadan büyümesini sağlayan birkaç kritik ürün katmanı henüz olgun değil.</p>
+      </article>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div><p class="eyebrow">Rol soruları</p><h2>Ürünü kim, neden seçer?</h2></div>
+        <p>Her rolün başarı ölçütü farklıdır. Aynı özellik bir tarafı hızlandırırken diğer taraf için güvenlik veya karmaşa oluşturabilir.</p>
+      </div>
+      <div class="persona-grid">
+        <article class="persona mechanic card">
+          <span class="number">BAKIŞ 01</span><h3>Tamirci / Servis</h3>
+          <p>Benim için yazılımın değeri rapor ekranı değil; yoğun saatte telefon, kâğıt ve personel trafiğini azaltmasıdır.</p>
+          <p class="question">“Aracı üç dakikada kabul edip gün boyunca kimin ne yaptığını tek bakışta görebiliyor muyum?”</p>
+        </article>
+        <article class="persona customer card">
+          <span class="number">BAKIŞ 02</span><h3>Araç Sahibi</h3>
+          <p>Ben modül istemem; sürpriz fiyat olmamasını, aracımın durumunu anlamayı ve yapılan işe güvenmeyi isterim.</p>
+          <p class="question">“Aracım nerede, ne yapılacak, ne kadar tutacak ve yapılan işin garantisi nedir?”</p>
+        </article>
+        <article class="persona founder card">
+          <span class="number">BAKIŞ 03</span><h3>İGESA / Kurucu</h3>
+          <p>Benim için iyi ürün yalnız çalışan ürün değildir; kurulumu, satışı, desteği, ölçümü ve tahsilatı ölçeklenebilir üründür.</p>
+          <p class="question">“Yüz işletmeyi tek tek müdahale etmeden güvenle çalıştırabilir miyim?”</p>
+        </article>
+      </div>
+
+      <div class="scoreboard" aria-label="Yönsel ürün puanları">
+        <div class="score"><b>Operasyon çekirdeği</b><strong>4.0 / 5</strong><div class="bar"><i style="width:80%"></i></div></div>
+        <div class="score"><b>Saha hızı</b><strong>2.5 / 5</strong><div class="bar"><i style="width:50%"></i></div></div>
+        <div class="score"><b>Müşteri güveni</b><strong>3.0 / 5</strong><div class="bar"><i style="width:60%"></i></div></div>
+        <div class="score"><b>SaaS ölçeklenmesi</b><strong>2.2 / 5</strong><div class="bar"><i style="width:44%"></i></div></div>
+      </div>
+    </section>
+
+    <section id="tamirci">
+      <div class="section-head">
+        <div><p class="eyebrow">Tamirci olsaydım</p><h2>“Bu uygulamada ne eksik?”</h2></div>
+        <div class="filters" data-target="tamirci-list">
+          <button class="filter active" data-filter="all">Tümü</button><button class="filter" data-filter="p0">Kritik</button><button class="filter" data-filter="p1">Güçlü değer</button><button class="filter" data-filter="p2">Sonra</button>
+        </div>
+      </div>
+      <div class="gap-list" id="tamirci-list">
+        <article class="gap-row" data-priority="p0"><span class="gap-index">01</span><div><h3>Günün servis panosu</h3><p>Araçlar, liftler ve teknisyen yükü tek ekranda görünmüyor.</p></div><p class="solution">Sürükle-bırak “Bekliyor / İşlemde / Parça Bekliyor / Kalite / Teslim” panosu; teknisyen ve lift kapasitesi.</p><span class="tag p0">P0 · Kritik</span></article>
+        <article class="gap-row" data-priority="p0"><span class="gap-index">02</span><div><h3>Gerçek süre ve işçilik ölçümü</h3><p>İşin tahminiyle gerçekte harcanan süre karşılaştırılmıyor.</p></div><p class="solution">Kalem bazlı başlat/durdur, bekleme nedeni, gerçek işçilik süresi ve teknisyen verimliliği.</p><span class="tag p0">P0 · Kritik</span></article>
+        <article class="gap-row" data-priority="p0"><span class="gap-index">03</span><div><h3>Parça rezervasyonu ve tedarik</h3><p>Stok düşmek tek başına yeterli değil; iş için ayrılan ve sipariş edilen parça izlenmeli.</p></div><p class="solution">Rezerve stok, sipariş talebi, tedarikçi fiyat karşılaştırması, beklenen geliş tarihi ve muadil parça.</p><span class="tag p0">P0 · Kritik</span></article>
+        <article class="gap-row" data-priority="p0"><span class="gap-index">04</span><div><h3>Garanti ve geri gelen iş</h3><p>Aynı arızayla geri gelen araç normal yeni iş gibi görünürse gerçek kalite ölçülemez.</p></div><p class="solution">Garanti süresi, tekrar iş/rework etiketi, önceki iş emri bağlantısı, maliyet ve sorumlu analizi.</p><span class="tag p0">P0 · Kritik</span></article>
+        <article class="gap-row" data-priority="p1"><span class="gap-index">05</span><div><h3>Dijital kabul imzası</h3><p>Hasar, yakıt, eşya ve teslim koşulları sonradan tartışma yaratabilir.</p></div><p class="solution">Müşteri onayı, ekran imzası, tarih-konum kaydı ve değiştirilemeyen kabul özeti.</p><span class="tag p1">P1 · Güçlü değer</span></article>
+        <article class="gap-row" data-priority="p1"><span class="gap-index">06</span><div><h3>Akıllı kontrol şablonları</h3><p>Her araç ve iş tipi için aynı kontrol listesi verimsizdir.</p></div><p class="solution">Araç sınıfı, bakım türü ve kilometreye göre otomatik kontrol maddeleri; zorunlu fotoğraf noktaları.</p><span class="tag p1">P1 · Güçlü değer</span></article>
+        <article class="gap-row" data-priority="p1"><span class="gap-index">07</span><div><h3>Hızlı saha girişi</h3><p>Yağlı elle uzun form ve klavye kullanımı gerçek serviste terk edilir.</p></div><p class="solution">Sesli nottan işlem çıkarma, barkod okutma, favori işler, son kullanılan parçalar ve üç dokunuş kuralı.</p><span class="tag p1">P1 · Güçlü değer</span></article>
+        <article class="gap-row" data-priority="p1"><span class="gap-index">08</span><div><h3>Randevu kapasitesi</h3><p>Sadece tarih-saat seçimi, servisin gerçek iş yükünü bilmez.</p></div><p class="solution">Lift, teknisyen, tahmini süre ve parça uygunluğuna göre boşluk öneren kapasite takvimi.</p><span class="tag p1">P1 · Güçlü değer</span></article>
+        <article class="gap-row" data-priority="p2"><span class="gap-index">09</span><div><h3>Fatura ve muhasebe aktarımı</h3><p>Tahsilat kaydı mali mevzuata uygun belge üretiminin yerini tutmaz.</p></div><p class="solution">e-Arşiv/e-Fatura sağlayıcısı, Paraşüt/Logo/Mikro dışa aktarımı ve günlük kasa mutabakatı.</p><span class="tag p2">P2 · Sonra</span></article>
+        <article class="gap-row" data-priority="p2"><span class="gap-index">10</span><div><h3>Çevrimdışı saha devamlılığı</h3><p>İnternet zayıf olduğunda teknisyen işaretlemeleri durabilir.</p></div><p class="solution">Sınırlı çevrimdışı iş listesi, yerel kuyruk ve çakışma kontrollü senkronizasyon.</p><span class="tag p2">P2 · Sonra</span></article>
+      </div>
+    </section>
+
+    <section id="musteri">
+      <div class="section-head">
+        <div><p class="eyebrow">Müşteri olsaydım</p><h2>“Bu uygulamada ne eksik?”</h2></div>
+        <div class="filters" data-target="musteri-list">
+          <button class="filter active" data-filter="all">Tümü</button><button class="filter" data-filter="p0">Kritik</button><button class="filter" data-filter="p1">Güçlü değer</button><button class="filter" data-filter="p2">Sonra</button>
+        </div>
+      </div>
+      <div class="gap-list" id="musteri-list">
+        <article class="gap-row" data-priority="p0"><span class="gap-index">01</span><div><h3>Anlaşılır canlı durum</h3><p>Teknik durum adları müşterinin “aracım ne zaman çıkar?” sorusunu cevaplamaz.</p></div><p class="solution">Sade zaman çizgisi, güncel aşama, tahmini teslim zamanı, gecikme nedeni ve sıradaki adım.</p><span class="tag p0">P0 · Kritik</span></article>
+        <article class="gap-row" data-priority="p0"><span class="gap-index">02</span><div><h3>Kalem bazlı karar</h3><p>Teklifin tamamına evet/hayır demek müşteriyi zorlar.</p></div><p class="solution">Her parça/işçilik için onayla, reddet veya sonra yap; zorunlu-güvenlik-konusunda bilgilendir etiketi.</p><span class="tag p0">P0 · Kritik</span></article>
+        <article class="gap-row" data-priority="p0"><span class="gap-index">03</span><div><h3>Sürpriz fiyat koruması</h3><p>Onaydan sonra değişen tutar güveni en hızlı bozan konudur.</p></div><p class="solution">Onaylanan tavan tutar, ek iş için yeniden açık onay ve önce/sonra fiyat farkı özeti.</p><span class="tag p0">P0 · Kritik</span></article>
+        <article class="gap-row" data-priority="p0"><span class="gap-index">04</span><div><h3>Garanti cüzdanı</h3><p>Yapılan işin ve takılan parçanın garantisi kayboluyor.</p></div><p class="solution">Parça markası/seri no, garanti bitişi, servis şartları ve tek dokunuşla garanti talebi.</p><span class="tag p0">P0 · Kritik</span></article>
+        <article class="gap-row" data-priority="p1"><span class="gap-index">05</span><div><h3>Öncesi–sonrası kanıtı</h3><p>Fotoğraf görmek yetmez; neyin neden değiştiği anlaşılmalı.</p></div><p class="solution">Yan yana fotoğraf, teknisyen açıklaması ve müşteriye göster/gizle kontrolü.</p><span class="tag p1">P1 · Güçlü değer</span></article>
+        <article class="gap-row" data-priority="p1"><span class="gap-index">06</span><div><h3>Servisle kontrollü iletişim</h3><p>Her soru için telefon açmak iki tarafı da yavaşlatır.</p></div><p class="solution">İş emrine bağlı mesaj/not, hazır sorular ve servis çalışma saatlerinde geri dönüş beklentisi.</p><span class="tag p1">P1 · Güçlü değer</span></article>
+        <article class="gap-row" data-priority="p1"><span class="gap-index">07</span><div><h3>Randevu yönetimi</h3><p>Randevu almak kadar değiştirmek ve iptal etmek de gerekir.</p></div><p class="solution">Hizmet seçimi, tahmini süre/fiyat aralığı, yeniden planlama, iptal ve takvime ekleme.</p><span class="tag p1">P1 · Güçlü değer</span></article>
+        <article class="gap-row" data-priority="p1"><span class="gap-index">08</span><div><h3>Belge kasası</h3><p>Eski teklif, ödeme belgesi ve servis raporuna tekrar ulaşmak zor olursa uygulama unutulur.</p></div><p class="solution">İndirilebilir teklif, iş emri, teslim raporu, ödeme makbuzu, fatura ve garanti belgeleri.</p><span class="tag p1">P1 · Güçlü değer</span></article>
+        <article class="gap-row" data-priority="p2"><span class="gap-index">09</span><div><h3>Aile ve filo erişimi</h3><p>Aracı her zaman ruhsat sahibi getirmez.</p></div><p class="solution">Süreli araç paylaşımı, aile üyesi/sürücü yetkisi ve şirket filosunda araç sorumlusu rolleri.</p><span class="tag p2">P2 · Sonra</span></article>
+        <article class="gap-row" data-priority="p2"><span class="gap-index">10</span><div><h3>Bakımı anlamlandırma</h3><p>“10.000 km kaldı” tek başına davranış oluşturmaz.</p></div><p class="solution">Neden gerekli, gecikirse risk, tahmini süre ve bütçe aralığıyla bakım hazırlık kartı.</p><span class="tag p2">P2 · Sonra</span></article>
+      </div>
+    </section>
+
+    <section id="kurucu">
+      <div class="section-head">
+        <div><p class="eyebrow">Kurucu olsaydım</p><h2>“Bu uygulamada ne eksik?”</h2></div>
+        <div class="filters" data-target="kurucu-list">
+          <button class="filter active" data-filter="all">Tümü</button><button class="filter" data-filter="p0">Kritik</button><button class="filter" data-filter="p1">Güçlü değer</button><button class="filter" data-filter="p2">Sonra</button>
+        </div>
+      </div>
+      <div class="gap-list" id="kurucu-list">
+        <article class="gap-row" data-priority="p0"><span class="gap-index">01</span><div><h3>Kendi kendine kurulum</h3><p>Her müşteriyi İGESA elle kurarsa büyüme destek yüküne dönüşür.</p></div><p class="solution">İşletme sihirbazı: logo, şube, personel, hizmetler, fiyatlar, stok ve ilk QR kartı.</p><span class="tag p0">P0 · Kritik</span></article>
+        <article class="gap-row" data-priority="p0"><span class="gap-index">02</span><div><h3>Abonelik ve tahsilat motoru</h3><p>Paket açmak var; ticari yaşam döngüsü eksik kalır.</p></div><p class="solution">Deneme süresi, abonelik, fatura, geciken ödeme, kademeli kısıtlama, kupon ve paket yükseltme.</p><span class="tag p0">P0 · Kritik</span></article>
+        <article class="gap-row" data-priority="p0"><span class="gap-index">03</span><div><h3>Yedekleme ve geri dönüş</h3><p>Servis geçmişi kaybolursa ürün güveni tek olayda biter.</p></div><p class="solution">Otomatik veritabanı yedeği, fotoğraf yaşam döngüsü, düzenli geri yükleme testi ve tenant dışa aktarımı.</p><span class="tag p0">P0 · Kritik</span></article>
+        <article class="gap-row" data-priority="p0"><span class="gap-index">04</span><div><h3>Merkezi gözlem ve destek</h3><p>“Çalışmıyor” diyen müşterinin sorununu tenant içinde hızla bulmak gerekir.</p></div><p class="solution">Hata takip sistemi, istek kimliği, performans ölçümü, servis sağlık ekranı ve izinli/süreli destek oturumu.</p><span class="tag p0">P0 · Kritik</span></article>
+        <article class="gap-row" data-priority="p0"><span class="gap-index">05</span><div><h3>KVKK ve veri yaşam döngüsü</h3><p>Telefon, araç, finans ve fotoğraf verisi ticari sorumluluk doğurur.</p></div><p class="solution">Aydınlatma/onay, saklama süresi, erişim kaydı, silme/anonimleştirme talebi ve veri işleyen sözleşmesi.</p><span class="tag p0">P0 · Kritik</span></article>
+        <article class="gap-row" data-priority="p1"><span class="gap-index">06</span><div><h3>Ürün kullanım analitiği</h3><p>Hangi işletmenin değer aldığını yalnız tahminle anlayamazsın.</p></div><p class="solution">Aktivasyon, haftalık aktif işletme, tamamlanan iş emri, teklif onay oranı, churn riski ve özellik kullanımı.</p><span class="tag p1">P1 · Güçlü değer</span></article>
+        <article class="gap-row" data-priority="p1"><span class="gap-index">07</span><div><h3>Sağlam özellik bayrakları</h3><p>Paket + override + personel izni büyüdükçe destek karmaşası çıkarır.</p></div><p class="solution">Tek merkezden feature flag, bağımlılık doğrulama, açıklanabilir “neden kapalı?” cevabı ve paket ön izlemesi.</p><span class="tag p1">P1 · Güçlü değer</span></article>
+        <article class="gap-row" data-priority="p1"><span class="gap-index">08</span><div><h3>İçe aktarma ve taşınma</h3><p>Eski Excel'i olan servis sıfırdan veri girmek istemez.</p></div><p class="solution">Müşteri/araç/stok Excel aktarımı, mükerrer eşleştirme, örnek şablon ve doğrulama raporu.</p><span class="tag p1">P1 · Güçlü değer</span></article>
+        <article class="gap-row" data-priority="p2"><span class="gap-index">09</span><div><h3>Entegrasyon katmanı</h3><p>Her işletmenin muhasebe ve iletişim aracı farklıdır.</p></div><p class="solution">Belgeli API, webhook, e-Fatura, muhasebe, SMS, ödeme ve ileride parça katalog bağlantıları.</p><span class="tag p2">P2 · Sonra</span></article>
+        <article class="gap-row" data-priority="p2"><span class="gap-index">10</span><div><h3>Satış ve iş ortağı motoru</h3><p>Ürün yalnız doğrudan satışla yavaş büyür.</p></div><p class="solution">Bayilik/referral, demo tenant, tekliften aboneliğe satış hunisi ve sektör bazlı hazır kurulumlar.</p><span class="tag p2">P2 · Sonra</span></article>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head"><div><p class="eyebrow">Üç rol çakışınca</p><h2>Ürün kararları</h2></div><p>İyi ürün her talebi eklemez; taraflar çatıştığında açık bir ilkeye göre karar verir.</p></div>
+      <div class="conflicts">
+        <article class="conflict"><strong>Hız ↔ Kontrol</strong><span>Tamirci az alan ister; kurucu eksiksiz kayıt ister.</span><div class="decision">Karar: Aşamalı form, akıllı varsayılan ve teslim öncesi zorunlu son kontrol.</div></article>
+        <article class="conflict"><strong>Şeffaflık ↔ İç servis notu</strong><span>Müşteri her şeyi görmek ister; servis iç değerlendirmeyi korumak ister.</span><div class="decision">Karar: Her alan “müşteriye görünür / iç kullanım” olarak açık sınıflandırılmalı.</div></article>
+        <article class="conflict"><strong>Anlık güncelleme ↔ Performans</strong><span>Kullanıcı canlı ekran ister; sürekli sorgu paneli ağırlaştırır.</span><div class="decision">Karar: Olay sonrası yenileme + önbellek; körlemesine beş saniyelik toplu sorgu yok.</div></article>
+        <article class="conflict"><strong>Kolay giriş ↔ Müşteri güvenliği</strong><span>Testte hızlı giriş gerekir; canlıda telefon tek başına yeterli değildir.</span><div class="decision">Karar: Test telefonu yalnız geliştirmede; canlıda şifre + aktivasyon/sıfırlama doğrulaması.</div></article>
+        <article class="conflict"><strong>Özelleştirme ↔ Bakım maliyeti</strong><span>Her servis farklı görünmek ister; her tenant için ayrı kod sürdürülemez.</span><div class="decision">Karar: Tema, logo, modül ve metin ayarı; tenant'a özel kod çatallaması yok.</div></article>
+        <article class="conflict"><strong>Çok özellik ↔ Kullanım kolaylığı</strong><span>Satışta özellik listesi güçlüdür; sahada kalabalık menü terk edilir.</span><div class="decision">Karar: Role göre ana ekran ve “bugün yapacağım işler”; diğer modüller ikinci seviyede.</div></article>
+      </div>
+    </section>
+
+    <section id="yol-haritasi">
+      <div class="section-head"><div><p class="eyebrow">Önceliklendirme</p><h2>Eksikleri hangi sırada kapatmalı?</h2></div><p>Her şeyi aynı anda yapmak ürünü yeniden kararsızlaştırır. Önce güvenilir çekirdek, sonra vazgeçilmez değer, en son ölçek.</p></div>
+      <div class="roadmap">
+        <article class="phase p0"><small>P0 · Satıştan önce</small><h3>Güvenilir çekirdek</h3><ul><li>Mevcut akışın uçtan uca test edilmesi</li><li>Panel hızı ve istek azaltma</li><li>Yedekleme/geri yükleme</li><li>Canlı müşteri girişi güvenliği</li><li>Garanti/geri iş kaydı</li><li>Kalem bazlı onay ve fiyat kilidi</li><li>Merkezi hata takibi</li><li>KVKK temel süreçleri</li></ul></article>
+        <article class="phase p1"><small>P1 · Ürünü vazgeçilmez yap</small><h3>Saha ve güven</h3><ul><li>Günün servis panosu</li><li>Kapasiteli randevu takvimi</li><li>Parça rezervasyonu/tedarik</li><li>Dijital kabul ve teslim imzası</li><li>Öncesi–sonrası açıklamalı medya</li><li>Müşteri durum zaman çizgisi</li><li>Garanti ve belge cüzdanı</li><li>Excel içe aktarma</li></ul></article>
+        <article class="phase p2"><small>P2 · Ölçekle</small><h3>SaaS makinesi</h3><ul><li>Kendi kendine kurulum</li><li>Abonelik ve otomatik tahsilat</li><li>Ürün analitiği/churn sinyalleri</li><li>e-Fatura ve muhasebe bağlantıları</li><li>API/webhook ekosistemi</li><li>Filo ve aile araç paylaşımı</li><li>Bayilik ve referral sistemi</li><li>Gelişmiş çevrimdışı kullanım</li></ul></article>
+      </div>
+    </section>
+
+    <section class="north-star">
+      <div><p class="eyebrow" style="color:#ffd176">Kuzey yıldızı</p><h2>Özellik sayısı değil, tamamlanan güvenilir servis işi</h2><p>Ürünün ana metriği “aylık aktif kullanıcı” tek başına olmamalı. En anlamlı metrik: kabulden teslimata, fiyat ve stok çakışması olmadan tamamlanan doğrulanmış iş emri sayısı.</p></div>
+      <div><h3>Her sürümde dört soru</h3><ol><li>Tamirciye kaç dakika kazandırdı?</li><li>Müşterinin hangi belirsizliğini kaldırdı?</li><li>İGESA'nın destek yükünü azalttı mı?</li><li>Veri, ödeme veya yetki riskini artırdı mı?</li></ol></div>
+    </section>
+
+    <section>
+      <div class="section-head"><div><p class="eyebrow">Şimdilik yapma</p><h2>Ürünü dağıtacak işler</h2></div><p>Test tamamlanmadan aşağıdaki başlıklar cazip görünür ama odağı bozar.</p></div>
+      <div class="dont-grid">
+        <article class="dont"><strong>Yeni sosyal özellikler</strong><span>Topluluk, puan, yorum ve kampanya akışları çekirdek servis kalitesi oturmadan beklemeli.</span></article>
+        <article class="dont"><strong>Aşırı yapay zekâ</strong><span>Önce OCR ve basit öneriler güvenilir olsun; teşhis veren yapay zekâ hukuki ve operasyonel risk taşır.</span></article>
+        <article class="dont"><strong>Her müşteriye özel kod</strong><span>Markalama ayarla çözülsün; ayrı sürümler bakım ve mağaza dağıtımını parçalar.</span></article>
+        <article class="dont"><strong>Ücretsiz otomasyon ısrarı</strong><span>SMS/WhatsApp gibi dış hizmetlerde “ücretsiz” hedefi güvenilirliği ve teslim süresini bozabilir.</span></article>
+        <article class="dont"><strong>Testte gerçek müşteri verisi</strong><span>İzole test organizasyonu kullanılmalı; ödeme ve stok yarış testleri canlı kayıtlara dokunmamalı.</span></article>
+        <article class="dont"><strong>Yeni modül eklemek</strong><span>P0 ve P1 hatalar kapanana kadar kapsam dondurulmalı; yalnız hata ve kullanım sürtünmesi düzeltilmeli.</span></article>
+      </div>
+    </section>
+
+    <section class="final-call">
+      <h2>Son ürün kararı</h2>
+      <p>TamirApp'ın eksikliği daha fazla menü değil. Onu uçuracak üç şey: tamircinin gününü yöneten hızlı servis panosu, müşterinin sürpriz fiyat korkusunu kaldıran şeffaf onay/garanti deneyimi ve İGESA'nın yüz işletmeyi elle müdahale etmeden yönetmesini sağlayan SaaS işletim katmanı.</p>
+    </section>
+  </main>
+
+  <footer>İGESA Creative · TamirApp Üç Rol Ürün Boşluk Analizi</footer>
+
+  <script>
+    document.querySelectorAll('.filters').forEach((group) => {
+      const list = document.getElementById(group.dataset.target);
+      group.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-filter]');
+        if (!button) return;
+        group.querySelectorAll('.filter').forEach((item) => item.classList.toggle('active', item === button));
+        list.querySelectorAll('.gap-row').forEach((row) => {
+          row.classList.toggle('hidden', button.dataset.filter !== 'all' && row.dataset.priority !== button.dataset.filter);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -95,6 +95,13 @@ export default function Cashier() {
           form.serviceOrderId),
   );
 
+  function quoteRemaining(quote) {
+    const paid = payments
+      .filter((payment) => payment.quoteId === quote.id && payment.status === 'PAID')
+      .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+    return Math.max(0, Number(quote.total || 0) - paid);
+  }
+
   const todaySummary = useMemo(() => {
     const today =
       new Date().toDateString();
@@ -273,9 +280,7 @@ export default function Cashier() {
         form.branchId,
       amount:
         quote
-          ? Number(
-              quote.total || 0,
-            )
+          ? quoteRemaining(quote).toFixed(2)
           : form.amount,
     });
   }
@@ -445,7 +450,7 @@ export default function Cashier() {
                 Teklif / Proforma (opsiyonel)
               </option>
 
-              {filteredQuotes.filter((quote) => quote.status === 'APPROVED').map(
+              {filteredQuotes.filter((quote) => quote.status === 'APPROVED' && quoteRemaining(quote) > 0.009).map(
                 (quote) => (
                   <option
                     key={quote.id}
@@ -454,9 +459,9 @@ export default function Cashier() {
                     {quote.quoteNumber}
                     {' · '}
                     {money(
-                      quote.total,
+                      quoteRemaining(quote),
                     )}{' '}
-                    ₺
+                    ₺ kalan
                   </option>
                 ),
               )}

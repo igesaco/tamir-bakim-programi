@@ -1,22 +1,8 @@
 import { IsDateString, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
-export class CreateAppointmentDto {
-  @IsString()
-  customerId: string;
-
-  @IsString()
-  vehicleId: string;
-
+export class CreateCustomerAppointmentDto {
   @IsDateString()
   startAt: string;
-
-  @IsOptional()
-  @IsDateString()
-  endAt?: string;
-
-  @IsOptional()
-  @IsString()
-  assignedTechnicianId?: string;
 
   @IsOptional()
   @IsInt()

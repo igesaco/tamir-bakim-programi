@@ -6,6 +6,7 @@ export default function Appointments() {
   const [appointments, setAppointments] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
+  const [technicians, setTechnicians] = useState([]);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -14,20 +15,24 @@ export default function Appointments() {
     customerId: '',
     vehicleId: '',
     startAt: '',
+    assignedTechnicianId: '',
+    estimatedDurationMinutes: 60,
     serviceType: '',
     customerNote: '',
   });
 
   async function load() {
-    const [a, c, v] = await Promise.all([
+    const [a, c, v, t] = await Promise.all([
       api.get('/appointments'),
       api.get('/customers'),
       api.get('/vehicles'),
+      api.get('/users/technicians'),
     ]);
 
     setAppointments(a.data);
     setCustomers(c.data);
     setVehicles(v.data);
+    setTechnicians(t.data);
   }
 
   useEffect(() => {
@@ -50,8 +55,12 @@ export default function Appointments() {
         setError('Gelecekteki bir randevu tarihini seçin.');
         return;
       }
-      await api.post('/appointments', { ...form, startAt: date.toISOString() });
-      setForm({ customerId: '', vehicleId: '', startAt: '', serviceType: '', customerNote: '' });
+      await api.post('/appointments', {
+        ...form,
+        assignedTechnicianId: form.assignedTechnicianId || undefined,
+        startAt: date.toISOString(),
+      });
+      setForm({ customerId: '', vehicleId: '', startAt: '', assignedTechnicianId: '', estimatedDurationMinutes: 60, serviceType: '', customerNote: '' });
       await load();
       setMessage('Randevu oluşturuldu; müşterinin kaydına eklendi.');
     } catch (err) {
@@ -129,6 +138,31 @@ export default function Appointments() {
               required
             />
 
+            <select
+              value={form.assignedTechnicianId}
+              onChange={(e) => setForm({ ...form, assignedTechnicianId: e.target.value })}
+            >
+              <option value="">Teknisyen sonra atanacak</option>
+              {technicians.map((technician) => (
+                <option key={technician.id} value={technician.id}>
+                  {technician.firstName} {technician.lastName}
+                  {technician.branch?.name ? ` - ${technician.branch.name}` : ''}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={form.estimatedDurationMinutes}
+              onChange={(e) => setForm({ ...form, estimatedDurationMinutes: Number(e.target.value) })}
+            >
+              <option value={30}>30 dakika</option>
+              <option value={60}>1 saat</option>
+              <option value={90}>1,5 saat</option>
+              <option value={120}>2 saat</option>
+              <option value={180}>3 saat</option>
+              <option value={240}>4 saat</option>
+            </select>
+
             <input
               placeholder="Hizmet türü"
               value={form.serviceType}
@@ -169,6 +203,7 @@ export default function Appointments() {
                   <th>Müşteri</th>
                   <th>Araç</th>
                   <th>Hizmet</th>
+                  <th>Teknisyen / Süre</th>
                   <th>Durum</th>
                 </tr>
               </thead>
@@ -188,6 +223,13 @@ export default function Appointments() {
                     <td>{a.vehicle?.plate}</td>
 
                     <td>{a.serviceType || '-'}</td>
+
+                    <td>
+                      {a.assignedTechnician
+                        ? `${a.assignedTechnician.firstName} ${a.assignedTechnician.lastName}`
+                        : 'Atanmadı'}
+                      {' · '}{a.estimatedDurationMinutes || 60} dk
+                    </td>
 
                     <td>
                       <span className="status-badge">

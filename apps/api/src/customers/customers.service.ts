@@ -10,6 +10,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { nationalIdFingerprint } from './customer-identity';
+import { ImportCustomerRowDto } from './dto/import-customers.dto';
+import { atomic } from '../workflow/transaction';
 
 @Injectable()
 export class CustomersService {
@@ -170,6 +172,86 @@ export class CustomersService {
     return this.safeCustomer(
       created,
     );
+  }
+
+  async previewImport(
+    organizationId: string,
+    actorBranchId: string | null,
+    role: UserRole,
+    rows: ImportCustomerRowDto[],
+  ) {
+    if (!rows.length || rows.length > 500) {
+      throw new BadRequestException('İçe aktarma 1 ile 500 satır arasında olmalıdır.');
+    }
+    const phones = rows.map(row => this.cleanPhone(row.phone)).filter(Boolean) as string[];
+    const emails = rows.map(row => row.email?.trim().toLowerCase()).filter(Boolean) as string[];
+    const plates = rows.map(row => row.plate?.replace(/\s+/g, '').toLocaleUpperCase('tr-TR')).filter(Boolean) as string[];
+    const [existingCustomers, existingVehicles] = await Promise.all([
+      this.prisma.customer.findMany({
+        where: { organizationId, OR: [{ phone: { in: phones } }, { email: { in: emails } }] },
+        select: { phone: true, email: true },
+      }),
+      this.prisma.vehicle.findMany({ where: { organizationId, plate: { in: plates } }, select: { plate: true } }),
+    ]);
+    const seen = new Set<string>();
+    const results = rows.map((row, index) => {
+      const errors: string[] = [];
+      const branchId = role === UserRole.OWNER || role === UserRole.MANAGER
+        ? row.branchId || actorBranchId : actorBranchId;
+      const phone = this.cleanPhone(row.phone);
+      const email = row.email?.trim().toLowerCase();
+      const plate = row.plate?.replace(/\s+/g, '').toLocaleUpperCase('tr-TR');
+      if (!branchId) errors.push('Şube eksik');
+      if (phone && (seen.has(`p:${phone}`) || existingCustomers.some(item => item.phone === phone))) errors.push('Telefon zaten kayıtlı');
+      if (email && (seen.has(`e:${email}`) || existingCustomers.some(item => item.email === email))) errors.push('E-posta zaten kayıtlı');
+      if (plate && (seen.has(`v:${plate}`) || existingVehicles.some(item => item.plate === plate))) errors.push('Plaka zaten kayıtlı');
+      if (plate && (!row.brand?.trim() || !row.model?.trim())) errors.push('Araç için marka ve model gerekli');
+      if (phone) seen.add(`p:${phone}`);
+      if (email) seen.add(`e:${email}`);
+      if (plate) seen.add(`v:${plate}`);
+      return { index, valid: errors.length === 0, errors, normalized: { ...row, branchId, phone, email, plate } };
+    });
+    return { total: rows.length, valid: results.filter(row => row.valid).length, invalid: results.filter(row => !row.valid).length, rows: results };
+  }
+
+  async commitImport(
+    organizationId: string,
+    actorBranchId: string | null,
+    role: UserRole,
+    rows: ImportCustomerRowDto[],
+  ) {
+    const preview = await this.previewImport(organizationId, actorBranchId, role, rows);
+    if (preview.invalid) {
+      throw new BadRequestException('Hatalı satırlar düzeltilmeden içe aktarma yapılamaz.');
+    }
+    return atomic(this.prisma, organizationId, async tx => {
+      const created = [];
+      for (const result of preview.rows) {
+        const row = result.normalized;
+        const branchId = row.branchId;
+        if (!branchId) throw new BadRequestException(`${result.index + 1}. satırda şube eksik.`);
+        const branch = await tx.branch.findFirst({ where: { id: branchId, organizationId, active: true } });
+        if (!branch) throw new BadRequestException(`${result.index + 1}. satırdaki şube aktif değil.`);
+        const customer = await tx.customer.create({
+          data: {
+            organizationId, branchId, firstName: row.firstName.trim(),
+            lastName: row.lastName?.trim(), phone: row.phone, email: row.email,
+            address: row.address?.trim(),
+          },
+        });
+        if (row.plate) {
+          await tx.vehicle.create({
+            data: {
+              organizationId, branchId, customerId: customer.id,
+              plate: row.plate, brand: row.brand!.trim(), model: row.model!.trim(),
+              modelYear: row.modelYear, mileage: row.mileage ?? 0,
+            },
+          });
+        }
+        created.push(customer.id);
+      }
+      return { imported: created.length, customerIds: created };
+    });
   }
 
   async findAll(

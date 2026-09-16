@@ -23,6 +23,22 @@ function getApiMessage(error) {
   );
 }
 
+function parseCsvLine(line, separator) {
+  const values = [];
+  let value = '';
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    if (character === '"' && line[index + 1] === '"' && quoted) {
+      value += '"'; index += 1;
+    } else if (character === '"') quoted = !quoted;
+    else if (character === separator && !quoted) { values.push(value.trim()); value = ''; }
+    else value += character;
+  }
+  values.push(value.trim());
+  return values;
+}
+
 export default function Customers() {
   const { user } = useAuth();
 
@@ -57,6 +73,49 @@ export default function Customers() {
     useState('');
   const [error, setError] =
     useState('');
+  const [importPreview, setImportPreview] = useState(null);
+  const [importRows, setImportRows] = useState([]);
+
+  async function previewCsv(file) {
+    setError(''); setMessage(''); setImportPreview(null); setImportRows([]);
+    try {
+      const text = (await file.text()).replace(/^\uFEFF/, '');
+      const lines = text.split(/\r?\n/).filter(line => line.trim());
+      if (lines.length < 2) throw new Error('CSV dosyasında başlık ve en az bir veri satırı olmalı.');
+      const separator = lines[0].includes(';') ? ';' : ',';
+      const headers = parseCsvLine(lines[0], separator).map(value => value.trim().toLowerCase());
+      const keyMap = {
+        ad: 'firstName', firstname: 'firstName', soyad: 'lastName', lastname: 'lastName',
+        telefon: 'phone', phone: 'phone', eposta: 'email', email: 'email',
+        subeid: 'branchId', branchid: 'branchId', adres: 'address', address: 'address',
+        plaka: 'plate', plate: 'plate', marka: 'brand', brand: 'brand', model: 'model',
+        modelyili: 'modelYear', modelyear: 'modelYear', kilometre: 'mileage', mileage: 'mileage',
+      };
+      const rows = lines.slice(1).map(line => {
+        const values = parseCsvLine(line, separator);
+        const row = {};
+        headers.forEach((header, index) => {
+          const normalized = header.replace(/[^a-z0-9ğüşöçı]/g, '')
+            .replaceAll('ı', 'i').replaceAll('ş', 's').replaceAll('ğ', 'g').replaceAll('ü', 'u').replaceAll('ö', 'o').replaceAll('ç', 'c');
+          const key = keyMap[normalized];
+          if (key && values[index]) row[key] = ['modelYear', 'mileage'].includes(key) ? Number(values[index]) : values[index];
+        });
+        return row;
+      });
+      const response = await api.post('/customers/import/preview', { rows });
+      setImportRows(rows); setImportPreview(response.data);
+    } catch (err) { setError(getApiMessage(err)); }
+  }
+
+  async function commitImport() {
+    setBusy(true); setError(''); setMessage('');
+    try {
+      const response = await api.post('/customers/import/commit', { rows: importRows });
+      setMessage(`${response.data.imported} müşteri başarıyla içe aktarıldı.`);
+      setImportRows([]); setImportPreview(null); await load();
+    } catch (err) { setError(getApiMessage(err)); }
+    finally { setBusy(false); }
+  }
 
   async function load() {
     const requests = [
@@ -320,6 +379,27 @@ export default function Customers() {
       </div>
 
       <ActionNotice message={message} error={error} />
+
+      {canChooseBranch && (
+        <div className="panel-card">
+          <h3>CSV ile Toplu İçe Aktarma</h3>
+          <p className="muted-text">
+            Excel dosyanızı CSV UTF-8 olarak kaydedin. Başlıklar: ad, soyad, telefon, eposta, subeId, plaka, marka, model, modelYili, kilometre.
+          </p>
+          <input type="file" accept=".csv,text/csv" onChange={(event) => event.target.files?.[0] && previewCsv(event.target.files[0])} />
+          {importPreview ? (
+            <div className="inline-actions">
+              <strong>{importPreview.valid} geçerli · {importPreview.invalid} hatalı</strong>
+              <button className="primary-button" disabled={busy || importPreview.invalid > 0} onClick={commitImport}>
+                {busy ? 'Aktarılıyor...' : 'Geçerli Dosyayı İçe Aktar'}
+              </button>
+            </div>
+          ) : null}
+          {importPreview?.rows?.filter(row => !row.valid).slice(0, 10).map(row => (
+            <p className="error-text" key={row.index}>{row.index + 2}. satır: {row.errors.join(', ')}</p>
+          ))}
+        </div>
+      )}
 
       <div className="content-grid">
         <div className="panel-card">
