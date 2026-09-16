@@ -23,6 +23,8 @@ import { VerifyPortalAccessDto } from './dto/verify-portal-access.dto';
 import { UpdateCustomerMileageDto } from './dto/update-customer-mileage.dto';
 import { CheckWhatsappAccessDto } from './dto/check-whatsapp-access.dto';
 import { ManualConfirmWhatsappDto } from './dto/manual-confirm-whatsapp.dto';
+import { DecideQuoteItemsDto } from './dto/decide-quote-items.dto';
+import { CreateCustomerAppointmentDto } from './dto/create-customer-appointment.dto';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 
@@ -175,6 +177,21 @@ export class CustomerPortalController {
     );
   }
 
+  @Post('vehicles/:vehicleId/appointments')
+  @UseGuards(AuthGuard('customer-portal-jwt'))
+  createAppointment(
+    @Req() req: any,
+    @Param('vehicleId') vehicleId: string,
+    @Body() dto: CreateCustomerAppointmentDto,
+  ) {
+    return this.customerPortalService.createCustomerAppointment(
+      req.user.customerId,
+      vehicleId,
+      req.user.organizationId,
+      dto,
+    );
+  }
+
   @Post('quotes/:quoteId/approve')
   @UseGuards(
     AuthGuard(
@@ -190,6 +207,18 @@ export class CustomerPortalController {
       req.user.customerId,
       req.user.organizationId,
       quoteId,
+    );
+  }
+
+  @Post('quotes/:quoteId/decide-items')
+  @UseGuards(AuthGuard('customer-portal-jwt'))
+  decideQuoteItems(
+    @Req() req: any,
+    @Param('quoteId') quoteId: string,
+    @Body() dto: DecideQuoteItemsDto,
+  ) {
+    return this.customerPortalService.decideCustomerQuoteItems(
+      req.user.customerId, req.user.organizationId, quoteId, dto.decisions,
     );
   }
 

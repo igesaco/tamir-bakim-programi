@@ -23,6 +23,8 @@ const emptyItem = () => ({
   unitPrice: '',
   discountAmount: 0,
   vatRate: 20,
+  warrantyMonths: '',
+  warrantyKm: '',
 });
 
 function money(value) {
@@ -91,6 +93,8 @@ export default function Quotes() {
         Number(item.discountAmount) || 0,
       vatRate:
         Number(item.vatRate) || 20,
+      warrantyMonths: item.warrantyMonths || '',
+      warrantyKm: item.warrantyKm || '',
     }));
   }
 
@@ -314,6 +318,8 @@ export default function Quotes() {
         discountAmount: 0,
         vatRate:
           Number(item.vatRate) || 20,
+        warrantyMonths: '',
+        warrantyKm: '',
       })),
     );
   }
@@ -349,6 +355,8 @@ export default function Quotes() {
             ),
           vatRate:
             Number(item.vatRate || 0),
+          warrantyMonths: item.warrantyMonths ? Number(item.warrantyMonths) : undefined,
+          warrantyKm: item.warrantyKm ? Number(item.warrantyKm) : undefined,
         })),
       });
 
@@ -632,6 +640,8 @@ export default function Quotes() {
               <span>Birim Fiyat</span>
               <span>İndirim</span>
               <span>KDV %</span>
+              <span>Garanti Ay</span>
+              <span>Garanti KM</span>
               <span></span>
             </div>
 
@@ -739,6 +749,23 @@ export default function Quotes() {
                     )
                   }
                   required
+                />
+
+                <input
+                  type="number"
+                  min="0"
+                  max="120"
+                  placeholder="Ay"
+                  value={item.warrantyMonths}
+                  onChange={(e) => updateItem(index, 'warrantyMonths', e.target.value)}
+                />
+
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="KM"
+                  value={item.warrantyKm}
+                  onChange={(e) => updateItem(index, 'warrantyKm', e.target.value)}
                 />
 
                 <button

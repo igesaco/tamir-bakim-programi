@@ -9,9 +9,9 @@ import { Button, Card, Field, Message, ScreenTitle } from '../components/UI';
 import { readDocument } from '../documentOcr';
 import { colors, spacing } from '../theme';
 
-const emptyForm = () => ({ firstName: '', lastName: '', phone: '', email: '', plate: '', brand: '', model: '', modelYear: '', vin: '', mileage: '', complaint: '', internalNote: '', fuelLevel: '', existingDamage: '', valuablesNote: '' });
+const emptyForm = () => ({ firstName: '', lastName: '', phone: '', email: '', plate: '', brand: '', model: '', modelYear: '', vin: '', mileage: '', complaint: '', internalNote: '', fuelLevel: '', existingDamage: '', valuablesNote: '', estimatedDeliveryAt: '' });
 const emptyItem = () => ({ type: 'LABOR', name: '', quantity: '1' });
-const stages = ['Müşteri', 'Araç', 'Kabul', 'İşlemler ve Onay'];
+const stages = ['Müşteri', 'Araç', 'Şikâyet', 'Kontrol', 'Plan', 'Onay'];
 const normalizedPlate = value => String(value || '').replace(/\s+/g, '').toLocaleUpperCase('tr-TR');
 const apiMessage = (e, fallback) => { const m = e?.response?.data?.message; return Array.isArray(m) ? m.join(', ') : m || e?.message || fallback; };
 
@@ -113,6 +113,10 @@ export default function QuickIntakeScreen({ initialCustomerId = '', initialVehic
       !Number.isFinite(Number(form.mileage)) || Number(form.mileage) < 0 || !form.mileage.trim())) {
       setError('Araç bilgileri ve güncel kabul kilometresini tamamlayın.'); return;
     }
+    if (stage === 4 && form.estimatedDeliveryAt &&
+      !Number.isFinite(new Date(form.estimatedDeliveryAt.trim().replace(' ', 'T')).getTime())) {
+      setError('Tahmini teslim tarihini 2026-09-20 18:00 biçiminde girin.'); return;
+    }
     setStage(current => Math.min(current + 1, stages.length - 1));
   }
   async function capture(kind = 'photo', library = false) {
@@ -157,6 +161,7 @@ export default function QuickIntakeScreen({ initialCustomerId = '', initialVehic
           modelYear: !vehicleId && form.modelYear ? Number(form.modelYear) : undefined, vin: !vehicleId && form.vin ? form.vin.trim() : undefined,
           mileage: Number(form.mileage), customerComplaint: form.complaint || undefined, internalNote: form.internalNote || undefined,
           fuelLevel: form.fuelLevel || undefined, existingDamage: form.existingDamage || undefined, valuablesNote: form.valuablesNote || undefined,
+          estimatedDeliveryAt: form.estimatedDeliveryAt ? new Date(form.estimatedDeliveryAt.trim().replace(' ', 'T')).toISOString() : undefined,
           plannedItems: items.filter(i => i.name.trim()).map(i => ({ type: i.type, name: i.name.trim(), quantity: Number(i.quantity || 1), unitPrice: 0, vatRate: 20 })),
         });
         result = { orderId: response.data.serviceOrder.id, inspectionId: response.data.inspection.id };
@@ -198,22 +203,30 @@ export default function QuickIntakeScreen({ initialCustomerId = '', initialVehic
           <Button title="Listeyi yenile" tone="ghost" onPress={() => api.get('/customers').then(r => setCustomers(r.data)).catch(e => setError(apiMessage(e, 'Liste alınamadı.')))} />
           {matches.map(c => <Pressable key={c.id} onPress={() => selectCustomer(c)}><Text style={styles.info}>{c.firstName} {c.lastName} • {(c.vehicles || []).map(v => v.plate).join(', ')}</Text></Pressable>)}
           <Button title="Yeni müşteri" tone="ghost" onPress={() => { setCustomerId(''); newVehicle(); setForm(emptyForm()); }} />
-          <Button title="Kimlikten ad/soyad oku" tone="ghost" disabled={!!customerId} onPress={() => capture('identity')} />
+          <Button title="Kimliği kamerayla oku" tone="ghost" disabled={!!customerId} onPress={() => capture('identity')} />
+          <Button title="Kimliği galeriden seç" tone="ghost" disabled={!!customerId} onPress={() => capture('identity', true)} />
           {field('firstName','Ad')}{field('lastName','Soyad')}{field('phone','Telefon (isteğe bağlı)',{ keyboardType: 'phone-pad' })}{field('email','E-posta (isteğe bağlı)',{ autoCapitalize: 'none' })}
           {customerId && <Text style={styles.info}>Kayıtlı müşterinin iletişim bilgisi ofisteki müşteri ekranından tamamlanabilir.</Text>}
         </Card></>}
         {stage === 1 && <Card><Text style={styles.heading}>Araç bilgileri</Text>
           {(customers.find(c => c.id === customerId)?.vehicles || []).map(v => <Button key={v.id} title={`${v.id === vehicleId ? '✓ ' : ''}${v.plate}`} tone="ghost" onPress={() => selectCustomer(customers.find(c => c.id === customerId), v.id)} />)}
           <Button title="Bu müşteriye yeni araç" tone="ghost" onPress={newVehicle} />
-          <Button title="Ruhsat oku" tone="ghost" disabled={!!vehicleId} onPress={() => capture('registration')} />
+          <Button title="Ruhsatı kamerayla oku" tone="ghost" disabled={!!vehicleId} onPress={() => capture('registration')} />
+          <Button title="Ruhsatı galeriden seç" tone="ghost" disabled={!!vehicleId} onPress={() => capture('registration', true)} />
           {field('plate','Plaka')}{field('brand','Marka')}{field('model','Model')}{field('modelYear','Model yılı',{ keyboardType: 'number-pad' })}{field('vin','Şasi / VIN')}{field('mileage','Güncel kabul KM',{ keyboardType: 'number-pad' })}
         </Card>}
-        {stage === 2 && <Card><Text style={styles.heading}>Kabul kontrolü</Text>
-          {field('complaint','Müşteri talebi',{ multiline: true })}{field('fuelLevel','Yakıt seviyesi')}{field('existingDamage','Mevcut hasarlar',{ multiline: true })}{field('valuablesNote','Araçta bırakılan eşyalar')}{field('internalNote','İç servis notu',{ multiline: true })}
+        {stage === 2 && <Card><Text style={styles.heading}>Müşteri şikâyeti</Text>
+          {field('complaint','Müşteri talebi / şikâyeti',{ multiline: true })}
+          <Text style={styles.info}>Müşterinin kendi sözleriyle talebini kaydedin. Teknik yorumu sonraki adımda ekleyin.</Text>
+        </Card>}
+        {stage === 3 && <Card><Text style={styles.heading}>Kabul kontrolü</Text>
+          {field('fuelLevel','Yakıt seviyesi')}{field('existingDamage','Mevcut hasarlar',{ multiline: true })}{field('valuablesNote','Araçta bırakılan eşyalar')}{field('internalNote','İç servis notu',{ multiline: true })}
           <Button title="Kabul fotoğrafı çek" onPress={() => capture()} /><Button title="Galeriden fotoğraf ekle" tone="ghost" onPress={() => capture('photo', true)} />
           {photos.map(photo => <View key={photo.requestKey}><Image source={{ uri: photo.uri }} style={styles.photo} /><Button title="Fotoğrafı kaldır" tone="ghost" onPress={() => setPhotos(current => current.filter(p => p.requestKey !== photo.requestKey))} /></View>)}
         </Card>}
-        {stage === 3 && <Card><Text style={styles.heading}>Yapılacak işlemler</Text>
+        {stage === 4 && <Card><Text style={styles.heading}>Ön plan ve işlemler</Text>
+          {field('estimatedDeliveryAt','Tahmini teslim (2026-09-20 18:00)')}
+          <Text style={styles.info}>Sorumlu danışman: {user?.firstName || ''} {user?.lastName || ''}</Text>
           {templates.map(t => <Button key={t.code} title={`+ ${t.name}`} tone="ghost" onPress={() => setItems(current => [...current.filter(i => i.name.trim()), ...t.items.map(i => ({ type: i.type, name: i.name, quantity: String(i.quantity) }))])} />)}
           {items.map((item,index) => <View key={index}>
             <Field label="İşlem" value={item.name} onChangeText={value => setItems(current => current.map((i,n) => n === index ? { ...i, name: value } : i))} />
@@ -223,7 +236,7 @@ export default function QuickIntakeScreen({ initialCustomerId = '', initialVehic
           </View>)}<Button title="+ İşlem ekle" tone="ghost" onPress={() => setItems(current => [...current, emptyItem()])} />
         </Card>}
       </View>
-      {!submitted && stage === 3 && <Card><Text style={styles.heading}>Son kontrol</Text>
+      {!submitted && stage === 5 && <Card><Text style={styles.heading}>Son kontrol ve onay</Text>
         <Text style={styles.info}>{form.firstName} {form.lastName} · {form.plate} · {form.mileage} KM · {photos.length} fotoğraf · {items.filter(item => item.name.trim()).length} işlem</Text>
         <Text style={styles.info}>Kaydettiğinizde müşteri, araç, kabul ve iş emri tek seferde oluşur.</Text>
       </Card>}

@@ -334,6 +334,30 @@ export default function WorkOrdersScreen() {
     }
   }
 
+  async function startWorkSession() {
+    if (!selected) return;
+    setBusy(true); setError(''); setMessage('');
+    try {
+      await api.post(`/service-orders/${selected.id}/work-sessions/start`, {});
+      setMessage('Çalışma süresi başlatıldı.');
+      await Promise.all([load(), refreshSelected()]);
+    } catch (err) {
+      setError(apiMessage(err, 'Çalışma süresi başlatılamadı.'));
+    } finally { setBusy(false); }
+  }
+
+  async function stopWorkSession(sessionId) {
+    if (!selected) return;
+    setBusy(true); setError(''); setMessage('');
+    try {
+      await api.patch(`/service-orders/${selected.id}/work-sessions/${sessionId}/stop`);
+      setMessage('Çalışma süresi durduruldu.');
+      await refreshSelected();
+    } catch (err) {
+      setError(apiMessage(err, 'Çalışma süresi durdurulamadı.'));
+    } finally { setBusy(false); }
+  }
+
   async function toggleTask(
     item,
   ) {
@@ -1126,6 +1150,28 @@ export default function WorkOrdersScreen() {
               ) : null}
 
               <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Çalışma Süresi</Text>
+                {selected?.workSessions?.find(session => session.status === 'ACTIVE') ? (
+                  <>
+                    <Text style={styles.infoText}>
+                      Süre çalışıyor · {selected.workSessions.find(session => session.status === 'ACTIVE')?.technician?.firstName}{' '}
+                      {selected.workSessions.find(session => session.status === 'ACTIVE')?.technician?.lastName}
+                    </Text>
+                    <Button title={busy ? 'Durduruluyor...' : 'Çalışmayı Durdur'} disabled={busy}
+                      onPress={() => stopWorkSession(selected.workSessions.find(session => session.status === 'ACTIVE').id)} />
+                  </>
+                ) : (
+                  <Button title={busy ? 'Başlatılıyor...' : 'Çalışmayı Başlat'} disabled={busy}
+                    onPress={startWorkSession} />
+                )}
+                {selected?.workSessions?.filter(session => session.status === 'STOPPED').slice(0, 3).map(session => (
+                  <Text key={session.id} style={styles.infoText}>
+                    {session.technician?.firstName} {session.technician?.lastName} · {session.durationMinutes || 0} dk
+                  </Text>
+                ))}
+              </View>
+
+              <View style={styles.section}>
                 <Text style={styles.sectionTitle}>
                   İşlem Geçmişi
                 </Text>
@@ -1330,6 +1376,12 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 13,
     fontWeight: '900',
+  },
+  infoText: {
+    marginBottom: 8,
+    color: colors.muted,
+    fontSize: 10,
+    lineHeight: 15,
   },
   statusGrid: {
     flexDirection: 'row',

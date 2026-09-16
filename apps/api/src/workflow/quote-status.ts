@@ -2,6 +2,10 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { NotificationChannel, NotificationStatus, Prisma, QuoteStatus, ServiceOrderStatus, UserRole } from '@prisma/client';
 import { syncPending } from './finance';
 import { notifyOffice } from './notifications';
+import { reserveOrderParts } from './reservations';
+
+const isApprovedStatus = (status: QuoteStatus) =>
+  status === QuoteStatus.APPROVED || status === QuoteStatus.PARTIALLY_APPROVED;
 
 export async function applyQuoteStatus(tx: Prisma.TransactionClient, organizationId: string, id: string,
   status: QuoteStatus, access: { role?: UserRole; branchId?: string | null; customerId?: string } = {}) {
@@ -13,21 +17,23 @@ export async function applyQuoteStatus(tx: Prisma.TransactionClient, organizatio
   if (quote.status === status) return quote;
   const allowed: Partial<Record<QuoteStatus, QuoteStatus[]>> = {
     DRAFT: [QuoteStatus.SENT, QuoteStatus.APPROVED, QuoteStatus.REJECTED],
-    SENT: [QuoteStatus.APPROVED, QuoteStatus.REJECTED, QuoteStatus.EXPIRED],
+    SENT: [QuoteStatus.PARTIALLY_APPROVED, QuoteStatus.APPROVED, QuoteStatus.REJECTED, QuoteStatus.EXPIRED],
     PARTIALLY_APPROVED: [QuoteStatus.APPROVED, QuoteStatus.REJECTED],
   };
   if (!allowed[quote.status]?.includes(status)) throw new BadRequestException('Bu teklif sürümü değiştirilemez. Yeni teklif oluşturun.');
   if (access.customerId && ![QuoteStatus.SENT, QuoteStatus.PARTIALLY_APPROVED].includes(quote.status as any))
     throw new BadRequestException('Bu teklif henüz onaya gönderilmedi.');
-  if (status === QuoteStatus.APPROVED && quote.expiresAt && quote.expiresAt < new Date())
+  if (isApprovedStatus(status) && quote.expiresAt && quote.expiresAt < new Date())
     throw new BadRequestException('Teklifin süresi doldu. Yeni teklif isteyin.');
   const order = quote.serviceOrder;
   if (order && [ServiceOrderStatus.DELIVERED, ServiceOrderStatus.CANCELLED].includes(order.status as any))
     throw new BadRequestException('Kapanmış iş emrinin teklifi değiştirilemez.');
-  if (status === QuoteStatus.APPROVED && order) {
-    const firstApproval = !order.quotes.some(q => q.status === QuoteStatus.APPROVED);
+  if (isApprovedStatus(status) && order) {
+    const approvedLines = quote.items.filter(line => line.approved !== false);
+    if (!approvedLines.length) throw new BadRequestException('En az bir teklif kalemi onaylanmalıdır.');
+    const firstApproval = !order.quotes.some(q => isApprovedStatus(q.status));
     const linked = new Set<string>();
-    for (const line of quote.items) {
+    for (const line of approvedLines) {
       let source = line.serviceOrderItemId ? order.items.find(i => i.id === line.serviceOrderItemId) : undefined;
       if (line.serviceOrderItemId && !source) throw new BadRequestException('Teklif kalemi iş emriyle eşleşmiyor.');
       if (!source && firstApproval) {
@@ -42,11 +48,12 @@ export async function applyQuoteStatus(tx: Prisma.TransactionClient, organizatio
       const data = { partId: line.partId || source?.partId, type: line.type, name: line.name, description: line.description,
         quantity: line.quantity, unitPrice: line.unitPrice, discountAmount: line.discountAmount,
         totalPrice: line.totalPrice, vatRate: line.vatRate, vatAmount: line.vatAmount,
-        grossTotal: line.grossTotal, approvedQuoteId: quote.id };
+        grossTotal: line.grossTotal, approvedQuoteId: quote.id,
+        warrantyMonths: line.warrantyMonths, warrantyKm: line.warrantyKm };
       const item = source ? await tx.serviceOrderItem.update({ where: { id: source.id }, data })
         : await tx.serviceOrderItem.create({ data: { ...data, serviceOrderId: order.id } });
       linked.add(item.id);
-      await tx.quoteItem.update({ where: { id: line.id }, data: { serviceOrderItemId: item.id, approved: true } });
+      await tx.quoteItem.update({ where: { id: line.id }, data: { serviceOrderItemId: item.id, approved: true, decidedAt: line.decidedAt || new Date() } });
     }
     if (firstApproval) {
       const removed = order.items.filter(i => !linked.has(i.id));
@@ -61,10 +68,18 @@ export async function applyQuoteStatus(tx: Prisma.TransactionClient, organizatio
       status: beforeWork.includes(order.status) ? ServiceOrderStatus.APPROVED
         : reopenControl.includes(order.status) ? ServiceOrderStatus.IN_PROGRESS : order.status,
     } });
+    const reservation = await reserveOrderParts(tx, organizationId, order.id);
+    if (reservation.shortage) {
+      await tx.serviceOrder.update({ where: { id: order.id }, data: { status: ServiceOrderStatus.PART_WAITING } });
+    }
   }
+  const approvedTotal = isApprovedStatus(status)
+    ? quote.items.filter(line => line.approved !== false).reduce((sum, line) => sum + Number(line.grossTotal), 0)
+    : null;
   const updated = await tx.quote.update({ where: { id }, data: { status,
     sentAt: status === QuoteStatus.SENT ? new Date() : undefined,
-    approvedAt: status === QuoteStatus.APPROVED ? new Date() : undefined,
+    approvedAt: isApprovedStatus(status) ? new Date() : undefined,
+    approvedTotal,
   }, include: { items: true } });
   if (status === QuoteStatus.SENT && order && ['ACCEPTED', 'INSPECTION'].includes(order.status)) {
     await tx.serviceOrder.update({
@@ -72,14 +87,14 @@ export async function applyQuoteStatus(tx: Prisma.TransactionClient, organizatio
       data: { status: ServiceOrderStatus.QUOTE_WAITING },
     });
   }
-  if (status === QuoteStatus.APPROVED) {
+  if (isApprovedStatus(status)) {
     await syncPending(tx, organizationId, id);
     if (order?.assignedTechnicianId) await tx.notification.create({ data: { organizationId, branchId: order.branchId,
       serviceOrderId: order.id, userId: order.assignedTechnicianId,
       channel: NotificationChannel.IN_APP, status: NotificationStatus.PENDING,
       title: 'Onaylı iş listesi güncellendi', message: `${order.orderNumber} iş emrinin onaylı işlemlerini kontrol edin.` } });
   }
-  if (order && new Set<QuoteStatus>([QuoteStatus.SENT, QuoteStatus.APPROVED, QuoteStatus.REJECTED]).has(status)) {
+  if (order && new Set<QuoteStatus>([QuoteStatus.SENT, QuoteStatus.PARTIALLY_APPROVED, QuoteStatus.APPROVED, QuoteStatus.REJECTED]).has(status)) {
     const customer = await tx.customer.findUnique({
       where: { id: quote.customerId },
       select: { portalEnabled: true },
@@ -94,7 +109,7 @@ export async function applyQuoteStatus(tx: Prisma.TransactionClient, organizatio
         status: NotificationStatus.PENDING,
         title: status === QuoteStatus.SENT
           ? 'Teklifiniz hazır'
-          : status === QuoteStatus.APPROVED
+          : isApprovedStatus(status)
             ? 'Teklif onaylandı'
             : 'Teklif sonucu güncellendi',
         message: `${quote.quoteNumber} numaralı teklifin durumunu uygulamadan kontrol edebilirsiniz.`,
@@ -102,7 +117,7 @@ export async function applyQuoteStatus(tx: Prisma.TransactionClient, organizatio
     }
   }
   if (order) await notifyOffice(tx, organizationId, order.branchId, order.id,
-    status === QuoteStatus.APPROVED ? 'Teklif onaylandı' : status === QuoteStatus.SENT ? 'Müşteri onayı bekleniyor' : 'Teklif sonucu güncellendi',
+    isApprovedStatus(status) ? 'Teklif kararı alındı' : status === QuoteStatus.SENT ? 'Müşteri onayı bekleniyor' : 'Teklif sonucu güncellendi',
     `${quote.quoteNumber}: ${status}`);
   return updated;
 }

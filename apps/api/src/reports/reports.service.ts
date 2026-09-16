@@ -18,6 +18,13 @@ export class ReportsService {
       activePlans,
       paymentAggregate,
       quoteAggregate,
+      delayedOrders,
+      unassignedOrders,
+      partWaitingOrders,
+      pendingQuotes,
+      activeWorkSessions,
+      openProcurementRequests,
+      warrantyReturns,
     ] = await Promise.all([
       this.prisma.customer.count({
         where: { organizationId },
@@ -69,6 +76,35 @@ export class ReportsService {
           total: true,
         },
       }),
+      this.prisma.serviceOrder.count({
+        where: {
+          organizationId,
+          estimatedDeliveryAt: { lt: new Date() },
+          status: { notIn: [ServiceOrderStatus.DELIVERED, ServiceOrderStatus.CANCELLED] },
+        },
+      }),
+      this.prisma.serviceOrder.count({
+        where: {
+          organizationId,
+          assignedTechnicianId: null,
+          status: { notIn: [ServiceOrderStatus.DELIVERED, ServiceOrderStatus.CANCELLED] },
+        },
+      }),
+      this.prisma.serviceOrder.count({
+        where: { organizationId, status: ServiceOrderStatus.PART_WAITING },
+      }),
+      this.prisma.quote.count({
+        where: { organizationId, status: 'SENT' },
+      }),
+      this.prisma.serviceOrderWorkSession.count({
+        where: { organizationId, status: 'ACTIVE' },
+      }),
+      this.prisma.procurementRequest.count({
+        where: { organizationId, status: { in: ['OPEN', 'ORDERED'] } },
+      }),
+      this.prisma.serviceOrderItem.count({
+        where: { warrantyClaimOfId: { not: null }, serviceOrder: { organizationId } },
+      }),
     ]);
 
     return {
@@ -83,6 +119,13 @@ export class ReportsService {
       approvedQuotesTotal: Number(
         quoteAggregate._sum.total ?? 0,
       ),
+      delayedOrders,
+      unassignedOrders,
+      partWaitingOrders,
+      pendingQuotes,
+      activeWorkSessions,
+      openProcurementRequests,
+      warrantyReturns,
     };
   }
 }

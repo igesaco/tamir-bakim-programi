@@ -306,6 +306,8 @@ export class QuotesService {
           vatRate,
           vatAmount,
           grossTotal,
+          warrantyMonths: item.warrantyMonths,
+          warrantyKm: item.warrantyKm,
         };
       },
     );

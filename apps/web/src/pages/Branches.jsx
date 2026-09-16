@@ -1,8 +1,12 @@
 ﻿import { useEffect, useState } from 'react';
 import api from '../api/client';
+import ActionNotice from '../components/ActionNotice';
 
 export default function Branches() {
   const [branches, setBranches] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   const [form, setForm] = useState({
     name: '',
@@ -17,30 +21,38 @@ export default function Branches() {
   }
 
   useEffect(() => {
-    load();
+    load().catch(() => setError('Şube listesi yüklenemedi.'));
   }, []);
 
   async function submit(e) {
     e.preventDefault();
-
-    await api.post('/branches', form);
-
-    setForm({
-      name: '',
-      phone: '',
-      address: '',
-      city: '',
-    });
-
-    await load();
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      await api.post('/branches', form);
+      setForm({ name: '', phone: '', address: '', city: '' });
+      setMessage('Şube oluşturuldu ve seçim listelerine eklendi.');
+      await load();
+    } catch (err) {
+      const detail = err?.response?.data?.message;
+      setError(Array.isArray(detail) ? detail.join(', ') : detail || 'Şube oluşturulamadı.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function toggle(branch) {
-    await api.patch(`/branches/${branch.id}/active`, {
-      active: !branch.active,
-    });
-
-    await load();
+    setError('');
+    setMessage('');
+    try {
+      await api.patch(`/branches/${branch.id}/active`, { active: !branch.active });
+      setMessage(`Şube ${branch.active ? 'pasif' : 'aktif'} duruma alındı.`);
+      await load();
+    } catch (err) {
+      const detail = err?.response?.data?.message;
+      setError(Array.isArray(detail) ? detail.join(', ') : detail || 'Şube durumu değiştirilemedi.');
+    }
   }
 
   return (
@@ -51,6 +63,8 @@ export default function Branches() {
           <p>İşletmenize bağlı servis noktalarını yönetin.</p>
         </div>
       </div>
+
+      <ActionNotice message={message} error={error} />
 
       <div className="content-grid">
         <div className="panel-card">
@@ -104,8 +118,8 @@ export default function Branches() {
               }
             />
 
-            <button className="primary-button full">
-              Şube Oluştur
+            <button className="primary-button full" disabled={busy}>
+              {busy ? 'Oluşturuluyor...' : 'Şube Oluştur'}
             </button>
           </form>
         </div>

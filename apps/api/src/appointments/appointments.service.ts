@@ -71,6 +71,48 @@ export class AppointmentsService {
     });
     if (!branch) throw new BadRequestException('Randevu şubesi aktif değil.');
 
+    const startAt = new Date(dto.startAt);
+    if (!Number.isFinite(startAt.getTime()) || startAt <= new Date()) {
+      throw new BadRequestException('Randevu zamanı gelecekte olmalıdır.');
+    }
+    const estimatedDurationMinutes = dto.estimatedDurationMinutes ?? 60;
+    const endAt = dto.endAt
+      ? new Date(dto.endAt)
+      : new Date(startAt.getTime() + estimatedDurationMinutes * 60_000);
+    if (!Number.isFinite(endAt.getTime()) || endAt <= startAt) {
+      throw new BadRequestException('Randevu bitiş zamanı başlangıçtan sonra olmalıdır.');
+    }
+
+    if (dto.assignedTechnicianId) {
+      const technician = await this.prisma.user.findFirst({
+        where: {
+          id: dto.assignedTechnicianId,
+          organizationId,
+          branchId: appointmentBranchId,
+          role: UserRole.TECHNICIAN,
+          active: true,
+        },
+      });
+      if (!technician) {
+        throw new BadRequestException('Seçilen teknisyen bu şubede aktif değil.');
+      }
+      const conflict = await this.prisma.appointment.findFirst({
+        where: {
+          organizationId,
+          assignedTechnicianId: dto.assignedTechnicianId,
+          status: { notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW] },
+          startAt: { lt: endAt },
+          OR: [
+            { endAt: { gt: startAt } },
+            { endAt: null, startAt: { gt: new Date(startAt.getTime() - 60 * 60_000) } },
+          ],
+        },
+      });
+      if (conflict) {
+        throw new BadRequestException('Seçilen teknisyenin bu saat aralığında başka randevusu var.');
+      }
+    }
+
     return this.prisma.appointment.create({
       data: {
         organizationId,
@@ -81,14 +123,10 @@ export class AppointmentsService {
           dto.vehicleId,
         createdById:
           userId,
-        startAt:
-          new Date(dto.startAt),
-        endAt:
-          dto.endAt
-            ? new Date(
-                dto.endAt,
-              )
-            : null,
+        startAt,
+        endAt,
+        estimatedDurationMinutes,
+        assignedTechnicianId: dto.assignedTechnicianId,
         serviceType:
           dto.serviceType,
         customerNote:
@@ -98,6 +136,7 @@ export class AppointmentsService {
         customer: true,
         vehicle: true,
         branch: true,
+        assignedTechnician: true,
       },
     });
   }
@@ -117,6 +156,7 @@ export class AppointmentsService {
         customer: true,
         vehicle: true,
         branch: true,
+        assignedTechnician: true,
       },
       orderBy: {
         startAt: 'asc',
@@ -156,6 +196,7 @@ export class AppointmentsService {
         customer: true,
         vehicle: true,
         branch: true,
+        assignedTechnician: true,
       },
     });
   }

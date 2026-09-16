@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -20,6 +22,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { CreatePartDto } from './dto/create-part.dto';
 import { StockMovementDto } from './dto/stock-movement.dto';
 import { InventoryService } from './inventory.service';
+import { UpdateProcurementRequestDto } from './dto/update-procurement-request.dto';
 
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Feature(FeatureKey.INVENTORY)
@@ -121,6 +124,28 @@ export class InventoryController {
       req.user.organizationId,
       branchId ??
         req.user.branchId,
+    );
+  }
+
+@Permission(PermissionKey.INVENTORY_VIEW)
+  @Get('procurement-requests')
+  @Roles(UserRole.OWNER, UserRole.MANAGER, UserRole.WAREHOUSE, UserRole.SERVICE_ADVISOR)
+  findProcurementRequests(@Req() req: any, @Query('branchId') branchId?: string) {
+    return this.inventoryService.findProcurementRequests(
+      req.user.organizationId, branchId ?? req.user.branchId,
+    );
+  }
+
+@Permission(PermissionKey.INVENTORY_MANAGE)
+  @Patch('procurement-requests/:id')
+  @Roles(UserRole.OWNER, UserRole.MANAGER, UserRole.WAREHOUSE)
+  updateProcurementRequest(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateProcurementRequestDto,
+  ) {
+    return this.inventoryService.updateProcurementRequest(
+      req.user.organizationId, id, req.user.branchId, dto,
     );
   }
 }

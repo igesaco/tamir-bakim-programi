@@ -14,16 +14,43 @@ export class BranchesService {
     private readonly prisma: PrismaService,
   ) {}
 
-  create(
+  async create(
     organizationId: string,
     dto: CreateBranchDto,
   ) {
-    return this.prisma.branch.create({
-      data: {
+    const name = dto.name.trim();
+    if (name.length < 2) {
+      throw new BadRequestException('Şube adı en az 2 karakter olmalıdır.');
+    }
+
+    const existing = await this.prisma.branch.findFirst({
+      where: {
         organizationId,
-        ...dto,
+        name: { equals: name, mode: 'insensitive' },
       },
+      select: { id: true },
     });
+    if (existing) {
+      throw new BadRequestException('Bu isimde bir şube zaten bulunuyor.');
+    }
+
+    try {
+      return await this.prisma.branch.create({
+        data: {
+          organizationId,
+          ...dto,
+          name,
+          phone: dto.phone?.trim() || null,
+          address: dto.address?.trim() || null,
+          city: dto.city?.trim() || null,
+        },
+      });
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
+        throw new BadRequestException('Bu isimde bir şube zaten bulunuyor.');
+      }
+      throw error;
+    }
   }
 
   options(organizationId: string, role: string, branchId: string | null) {

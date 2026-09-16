@@ -1,6 +1,7 @@
 import { itemApproved } from '../workflow/item-approval';
 import { atomic } from '../workflow/transaction';
 import { issueItem } from '../workflow/stock';
+import { reserveOrderParts } from '../workflow/reservations';
 import { assertOpen } from '../workflow/order-rules';
 import {
   BadRequestException,
@@ -9,11 +10,13 @@ import {
 } from '@nestjs/common';
 import {
   InventoryMovementType,
+  ProcurementRequestStatus,
 } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePartDto } from './dto/create-part.dto';
 import { StockMovementDto } from './dto/stock-movement.dto';
+import { UpdateProcurementRequestDto } from './dto/update-procurement-request.dto';
 
 @Injectable()
 export class InventoryService {
@@ -137,7 +140,7 @@ export class InventoryService {
         branchId,
       );
 
-    return this.prisma.inventory.findMany({
+    const inventory = await this.prisma.inventory.findMany({
       where: {
         organizationId,
         branchId:
@@ -149,12 +152,24 @@ export class InventoryService {
             supplier: true,
           },
         },
+        reservations: {
+          where: { status: 'ACTIVE' },
+          select: { quantity: true },
+        },
       },
       orderBy: {
         part: {
           name: 'asc',
         },
       },
+    });
+    return inventory.map(({ reservations, ...item }) => {
+      const reservedQuantity = reservations.reduce((sum, reservation) => sum + Number(reservation.quantity), 0);
+      return {
+        ...item,
+        reservedQuantity,
+        availableQuantity: Math.max(0, Number(item.quantity) - reservedQuantity),
+      };
     });
   }
 
@@ -199,6 +214,47 @@ export class InventoryService {
         return quantity <= limit;
       },
     );
+  }
+
+  async findProcurementRequests(organizationId: string, branchId: string | null) {
+    const validBranchId = await this.validateBranch(organizationId, branchId);
+    return this.prisma.procurementRequest.findMany({
+      where: { organizationId, branchId: validBranchId },
+      include: {
+        part: { select: { id: true, name: true, sku: true, supplier: true } },
+        serviceOrder: { select: { id: true, orderNumber: true, vehicle: { select: { plate: true } } } },
+        serviceOrderItem: { select: { id: true, name: true } },
+      },
+      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  async updateProcurementRequest(
+    organizationId: string,
+    id: string,
+    actorBranchId: string | null,
+    dto: UpdateProcurementRequestDto,
+  ) {
+    return atomic(this.prisma, organizationId, async tx => {
+      const request = await tx.procurementRequest.findFirst({
+        where: { id, organizationId, ...(actorBranchId ? { branchId: actorBranchId } : {}) },
+      });
+      if (!request) throw new NotFoundException('Tedarik talebi bulunamadı.');
+      if (request.status === ProcurementRequestStatus.CANCELLED || request.status === ProcurementRequestStatus.RECEIVED) {
+        if (request.status === dto.status) return request;
+        throw new BadRequestException('Kapanmış tedarik talebi yeniden açılamaz.');
+      }
+      const updated = await tx.procurementRequest.update({
+        where: { id }, data: { status: dto.status, note: dto.note?.trim() || request.note },
+      });
+      if (dto.status === ProcurementRequestStatus.RECEIVED) {
+        const result = await reserveOrderParts(tx, organizationId, request.serviceOrderId);
+        if (result.shortage) {
+          throw new BadRequestException('Teslim alındı demeden önce parçayı stok girişinden kaydedin.');
+        }
+      }
+      return updated;
+    });
   }
 
   async stockIn(

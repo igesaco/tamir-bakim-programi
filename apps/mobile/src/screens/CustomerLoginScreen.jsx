@@ -49,33 +49,35 @@ export default function CustomerLoginScreen({
   const [code, setCode] =
     useState('');
 
-  const [deliveryChannel, setDeliveryChannel] =
-    useState('WHATSAPP');
-
   const [busy, setBusy] =
     useState(false);
 
   const [error, setError] =
     useState('');
 
-  async function sendCode(
-    channel,
-  ) {
+  async function sendCode() {
     setBusy(true);
     setError('');
-    setDeliveryChannel(channel);
 
     try {
       const result =
         await startCustomerAccess(
           phone,
           qrToken,
-          channel,
+          'SMS',
         );
 
       setChallenge(
         result,
       );
+      if (result.developmentCode) {
+        await verifyCustomerAccess(
+          result.challengeId,
+          result.developmentCode,
+        );
+        setStep('complete');
+        return;
+      }
       if (
         result.deliveryChannel ===
           'WHATSAPP' &&
@@ -210,7 +212,9 @@ export default function CustomerLoginScreen({
             ? 'Bakım kartındaki aracın sahibi olduğunuzu servis kaydındaki telefon numaranızla doğrulayın.'
             : 'Servis kaydında bulunan telefon numaranızı girin. Bağlı araçlarınız otomatik olarak hesabınızda görünür.'
           : step === 'whatsapp'
-            ? 'Açılan WhatsApp ekranındaki hazır mesajı değiştirmeden gönderin. Uygulama doğrulamayı otomatik algılar.'
+            ? challenge?.manualApprovalRequired
+              ? 'Hazır mesajı değiştirmeden gönderin. Ücretsiz kullanımda işletme personeli kodu onaylayınca giriş tamamlanır.'
+              : 'Açılan WhatsApp ekranındaki hazır mesajı değiştirmeden gönderin. Uygulama doğrulamayı otomatik algılar.'
             : `Kod ${challenge?.maskedPhone || 'telefonunuza'} gönderildi.`}
       </Text>
 
@@ -231,7 +235,7 @@ export default function CustomerLoginScreen({
               title={
                 busy
                   ? 'Hazırlanıyor...'
-                  : 'WhatsApp ile Ücretsiz Doğrula'
+                  : 'Geliştirme Girişi'
               }
               disabled={
                 busy ||
@@ -240,27 +244,12 @@ export default function CustomerLoginScreen({
                   '',
                 ).length < 10
               }
-              onPress={() =>
-                sendCode('WHATSAPP')
-              }
+              onPress={sendCode}
             />
 
-            <View style={styles.gap} />
-
-            <Button
-              title="SMS Kodu Gönder"
-              tone="ghost"
-              disabled={
-                busy ||
-                phone.replace(
-                  /\D/g,
-                  '',
-                ).length < 10
-              }
-              onPress={() =>
-                sendCode('SMS')
-              }
-            />
+            <Text style={styles.waitingText}>
+              WhatsApp doğrulaması geliştirme süresince kapalıdır. Yalnız tanımlı test telefonu hızlı giriş yapabilir.
+            </Text>
           </>
         ) : step === 'whatsapp' ? (
           <>
@@ -278,7 +267,9 @@ export default function CustomerLoginScreen({
             <Message text={error} />
 
             <Text style={styles.waitingText}>
-              Mesajı gönderdikten sonra işletme personelinin onayı bekleniyor…
+              {challenge?.manualApprovalRequired
+                ? 'Mesajı gönderdikten sonra işletme personelinin onayı bekleniyor…'
+                : 'WhatsApp mesajının doğrulanması bekleniyor…'}
             </Text>
           </>
         ) : (

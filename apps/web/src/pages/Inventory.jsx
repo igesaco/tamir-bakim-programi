@@ -26,6 +26,8 @@ export default function Inventory() {
     useState([]);
   const [movements, setMovements] =
     useState([]);
+  const [procurement, setProcurement] =
+    useState([]);
   const [branches, setBranches] =
     useState([]);
   const [selectedBranchId, setSelectedBranchId] =
@@ -90,6 +92,7 @@ export default function Inventory() {
       setStock([]);
       setLowStock([]);
       setMovements([]);
+      setProcurement([]);
       return;
     }
 
@@ -97,7 +100,7 @@ export default function Inventory() {
       branchId,
     };
 
-    const [s, l, m] =
+    const [s, l, m, procurementResponse] =
       await Promise.all([
         api.get('/inventory/stock', {
           params,
@@ -108,11 +111,25 @@ export default function Inventory() {
         api.get('/inventory/movements', {
           params,
         }),
+        api.get('/inventory/procurement-requests', { params }),
       ]);
 
     setStock(s.data);
     setLowStock(l.data);
     setMovements(m.data);
+    setProcurement(procurementResponse.data);
+  }
+
+  async function updateProcurement(id, status) {
+    setError(''); setMessage('');
+    try {
+      await api.patch(`/inventory/procurement-requests/${id}`, { status });
+      setMessage(status === 'ORDERED' ? 'Parça siparişe alındı.' : status === 'RECEIVED' ? 'Parça teslim alındı ve rezervasyon yenilendi.' : 'Tedarik talebi kapatıldı.');
+      await loadBranchData(selectedBranchId);
+    } catch (err) {
+      const detail = err?.response?.data?.message;
+      setError(Array.isArray(detail) ? detail.join(', ') : detail || 'Tedarik talebi güncellenemedi.');
+    }
   }
 
   useEffect(() => {
@@ -347,6 +364,10 @@ export default function Inventory() {
           <strong>
             {lowStock.length}
           </strong>
+        </div>
+        <div className="stat-card">
+          <span>Açık Tedarik</span>
+          <strong>{procurement.filter(item => ['OPEN', 'ORDERED'].includes(item.status)).length}</strong>
         </div>
       </div>
 
@@ -625,6 +646,8 @@ export default function Inventory() {
                 <th>Parça</th>
                 <th>Marka</th>
                 <th>Miktar</th>
+                <th>Rezerve</th>
+                <th>Kullanılabilir</th>
                 <th>Min.</th>
                 <th>Satış</th>
               </tr>
@@ -654,6 +677,9 @@ export default function Inventory() {
                       )}
                     </td>
 
+                    <td>{Number(item.reservedQuantity || 0)}</td>
+                    <td>{Number(item.availableQuantity ?? item.quantity)}</td>
+
                     <td>
                       {Number(
                         item.minQuantity,
@@ -676,11 +702,36 @@ export default function Inventory() {
 
               {!stock.length && (
                 <tr>
-                  <td colSpan="5">
+                  <td colSpan="7">
                     Seçili şubede stok kaydı yok.
                   </td>
                 </tr>
               )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="panel-card spaced-card">
+        <h3>Parça Tedarik Kuyruğu</h3>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>İş Emri</th><th>Araç</th><th>Parça</th><th>Eksik</th><th>Durum</th><th></th></tr></thead>
+            <tbody>
+              {procurement.map(request => (
+                <tr key={request.id}>
+                  <td>{request.serviceOrder?.orderNumber}</td>
+                  <td>{request.serviceOrder?.vehicle?.plate}</td>
+                  <td><strong>{request.partName}</strong></td>
+                  <td>{Number(request.quantity)}</td>
+                  <td>{request.status === 'OPEN' ? 'Talep Açık' : request.status === 'ORDERED' ? 'Sipariş Verildi' : request.status === 'RECEIVED' ? 'Teslim Alındı' : 'İptal'}</td>
+                  <td>
+                    {request.status === 'OPEN' && <button className="small-button" onClick={() => updateProcurement(request.id, 'ORDERED')}>Siparişe Al</button>}
+                    {request.status === 'ORDERED' && <button className="small-button" onClick={() => updateProcurement(request.id, 'RECEIVED')}>Teslim Al</button>}
+                  </td>
+                </tr>
+              ))}
+              {!procurement.length && <tr><td colSpan="6">Eksik parça talebi bulunmuyor.</td></tr>}
             </tbody>
           </table>
         </div>
