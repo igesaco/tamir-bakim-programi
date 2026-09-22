@@ -16,3 +16,9 @@ apps/mobile/.expo/
 apps/mobile/assets/icon.png
 apps/mobile/assets/splash.png
 apps/mobile/assets/brand-logo.png
+
+.vscode/
+*.local-backup.json
+tamir-bakim-programi/
+*-YEDEK*
+

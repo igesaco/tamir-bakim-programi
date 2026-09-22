@@ -6,6 +6,7 @@ import { useParams } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { statusLabel } from '../utils/status';
+import AiDiagnoseModal from '../components/AiDiagnoseModal';
 
 const allStatuses = [
   'ARRIVED',
@@ -45,6 +46,7 @@ export default function ServiceOrderDetail() {
   const [inspectionBusy, setInspectionBusy] = useState(false);
   const [inspectionError, setInspectionError] = useState('');
   const [uploadBusy, setUploadBusy] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   const [inspectionForm, setInspectionForm] = useState({
     mileage: '',
@@ -599,6 +601,23 @@ export default function ServiceOrderDetail() {
         </div>
 
         <div className="action-row">
+          <button
+            type="button"
+            className="small-button"
+            style={{
+              background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+              color: '#fff',
+              fontWeight: 700,
+              border: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+            onClick={() => setAiModalOpen(true)}
+          >
+            <span>🧠</span> AI Ön Teşhis
+          </button>
+
           {user?.role !== 'TECHNICIAN' && (
             <a
               className="small-button"
@@ -1652,6 +1671,23 @@ export default function ServiceOrderDetail() {
             </div>
           </div>
         </>
+      )}
+
+      {order && (
+        <AiDiagnoseModal
+          isOpen={aiModalOpen}
+          onClose={() => setAiModalOpen(false)}
+          vehicle={order.vehicle}
+          initialComplaint={order.complaint || inspectionForm.customerComplaint || ''}
+          onApplyPart={(partName) => {
+            setItemForm((prev) => ({
+              ...prev,
+              type: 'PART',
+              name: partName,
+            }));
+            setAiModalOpen(false);
+          }}
+        />
       )}
     </>
   );

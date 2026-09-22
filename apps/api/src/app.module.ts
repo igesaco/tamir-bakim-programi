@@ -13,6 +13,7 @@ import {
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
+import { AiModule } from './ai/ai.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
@@ -77,6 +78,7 @@ mkdirSync(
     AuditModule,
     ReportsModule,
     VehicleCatalogModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_INTERCEPTOR, useClass: SafeResponseInterceptor }],

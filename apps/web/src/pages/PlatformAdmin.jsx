@@ -1,4 +1,4 @@
-﻿import {
+import {
   useEffect,
   useMemo,
   useState,
@@ -2989,6 +2989,15 @@ export default function PlatformAdmin() {
                         </option>
                         <option value="focus">
                           Çalışma Alanı
+                        </option>
+                        <option value="command">
+                          Komuta Merkezi
+                        </option>
+                        <option value="tablet">
+                          Tablet
+                        </option>
+                        <option value="terminal">
+                          Terminal
                         </option>
                       </select>
                     </label>

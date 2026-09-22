@@ -1,4 +1,4 @@
-﻿import {
+import {
   useEffect,
   useMemo,
   useState,
@@ -212,6 +212,17 @@ const desktopWallpapers = [
     label: 'Füme',
   },
 ];
+
+const panelModes = [
+  { value: 'classic', label: 'Klasik', icon: 'dashboard' },
+  { value: 'desktop', label: 'Masaüstü', icon: 'folder' },
+  { value: 'focus', label: 'Çalışma Alanı', icon: 'reports' },
+  { value: 'command', label: 'Komuta Merkezi', icon: 'settings' },
+  { value: 'tablet', label: 'Tablet', icon: 'branch' },
+  { value: 'terminal', label: 'Terminal', icon: 'service' },
+];
+
+const ALL_MODES = panelModes.map(m => m.value);
 
 
 
@@ -441,7 +452,7 @@ export default function DashboardLayout() {
     '#111419';
 
   const tenantDefaultMode =
-    ['classic', 'desktop', 'focus'].includes(
+    ALL_MODES.includes(
       organization.defaultPanelMode,
     )
       ? organization.defaultPanelMode
@@ -499,8 +510,21 @@ export default function DashboardLayout() {
   const tabsStorageKey =
     `tb-desktop-tabs:${user?.id || 'default'}`;
 
-  const uiMode =
-    tenantDefaultMode;
+  const [uiMode, setUiMode] =
+    useState(() => {
+      const stored = localStorage.getItem(
+        `tb-ui-mode:${user?.id || 'default'}`,
+      );
+      if (stored && ALL_MODES.includes(stored)) return stored;
+      return tenantDefaultMode;
+    });
+
+  useEffect(() => {
+    localStorage.setItem(
+      `tb-ui-mode:${user?.id || 'default'}`,
+      uiMode,
+    );
+  }, [uiMode, user?.id]);
 
   const [theme, setTheme] =
     useState(() => {
@@ -552,31 +576,33 @@ export default function DashboardLayout() {
     setDesktopWindowMaximized,
   ] = useState(false);
 
+  const [
+    tabletMoreOpen,
+    setTabletMoreOpen,
+  ] = useState(false);
+
+  const [
+    paletteOpen,
+    setPaletteOpen,
+  ] = useState(false);
+
+  const [
+    paletteQuery,
+    setPaletteQuery,
+  ] = useState('');
+
   useEffect(() => {
-    const stored =
-      localStorage.getItem(
-        themeStorageKey,
-      );
-
-    setTheme(
-      stored === 'light'
-        ? 'light'
-        : 'dark',
-    );
-  }, [themeStorageKey]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      themeStorageKey,
-      theme,
-    );
-
-    document.documentElement.dataset.theme =
-      theme;
-  }, [
-    themeStorageKey,
-    theme,
-  ]);
+    function handlePaletteKey(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setPaletteOpen(v => !v);
+        setPaletteQuery('');
+      }
+      if (e.key === 'Escape') setPaletteOpen(false);
+    }
+    window.addEventListener('keydown', handlePaletteKey);
+    return () => window.removeEventListener('keydown', handlePaletteKey);
+  }, []);
 
   const visibleMenu =
     useMemo(
@@ -605,6 +631,40 @@ export default function DashboardLayout() {
         user?.permissions,
       ],
     );
+
+  const paletteResults = paletteQuery.trim()
+    ? visibleMenu.filter(item =>
+        item.label.toLocaleLowerCase('tr-TR').includes(
+          paletteQuery.toLocaleLowerCase('tr-TR'),
+        ),
+      )
+    : visibleMenu;
+
+  useEffect(() => {
+    const stored =
+      localStorage.getItem(
+        themeStorageKey,
+      );
+
+    setTheme(
+      stored === 'light'
+        ? 'light'
+        : 'dark',
+    );
+  }, [themeStorageKey]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      themeStorageKey,
+      theme,
+    );
+
+    document.documentElement.dataset.theme =
+      theme;
+  }, [
+    themeStorageKey,
+    theme,
+  ]);
 
   const currentPage =
     getPageInfo(
@@ -762,6 +822,188 @@ export default function DashboardLayout() {
       </button>
     </div>
   );
+
+  const modeSwitcher = (
+    <div className="mode-switcher">
+      <select
+        value={uiMode}
+        onChange={(e) => setUiMode(e.target.value)}
+        className="mode-select"
+      >
+        {panelModes.map((m) => (
+          <option key={m.value} value={m.value}>
+            {m.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+
+  const commandPaletteOverlay = paletteOpen ? (
+    <div
+      className="command-palette-overlay"
+      onClick={() => setPaletteOpen(false)}
+    >
+      <div
+        className="command-palette"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="command-palette-header">
+          <span className="command-palette-icon">⌘</span>
+          <input
+            autoFocus
+            type="text"
+            placeholder="Sayfa ara... (Esc ile kapat)"
+            value={paletteQuery}
+            onChange={(e) =>
+              setPaletteQuery(e.target.value)
+            }
+            className="command-palette-input"
+          />
+        </div>
+        <div className="command-palette-results">
+          {paletteResults.map((item) => (
+            <button
+              key={item.path}
+              type="button"
+              className={
+                location.pathname === item.path
+                  ? 'command-palette-item active'
+                  : 'command-palette-item'
+              }
+              onClick={() => {
+                navigate(item.path);
+                setPaletteOpen(false);
+              }}
+            >
+              <MenuIcon
+                name={item.icon}
+                size={20}
+              />
+              <span className="command-palette-label">
+                {item.label}
+              </span>
+              <kbd className="command-palette-short">
+                {item.short}
+              </kbd>
+            </button>
+          ))}
+          {paletteResults.length === 0 && (
+            <div className="command-palette-empty">
+              Sonuç bulunamadı
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  /* ── TABLET MODE ── */
+  if (uiMode === 'tablet') {
+    const tabItems = visibleMenu.slice(0, 4);
+    const moreItems = visibleMenu.slice(4);
+
+    return (
+      <div
+        className={`app-shell ui-mode-tablet theme-${theme}`}
+        style={brandingStyle}
+      >
+        {commandPaletteOverlay}
+
+        <header className="tablet-header">
+          <div className="tablet-brand">
+            <strong>
+              {organization.name || 'Tamir Bakım'}
+            </strong>
+            <span>{currentPage.label}</span>
+          </div>
+          <div className="tablet-actions">
+            {modeSwitcher}
+            {themeControl}
+            <button
+              type="button"
+              onClick={logout}
+              className="tablet-logout"
+            >
+              Çıkış
+            </button>
+          </div>
+        </header>
+
+        <section className="tablet-content page-area">
+          <Outlet />
+        </section>
+
+        <nav className="tablet-tab-bar">
+          {tabItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/'}
+              className={({ isActive }) =>
+                isActive
+                  ? 'tablet-tab active'
+                  : 'tablet-tab'
+              }
+            >
+              <MenuIcon
+                name={item.icon}
+                size={26}
+              />
+              <span>{item.short}</span>
+            </NavLink>
+          ))}
+          {moreItems.length > 0 && (
+            <button
+              type="button"
+              className={
+                tabletMoreOpen
+                  ? 'tablet-tab active'
+                  : 'tablet-tab'
+              }
+              onClick={() =>
+                setTabletMoreOpen((v) => !v)
+              }
+            >
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="5" r="1" />
+                <circle cx="12" cy="12" r="1" />
+                <circle cx="12" cy="19" r="1" />
+              </svg>
+              <span>Daha</span>
+            </button>
+          )}
+        </nav>
+
+        {tabletMoreOpen && moreItems.length > 0 && (
+          <div className="tablet-more-menu">
+            <div className="tablet-more-grid">
+              {moreItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    isActive
+                      ? 'tablet-more-item active'
+                      : 'tablet-more-item'
+                  }
+                  onClick={() =>
+                    setTabletMoreOpen(false)
+                  }
+                >
+                  <MenuIcon
+                    name={item.icon}
+                    size={28}
+                  />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (
     uiMode === 'desktop'
@@ -1196,6 +1438,35 @@ export default function DashboardLayout() {
       </aside>
 
       <main className="main-area">
+        {uiMode === 'command' && (
+          <div className="command-status-bar">
+            <div className="status-item">
+              <span className="status-dot live" />
+              <span>Sistem Aktif</span>
+            </div>
+            <div className="status-item">
+              <button
+                type="button"
+                className="status-palette-trigger"
+                onClick={() => setPaletteOpen(true)}
+              >
+                <kbd>Ctrl+K</kbd>
+                <span>Komut Paleti</span>
+              </button>
+            </div>
+            <div className="status-item">
+              <span>
+                {user?.firstName}{' '}
+                {user?.lastName}
+              </span>
+              <span className="status-role">
+                {roleLabels[user?.role] ||
+                  user?.role}
+              </span>
+            </div>
+          </div>
+        )}
+
         <header className="topbar">
           <div className="topbar-identity">
             <h2>
@@ -1211,6 +1482,8 @@ export default function DashboardLayout() {
           </div>
 
           <div className="ui-mode-control">
+            {modeSwitcher}
+
             <div className="ui-mode-copy">
               <strong>
                 Tema
@@ -1225,10 +1498,26 @@ export default function DashboardLayout() {
           </div>
         </header>
 
+        {uiMode === 'terminal' && (
+          <div className="terminal-breadcrumb">
+            <span className="terminal-prompt">&gt;</span>
+            <span className="terminal-path">
+              {organization.name || 'servis'}
+            </span>
+            <span className="terminal-sep">/</span>
+            <span className="terminal-current">
+              {currentPage.label}
+            </span>
+            <span className="terminal-cursor">_</span>
+          </div>
+        )}
+
         <section className="page-area">
           <Outlet />
         </section>
       </main>
+
+      {commandPaletteOverlay}
     </div>
   );
 }

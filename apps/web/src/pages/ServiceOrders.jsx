@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { statusLabel } from '../utils/status';
+import AiDiagnoseModal from '../components/AiDiagnoseModal';
 
 export default function ServiceOrders() {
   const { user } = useAuth();
@@ -21,6 +22,7 @@ export default function ServiceOrders() {
 
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   const canCreate = [
     'OWNER',
@@ -379,6 +381,26 @@ export default function ServiceOrders() {
                 }
               />
 
+              {form.complaint.trim() && (
+                <div className="full" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-6px' }}>
+                  <button
+                    type="button"
+                    className="small-button"
+                    style={{
+                      background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                      color: '#fff',
+                      border: 'none',
+                      fontSize: '11px',
+                      padding: '5px 12px',
+                      fontWeight: 600,
+                    }}
+                    onClick={() => setAiModalOpen(true)}
+                  >
+                    🧠 Şikayeti AI ile Ön Teşhis Et
+                  </button>
+                </div>
+              )}
+
               <textarea
                 className="full"
                 placeholder="Servis iç notu"
@@ -512,6 +534,13 @@ export default function ServiceOrders() {
           </div>
         </div>
       </div>
+
+      <AiDiagnoseModal
+        isOpen={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        vehicle={vehicles.find((v) => v.id === form.vehicleId)}
+        initialComplaint={form.complaint}
+      />
     </>
   );
 }
