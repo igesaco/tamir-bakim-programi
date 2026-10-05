@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 import {
   BrowserRouter,
   Navigate,
@@ -6,7 +6,7 @@ import {
   Routes,
 } from 'react-router-dom';
 
-import { AuthProvider } from './auth/AuthContext';
+import { AuthProvider, useAuth } from './auth/AuthContext';
 import PlatformRoute from './components/PlatformRoute';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
@@ -14,6 +14,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 
 import Login from './pages/Login';
 import PlatformLogin from './pages/PlatformLogin';
+const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
 const PlatformAdmin = lazy(() => import('./pages/PlatformAdmin'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 
@@ -115,12 +116,38 @@ function ForRoles({
   );
 }
 
+function HomeRoute() {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return <div className="loading-screen">Ekran yükleniyor...</div>;
+  }
+  if (!user) {
+    return <LandingPage />;
+  }
+  return <Navigate to="/dashboard" replace />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Suspense fallback={<div className="loading-screen">Ekran yükleniyor...</div>}>
         <Routes>
+          <Route
+            path="/"
+            element={<HomeRoute />}
+          />
+
+          <Route
+            path="/landing"
+            element={<LandingPage />}
+          />
+
+          <Route
+            path="/tanitim"
+            element={<LandingPage />}
+          />
+
           <Route
             path="/login"
             element={<Login />}
@@ -203,6 +230,18 @@ export default function App() {
           <Route element={<ProtectedLayout />}>
             <Route
               index
+              element={
+                <ForRoles
+                  roles={SERVICE_ORDER_ROLES}
+                  feature="DASHBOARD"
+                >
+                  <Dashboard />
+                </ForRoles>
+              }
+            />
+
+            <Route
+              path="dashboard"
               element={
                 <ForRoles
                   roles={SERVICE_ORDER_ROLES}

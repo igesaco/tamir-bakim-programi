@@ -14,7 +14,7 @@ import { useAuth } from '../auth/AuthContext';
 
 const menu = [
   {
-    path: '/',
+    path: '/dashboard',
     label: 'Dashboard',
     short: 'DB',
     icon: 'dashboard',

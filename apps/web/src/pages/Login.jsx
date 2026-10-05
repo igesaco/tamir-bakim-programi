@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import {
   Navigate,
   useNavigate,
@@ -14,7 +14,7 @@ function defaultPathForUser(user) {
     return '/cashier';
   }
 
-  return '/';
+  return '/dashboard';
 }
 
 export default function Login() {

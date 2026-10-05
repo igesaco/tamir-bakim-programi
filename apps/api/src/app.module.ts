@@ -39,18 +39,23 @@ import { UsersModule } from './users/users.module';
 import { VehicleCatalogModule } from './vehicle-catalog/vehicle-catalog.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
 
+const defaultUploadDir = process.env.VERCEL ? '/tmp/uploads' : './uploads';
 const mediaStorageDir =
   resolve(
     process.env.MEDIA_STORAGE_DIR ??
-      './uploads',
+      defaultUploadDir,
   );
 
-mkdirSync(
-  mediaStorageDir,
-  {
-    recursive: true,
-  },
-);
+try {
+  mkdirSync(
+    mediaStorageDir,
+    {
+      recursive: true,
+    },
+  );
+} catch (err) {
+  console.warn('Upload directory initialization notice:', err);
+}
 
 @Module({
   imports: [
