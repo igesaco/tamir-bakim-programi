@@ -7111,7 +7111,7 @@ html[data-theme="dark"] body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding: 20px 20px 0;
+  padding: 20px 20px 80px;
   background: #0c0e11;
 }
 
@@ -7431,27 +7431,33 @@ html[data-theme="dark"] body {
   overflow-y: auto;
 }
 
-/* Desktop Taskbar */
+/* Desktop Taskbar — macOS-style floating dock centered on screen */
 .desktop-taskbar {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 48px;
+  z-index: 200;
+  left: 50%;
+  right: auto;
+  bottom: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom, 12px));
+  width: min(1160px, calc(100vw - 26px));
+  height: 52px;
+  padding: 6px 12px;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
-  background: rgba(17, 20, 25, .92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-top: 1px solid #242930;
-  z-index: 200;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 14px;
+  background: rgba(17, 20, 25, .94);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, .45);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .desktop-start-button {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
   display: grid;
   place-items: center;
   border: none;
@@ -7470,14 +7476,16 @@ html[data-theme="dark"] body {
 
 .desktop-taskbar-apps {
   flex: 1;
+  min-width: 0;
   display: flex;
-  gap: 4px;
+  gap: 5px;
   overflow-x: auto;
 }
 
 .desktop-task-app {
   width: 38px;
   height: 38px;
+  flex: 0 0 38px;
   display: grid;
   place-items: center;
   border: 1px solid transparent;
@@ -7502,17 +7510,41 @@ html[data-theme="dark"] body {
 .desktop-taskbar-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.desktop-taskbar .theme-switch {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 9px;
+  background: #1a1e24;
+  border: 1px solid #2a2f36;
+}
+
+.desktop-taskbar .theme-button {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .desktop-logout-button {
-  padding: 6px 14px;
+  height: 36px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid #2d333a;
-  border-radius: 7px;
+  border-radius: 8px;
   background: #1e2229;
   color: #a0a8b2;
   font-size: 11px;
   font-weight: 600;
+  transition: all .15s;
 }
 
 .desktop-logout-button:hover {
@@ -8637,7 +8669,7 @@ html[data-theme="dark"] body {
 
 [data-theme="light"] .desktop-taskbar {
   background: rgba(255, 255, 255, .9);
-  border-top-color: #dce0e5;
+  border-color: #dce0e5;
 }
 
 [data-theme="light"] .desktop-task-app {
