@@ -6,6 +6,9 @@ import { getSavedTheme, saveTheme } from '../utils/theme';
 export default function Settings() {
   const { user, logout } = useAuth();
   const [currentTheme, setCurrentTheme] = useState(() => getSavedTheme(user?.id));
+  const [currentMode, setCurrentMode] = useState(() => {
+    return localStorage.getItem(`tb-ui-mode:${user?.id || 'default'}`) || user?.organization?.defaultPanelMode || 'classic';
+  });
   const [organization, setOrganization] = useState(null);
   const [saved, setSaved] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState('');
@@ -157,6 +160,12 @@ export default function Settings() {
     saveTheme(newTheme, user?.id);
   }
 
+  function handleModeChange(newMode) {
+    setCurrentMode(newMode);
+    localStorage.setItem(`tb-ui-mode:${user?.id || 'default'}`, newMode);
+    window.dispatchEvent(new CustomEvent('tb-mode-change', { detail: newMode }));
+  }
+
   return (
     <>
       <div className="page-heading">
@@ -172,7 +181,7 @@ export default function Settings() {
             <div>
               <h3>Görünüm ve Tema</h3>
               <p className="muted-text">
-                Programın renk temasını seçin. Seçiminiz anında uygulanır ve bu cihazda hatırlanır.
+                Programın renk temasını ve panel düzenini seçin. Seçiminiz anında uygulanır ve bu cihazda hatırlanır.
               </p>
             </div>
           </div>
@@ -237,6 +246,55 @@ export default function Settings() {
                 </span>
               )}
             </button>
+          </div>
+
+          <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '6px' }}>Panel Düzeni (Arayüz Modu)</h4>
+            <p className="muted-text" style={{ fontSize: '12px', marginBottom: '14px' }}>
+              İhtiyacınıza en uygun çalışma düzenini seçin. Seçiminiz bu cihazda anında aktif olur.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+              {[
+                { id: 'classic', icon: '🏢', title: 'Klasik', desc: 'Sol dikey menü, standart kurumsal ERP' },
+                { id: 'desktop', icon: '💻', title: 'Masaüstü', desc: 'Pencereler, masaüstü simgeleri & görev çubuğu' },
+                { id: 'focus', icon: '📐', title: 'Çalışma Alanı', desc: 'Sol menüsüz, üstten yatay gezinme, geniş ekran' },
+                { id: 'command', icon: '🛰️', title: 'Komuta Merkezi', desc: 'Kompakt menü, canlı durum çubuğu & HUD' },
+                { id: 'tablet', icon: '📱', title: 'Tablet', desc: 'Dokunmatik ekran için büyük alt sekmeler' },
+                { id: 'terminal', icon: '📟', title: 'Terminal', desc: 'Matrix / hacker konsolu ve CLI arayüzü' },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => handleModeChange(m.id)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    gap: '6px',
+                    padding: '14px',
+                    borderRadius: '10px',
+                    border: currentMode === m.id ? '2px solid #3b82f6' : '1px solid #334155',
+                    background: currentMode === m.id ? 'rgba(59, 130, 246, 0.12)' : 'rgba(255, 255, 255, 0.03)',
+                    color: 'inherit',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <span style={{ fontSize: '24px' }}>{m.icon}</span>
+                    {currentMode === m.id && (
+                      <span style={{ fontSize: '10px', background: '#3b82f6', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                        Aktif
+                      </span>
+                    )}
+                  </div>
+                  <strong style={{ fontSize: '13px', marginTop: '4px' }}>{m.title}</strong>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', lineHeight: '1.3' }}>{m.desc}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

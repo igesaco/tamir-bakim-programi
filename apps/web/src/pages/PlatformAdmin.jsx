@@ -2982,24 +2982,32 @@ export default function PlatformAdmin() {
                         }
                       >
                         <option value="classic">
-                          Klasik
+                          Klasik (Sol Menü - Standart ERP)
                         </option>
                         <option value="desktop">
-                          Masaüstü
+                          Masaüstü (Pencereler & Simgeler)
                         </option>
                         <option value="focus">
-                          Çalışma Alanı
+                          Çalışma Alanı (Yatay Üst Menü)
                         </option>
                         <option value="command">
-                          Komuta Merkezi
+                          Komuta Merkezi (Durum Çubuğu + Hızlı Arama)
                         </option>
                         <option value="tablet">
-                          Tablet
+                          Tablet (Dokunmatik Alt Sekmeler)
                         </option>
                         <option value="terminal">
-                          Terminal
+                          Terminal (Teknik Konsol Arayüzü)
                         </option>
                       </select>
+                      <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px', lineHeight: '1.4' }}>
+                        {(selected.defaultPanelMode === 'classic' || !selected.defaultPanelMode) && '📌 Klasik: Solda dikey menü ve üstte başlık alanı olan standart ERP düzeni (Önerilen).'}
+                        {selected.defaultPanelMode === 'desktop' && '📌 Masaüstü: Windows tarzı masaüstü simgeleri ve pencere içinde pencerelerle çoklu görev düzeni.'}
+                        {selected.defaultPanelMode === 'focus' && '📌 Çalışma Alanı: Sol menüyü kaldırıp üstte yatay menü sunar; içerik alanını ferahlatır.'}
+                        {selected.defaultPanelMode === 'command' && '📌 Komuta Merkezi: Sol menü + üstte canlı sistem durum çubuğu ve hızlı komut paleti.'}
+                        {selected.defaultPanelMode === 'tablet' && '📌 Tablet: Dokunmatik ekranlar için altta büyük parmak dostu sekmeler.'}
+                        {selected.defaultPanelMode === 'terminal' && '📌 Terminal: Hızlı klavye kullanımı ve kod/konsol stili teknik arayüz.'}
+                      </div>
                     </label>
 
                     <label className="branding-mode-field">
@@ -3030,60 +3038,139 @@ export default function PlatformAdmin() {
 
                     <div
                       className={
-                        `branding-preview full branding-preview-${selected.defaultWallpaper || 'soft'}`
+                        `branding-preview full branding-preview-${selected.defaultWallpaper || 'soft'} mode-${selected.defaultPanelMode || 'classic'}`
                       }
                       style={{
-                        '--preview-primary':
-                          selected.primaryColor ||
-                          '#F59E0B',
-                        '--preview-secondary':
-                          selected.secondaryColor ||
-                          '#E9EDF2',
-                        '--preview-sidebar':
-                          selected.sidebarColor ||
-                          '#111419',
+                        '--preview-primary': selected.primaryColor || '#F59E0B',
+                        '--preview-secondary': selected.secondaryColor || '#E9EDF2',
+                        '--preview-sidebar': selected.sidebarColor || '#111419',
+                        borderRadius: '14px',
+                        overflow: 'hidden',
+                        border: '1px solid #30363d',
+                        background: '#0d1117',
+                        minHeight: '200px',
+                        display: 'flex',
+                        flexDirection: 'column',
                       }}
                     >
-                      <aside>
-                        <div
-                          className="branding-preview-logo"
-                          style={{
-                            background:
-                              selected.primaryColor ||
-                              '#F59E0B',
-                          }}
-                        >
-                          {selected.logoUrl ? (
-                            <img
-                              src={selected.logoUrl}
-                              alt=""
-                            />
-                          ) : (
-                            selected.name
-                              ?.charAt(0)
-                              .toLocaleUpperCase(
-                                'tr-TR',
-                              ) || 'T'
-                          )}
+                      {/* Live Mockup Header according to mode */}
+                      {selected.defaultPanelMode === 'focus' ? (
+                        <div style={{ height: '48px', background: 'var(--preview-sidebar)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--preview-primary)', display: 'grid', placeItems: 'center', fontWeight: 'bold', fontSize: '11px', color: '#111' }}>
+                              {selected.name?.charAt(0) || 'T'}
+                            </div>
+                            <strong style={{ fontSize: '12px', color: 'var(--preview-secondary)' }}>{selected.name}</strong>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px', fontSize: '10px', color: '#94a3b8' }}>
+                            <span style={{ color: 'var(--preview-primary)', fontWeight: 'bold' }}>Dashboard</span>
+                            <span>Müşteriler</span>
+                            <span>İş Emirleri</span>
+                            <span>Teklifler</span>
+                          </div>
                         </div>
+                      ) : selected.defaultPanelMode === 'tablet' ? (
+                        <div style={{ height: '42px', background: 'var(--preview-sidebar)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                          <strong style={{ fontSize: '12px', color: 'var(--preview-secondary)' }}>{selected.name} (Tablet Modu)</strong>
+                          <span style={{ fontSize: '10px', color: '#94a3b8' }}>Çıkış</span>
+                        </div>
+                      ) : null}
 
-                        <strong>
-                          {selected.name}
-                        </strong>
+                      {/* Main body of preview */}
+                      <div style={{ display: 'flex', flex: 1, minHeight: '140px' }}>
+                        {/* Sidebar for classic, command, terminal */}
+                        {['classic', 'command', 'terminal', undefined, ''].includes(selected.defaultPanelMode) && (
+                          <aside style={{ width: '160px', padding: '16px', background: 'var(--preview-sidebar)', borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                              <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--preview-primary)', display: 'grid', placeItems: 'center', fontWeight: 'bold', fontSize: '11px', color: '#111' }}>
+                                {selected.name?.charAt(0) || 'T'}
+                              </div>
+                              <div style={{ overflow: 'hidden' }}>
+                                <strong style={{ fontSize: '11px', color: 'var(--preview-secondary)', display: 'block', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected.name}</strong>
+                                <span style={{ fontSize: '8px', color: '#64748b' }}>{selected.panelTitle || 'Yönetim'}</span>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '10px' }}>
+                              <div style={{ padding: '4px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.08)', color: 'var(--preview-primary)', fontWeight: 'bold' }}>Dashboard</div>
+                              <div style={{ padding: '4px 8px', color: '#94a3b8' }}>Müşteriler</div>
+                              <div style={{ padding: '4px 8px', color: '#94a3b8' }}>İş Emirleri</div>
+                            </div>
+                          </aside>
+                        )}
 
-                        <span>
-                          {selected.panelTitle ||
-                            'Yönetim Paneli'}
-                        </span>
-                      </aside>
+                        {/* Content area */}
+                        {selected.defaultPanelMode === 'desktop' ? (
+                          <div style={{ flex: 1, padding: '16px', background: selected.defaultWallpaper === 'technical' ? '#0f172a' : selected.defaultWallpaper === 'graphite' ? '#18181b' : '#0c1015', position: 'relative' }}>
+                            <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
+                              <div style={{ textAlign: 'center', fontSize: '9px', color: '#cbd5e1' }}>
+                                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.1)', margin: '0 auto 4px', display: 'grid', placeItems: 'center' }}>📊</div>
+                                Dashboard
+                              </div>
+                              <div style={{ textAlign: 'center', fontSize: '9px', color: '#cbd5e1' }}>
+                                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.1)', margin: '0 auto 4px', display: 'grid', placeItems: 'center' }}>👥</div>
+                                Müşteriler
+                              </div>
+                              <div style={{ textAlign: 'center', fontSize: '9px', color: '#cbd5e1' }}>
+                                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.1)', margin: '0 auto 4px', display: 'grid', placeItems: 'center' }}>🔧</div>
+                                İş Emirleri
+                              </div>
+                            </div>
+                            <div style={{ border: '1px solid #334155', borderRadius: '8px', background: '#1e293b', overflow: 'hidden' }}>
+                              <div style={{ height: '22px', background: '#0f172a', padding: '0 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '9px', color: '#94a3b8' }}>
+                                <span>Pencere: Atölye Panosu</span>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
+                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#eab308', display: 'inline-block' }} />
+                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                                </div>
+                              </div>
+                              <div style={{ padding: '10px', fontSize: '10px', color: '#cbd5e1' }}>
+                                <div style={{ height: '24px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', marginBottom: '6px' }} />
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <main style={{ flex: 1, padding: '16px', background: '#101318', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {selected.defaultPanelMode === 'command' && (
+                              <div style={{ padding: '6px 12px', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '6px', fontSize: '9px', color: '#34d399', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>● SİSTEM AKTİF (Komuta Modu)</span>
+                                <span>Ctrl+K Komut Paleti</span>
+                              </div>
+                            )}
+                            {selected.defaultPanelMode === 'terminal' && (
+                              <div style={{ padding: '6px 10px', background: '#05070a', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '4px', fontFamily: 'monospace', fontSize: '9px', color: '#4ade80' }}>
+                                &gt; tamir-bakim:~$ servis status --active [OK]
+                              </div>
+                            )}
 
-                      <main>
-                        <span>
-                          Dashboard
-                        </span>
-                        <div />
-                        <div />
-                      </main>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <strong style={{ fontSize: '13px', color: 'var(--preview-secondary)' }}>Dashboard & Yönetim</strong>
+                              <span style={{ fontSize: '10px', color: 'var(--preview-primary)', padding: '2px 8px', borderRadius: '4px', background: 'rgba(245, 158, 11, 0.1)' }}>Canlı</span>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                              <div style={{ height: '38px', borderRadius: '6px', background: '#171c21', border: '1px solid #2c343c', borderLeft: '3px solid var(--preview-primary)', padding: '6px 10px' }}>
+                                <span style={{ fontSize: '8px', color: '#64748b' }}>Kasa</span>
+                                <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#22c55e' }}>0,00 ₺</div>
+                              </div>
+                              <div style={{ height: '38px', borderRadius: '6px', background: '#171c21', border: '1px solid #2c343c', borderLeft: '3px solid #3b82f6', padding: '6px 10px' }}>
+                                <span style={{ fontSize: '8px', color: '#64748b' }}>Aktif İşler</span>
+                                <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#3b82f6' }}>0 Araç</div>
+                              </div>
+                            </div>
+                          </main>
+                        )}
+                      </div>
+
+                      {/* Tablet bottom tab bar */}
+                      {selected.defaultPanelMode === 'tablet' && (
+                        <div style={{ height: '40px', background: 'var(--preview-sidebar)', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-around', alignItems: 'center', fontSize: '9px', color: '#94a3b8' }}>
+                          <span style={{ color: 'var(--preview-primary)', fontWeight: 'bold' }}>📊 Panel</span>
+                          <span>👥 Müşteri</span>
+                          <span>🔧 İş Emri</span>
+                          <span>☰ Daha</span>
+                        </div>
+                      )}
                     </div>
 
                     <button

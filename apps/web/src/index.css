@@ -9820,3 +9820,175 @@ html[data-theme="dark"] body {
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* ═══════════════════════════════════════════════
+   MODE 3 — FOCUS (Çalışma Alanı / Üst Menü)
+   Sol menüsüz, tam genişlik, ferah çalışma alanı
+   ═══════════════════════════════════════════════ */
+.ui-mode-focus {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #0b0f14;
+}
+
+.focus-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 64px;
+  padding: 0 24px;
+  background: #111419;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.focus-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.focus-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.focus-brand-text strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.focus-brand-text span {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.focus-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  max-width: 60vw;
+  padding: 4px 0;
+  scrollbar-width: none;
+}
+
+.focus-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.focus-nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.focus-nav-item:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.focus-nav-item.active {
+  color: #fff;
+  background: var(--tenant-primary, #f59e0b);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+}
+
+.focus-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.focus-user-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 12px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.focus-logout-btn {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.focus-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+}
+
+.focus-page-area {
+  flex: 1;
+  width: 100%;
+  max-width: 1680px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Focus Light Theme */
+.theme-light.ui-mode-focus {
+  background: #f1f5f9;
+}
+
+.theme-light .focus-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .focus-brand-text strong {
+  color: #0f172a;
+}
+
+.theme-light .focus-brand-text span {
+  color: #64748b;
+}
+
+.theme-light .focus-nav-item {
+  color: #475569;
+}
+
+.theme-light .focus-nav-item:hover {
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.theme-light .focus-nav-item.active {
+  color: #ffffff;
+  background: var(--tenant-primary, #d97706);
+}
+
+.theme-light .focus-user-chip {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+

@@ -454,8 +454,7 @@ export default function DashboardLayout() {
 
   const tenantDefaultMode =
     organization.defaultPanelMode &&
-    ALL_MODES.includes(organization.defaultPanelMode) &&
-    organization.defaultPanelMode !== 'desktop'
+    ALL_MODES.includes(organization.defaultPanelMode)
       ? organization.defaultPanelMode
       : 'classic';
 
@@ -511,15 +510,22 @@ export default function DashboardLayout() {
   const tabsStorageKey =
     `tb-desktop-tabs:${user?.id || 'default'}`;
 
-  const uiMode = 'classic';
+  const [uiMode, setUiMode] = useState(() => {
+    const stored = localStorage.getItem(`tb-ui-mode:${user?.id || 'default'}`);
+    if (stored && ALL_MODES.includes(stored)) return stored;
+    return tenantDefaultMode;
+  });
+
+  useEffect(() => {
+    if (organization.defaultPanelMode && ALL_MODES.includes(organization.defaultPanelMode)) {
+      setUiMode(organization.defaultPanelMode);
+      localStorage.setItem(`tb-ui-mode:${user?.id || 'default'}`, organization.defaultPanelMode);
+    }
+  }, [organization.defaultPanelMode, user?.id]);
 
   const [theme, setTheme] = useState(() => getSavedTheme(user?.id));
 
   useEffect(() => {
-    // Clear any previous experimental ui modes so the user always has the modern ERP layout
-    localStorage.removeItem(`tb-ui-mode:${user?.id || 'default'}`);
-    localStorage.setItem(`tb-ui-mode:${user?.id || 'default'}`, 'classic');
-
     const currentTheme = getSavedTheme(user?.id);
     setTheme(currentTheme);
     document.documentElement.dataset.theme = currentTheme;
@@ -529,16 +535,30 @@ export default function DashboardLayout() {
         setTheme(e.detail);
       }
     }
+    function handleModeChange(e) {
+      if (e.detail && ALL_MODES.includes(e.detail)) {
+        setUiMode(e.detail);
+        localStorage.setItem(`tb-ui-mode:${user?.id || 'default'}`, e.detail);
+      }
+    }
     function handleStorage(e) {
       if (e.key && e.key.includes('tb-ui-theme')) {
         setTheme(getSavedTheme(user?.id));
       }
+      if (e.key && e.key.includes('tb-ui-mode')) {
+        const val = localStorage.getItem(`tb-ui-mode:${user?.id || 'default'}`);
+        if (val && ALL_MODES.includes(val)) {
+          setUiMode(val);
+        }
+      }
     }
 
     window.addEventListener('tb-theme-change', handleThemeChange);
+    window.addEventListener('tb-mode-change', handleModeChange);
     window.addEventListener('storage', handleStorage);
     return () => {
       window.removeEventListener('tb-theme-change', handleThemeChange);
+      window.removeEventListener('tb-mode-change', handleModeChange);
       window.removeEventListener('storage', handleStorage);
     };
   }, [user?.id]);
@@ -881,6 +901,97 @@ export default function DashboardLayout() {
     </div>
   ) : null;
 
+  /* ── FOCUS / ÇALIŞMA ALANI MODE ── */
+  if (uiMode === 'focus') {
+    return (
+      <div
+        className={`app-shell ui-mode-focus theme-${theme}`}
+        style={brandingStyle}
+      >
+        {commandPaletteOverlay}
+
+        <header className="focus-header">
+          <div className="focus-brand">
+            <div
+              className={
+                organization.logoUrl && !logoFailed
+                  ? 'brand-mark brand-mark-image'
+                  : 'brand-mark'
+              }
+            >
+              {organization.logoUrl && !logoFailed ? (
+                <img
+                  src={organization.logoUrl}
+                  alt={organization.name || 'Logo'}
+                  onError={() => setLogoFailed(true)}
+                />
+              ) : (
+                tenantInitials
+              )}
+            </div>
+            <div className="focus-brand-text">
+              <strong>{organization.name || 'Tamir Bakım'}</strong>
+              <span>{tenantPanelTitle}</span>
+            </div>
+          </div>
+
+          <nav className="focus-nav">
+            {visibleMenu.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                end={item.path === '/'}
+                className={({ isActive }) =>
+                  isActive ? 'focus-nav-item active' : 'focus-nav-item'
+                }
+                title={item.label}
+              >
+                <MenuIcon name={item.icon} size={16} />
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="focus-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setPaletteOpen(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '6px 10px', borderRadius: '8px' }}
+              title="Hızlı Menü Arama (Ctrl+K)"
+            >
+              <span>🔍</span>
+              <kbd style={{ fontSize: '10px', opacity: 0.7 }}>Ctrl+K</kbd>
+            </button>
+            <NavLink
+              to="/settings"
+              className="secondary-button"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '6px 10px', borderRadius: '8px' }}
+              title="Ayarlar & Görünüm"
+            >
+              ⚙️
+            </NavLink>
+            <div className="focus-user-chip">
+              <span>{user?.firstName} {user?.lastName}</span>
+              <button
+                type="button"
+                onClick={logout}
+                className="focus-logout-btn"
+                title="Çıkış Yap"
+              >
+                Çıkış
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <section className="focus-page-area page-area">
+          <Outlet />
+        </section>
+      </div>
+    );
+  }
+
   /* ── TABLET MODE ── */
   if (uiMode === 'tablet') {
     const tabItems = visibleMenu.slice(0, 4);
@@ -901,8 +1012,14 @@ export default function DashboardLayout() {
             <span>{currentPage.label}</span>
           </div>
           <div className="tablet-actions">
-            {modeSwitcher}
-            {themeControl}
+            <NavLink
+              to="/settings"
+              className="tablet-logout"
+              style={{ color: 'inherit', textDecoration: 'none' }}
+              title="Ayarlar & Görünüm"
+            >
+              ⚙️
+            </NavLink>
             <button
               type="button"
               onClick={logout}
@@ -931,9 +1048,9 @@ export default function DashboardLayout() {
             >
               <MenuIcon
                 name={item.icon}
-                size={26}
+                size={24}
               />
-              <span>{item.short}</span>
+              <span>{item.label.split(' ')[0]}</span>
             </NavLink>
           ))}
           {moreItems.length > 0 && (
@@ -948,10 +1065,10 @@ export default function DashboardLayout() {
                 setTabletMoreOpen((v) => !v)
               }
             >
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="5" r="1" />
-                <circle cx="12" cy="12" r="1" />
-                <circle cx="12" cy="19" r="1" />
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="5" r="1.5" />
+                <circle cx="12" cy="12" r="1.5" />
+                <circle cx="12" cy="19" r="1.5" />
               </svg>
               <span>Daha</span>
             </button>

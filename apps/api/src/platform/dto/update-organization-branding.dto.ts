@@ -30,7 +30,7 @@ export class UpdateOrganizationBrandingDto {
   sidebarColor?: string;
 
   @IsOptional()
-  @IsIn(['classic', 'desktop', 'focus'])
+  @IsIn(['classic', 'desktop', 'focus', 'command', 'tablet', 'terminal'])
   defaultPanelMode?: string;
 
   @IsOptional()
