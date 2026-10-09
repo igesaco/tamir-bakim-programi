@@ -6,12 +6,11 @@ import express from 'express';
 import type { Express, Request, Response } from 'express';
 import helmet from 'helmet';
 
-import { AppModule } from '../dist/app.module.js';
-
 let cachedServer: Express;
 
 async function bootstrapServer(): Promise<Express> {
   if (!cachedServer) {
+    const { AppModule } = await import('../dist/app.module.js');
     const expressApp = express();
     const app = await NestFactory.create(
       AppModule,
@@ -61,6 +60,7 @@ export default async function handler(req: Request, res: Response) {
     return res.status(500).json({
       error: 'SERVERLESS_BOOTSTRAP_ERROR',
       message: err?.message || String(err),
+      stack: err?.stack,
       hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
       hasJwtSecret: Boolean(process.env.JWT_SECRET),
       tip: !process.env.DATABASE_URL
