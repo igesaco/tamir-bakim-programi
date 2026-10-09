@@ -31,7 +31,8 @@ export class JwtStrategy extends PassportStrategy(
         ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey:
-        process.env.JWT_SECRET!,
+        process.env.JWT_SECRET ||
+        'tamircim-dev-fallback-secret-key-32-chars!',
     });
   }
 

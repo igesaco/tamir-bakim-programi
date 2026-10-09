@@ -13,7 +13,8 @@ import { PlatformService } from './platform.service';
     EntitlementsModule,
     JwtModule.register({
       secret:
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET ||
+        'tamircim-dev-fallback-secret-key-32-chars!',
       signOptions: {
         expiresIn: '7d',
       },

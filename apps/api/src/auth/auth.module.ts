@@ -18,7 +18,9 @@ import { JwtStrategy } from './jwt.strategy';
     UsersModule,
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET,
+      secret:
+        process.env.JWT_SECRET ||
+        'tamircim-dev-fallback-secret-key-32-chars!',
       signOptions: {
         expiresIn: '7d',
       },

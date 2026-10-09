@@ -29,7 +29,8 @@ export class CustomerPortalJwtStrategy extends PassportStrategy(
       ignoreExpiration: false,
       secretOrKey:
         process.env.CUSTOMER_PORTAL_JWT_SECRET ||
-        process.env.JWT_SECRET!,
+        process.env.JWT_SECRET ||
+        'tamircim-dev-fallback-secret-key-32-chars!',
     });
   }
 
