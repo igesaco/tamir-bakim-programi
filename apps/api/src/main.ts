@@ -1,4 +1,4 @@
-﻿import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import {
   DocumentBuilder,
@@ -38,22 +38,11 @@ async function bootstrap() {
 
   app.use(helmet());
 
-  const defaultOrigins = [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:5173',
-  ];
-
-  const corsOrigins = process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean)
-    : defaultOrigins;
-
   app.enableCors({
-    origin: corsOrigins,
+    origin: true,
     credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type,Accept,Authorization,X-Requested-With',
   });
 
   app.useGlobalPipes(

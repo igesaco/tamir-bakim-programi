@@ -23,21 +23,11 @@ async function bootstrapServer() {
 
     app.use(helmet());
 
-    const defaultOrigins = [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'https://tamircim.vercel.app',
-    ];
-
-    const corsOrigins = process.env.CORS_ORIGINS
-      ? process.env.CORS_ORIGINS.split(',')
-          .map((item) => item.trim())
-          .filter(Boolean)
-      : defaultOrigins;
-
     app.enableCors({
-      origin: corsOrigins,
+      origin: true,
       credentials: true,
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+      allowedHeaders: 'Content-Type,Accept,Authorization,X-Requested-With',
     });
 
     app.useGlobalPipes(
