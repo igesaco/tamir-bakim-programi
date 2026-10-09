@@ -1,16 +1,19 @@
-import 'reflect-metadata';
-import { ValidationPipe } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
-import { ExpressAdapter } from '@nestjs/platform-express';
-import express from 'express';
-import type { Express, Request, Response } from 'express';
-import helmet from 'helmet';
+import type { Request, Response } from 'express';
 
-let cachedServer: Express;
+let cachedServer: any;
 
-async function bootstrapServer(): Promise<Express> {
+async function bootstrapServer() {
   if (!cachedServer) {
+    await import('reflect-metadata');
+    const { ValidationPipe } = await import('@nestjs/common');
+    const { NestFactory } = await import('@nestjs/core');
+    const { ExpressAdapter } = await import('@nestjs/platform-express');
+    const expressModule = await import('express');
+    const express = (expressModule as any).default || expressModule;
+    const helmetModule = await import('helmet');
+    const helmet = (helmetModule as any).default || helmetModule;
     const { AppModule } = await import('../dist/app.module.js');
+
     const expressApp = express();
     const app = await NestFactory.create(
       AppModule,
