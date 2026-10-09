@@ -1,9 +1,11 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { getSavedTheme, saveTheme } from '../utils/theme';
 
 export default function Settings() {
   const { user, logout } = useAuth();
+  const [currentTheme, setCurrentTheme] = useState(() => getSavedTheme(user?.id));
   const [organization, setOrganization] = useState(null);
   const [saved, setSaved] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState('');
@@ -150,6 +152,11 @@ export default function Settings() {
     }
   }
 
+  function handleThemeChange(newTheme) {
+    setCurrentTheme(newTheme);
+    saveTheme(newTheme, user?.id);
+  }
+
   return (
     <>
       <div className="page-heading">
@@ -160,6 +167,79 @@ export default function Settings() {
       </div>
 
       <div className="settings-grid">
+        <div className="panel-card" style={{ gridColumn: '1 / -1' }}>
+          <div className="card-title-row">
+            <div>
+              <h3>Görünüm ve Tema</h3>
+              <p className="muted-text">
+                Programın renk temasını seçin. Seçiminiz anında uygulanır ve bu cihazda hatırlanır.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginTop: '14px' }}>
+            <button
+              type="button"
+              onClick={() => handleThemeChange('dark')}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '20px',
+                borderRadius: '12px',
+                border: currentTheme === 'dark' ? '2px solid #3b82f6' : '1px solid #334155',
+                background: currentTheme === 'dark' ? 'rgba(59, 130, 246, 0.12)' : '#0f172a',
+                color: '#f8fafc',
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <span style={{ fontSize: '32px' }}>🌙</span>
+              <div>
+                <strong style={{ fontSize: '15px', display: 'block', marginBottom: '4px' }}>Koyu Tema</strong>
+                <span style={{ fontSize: '12px', color: '#94a3b8' }}>Göz yormayan koyu gri kurumsal arayüz</span>
+              </div>
+              {currentTheme === 'dark' && (
+                <span style={{ fontSize: '11px', background: '#3b82f6', color: '#fff', padding: '3px 10px', borderRadius: '6px', fontWeight: 600 }}>
+                  ✓ Aktif Tema
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleThemeChange('light')}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '20px',
+                borderRadius: '12px',
+                border: currentTheme === 'light' ? '2px solid #3b82f6' : '1px solid #cbd5e1',
+                background: currentTheme === 'light' ? 'rgba(59, 130, 246, 0.08)' : '#ffffff',
+                color: '#0f172a',
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <span style={{ fontSize: '32px' }}>☀️</span>
+              <div>
+                <strong style={{ fontSize: '15px', display: 'block', marginBottom: '4px' }}>Aydınlık Tema</strong>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>Ferah ve kurumsal beyaz arayüz</span>
+              </div>
+              {currentTheme === 'light' && (
+                <span style={{ fontSize: '11px', background: '#3b82f6', color: '#fff', padding: '3px 10px', borderRadius: '6px', fontWeight: 600 }}>
+                  ✓ Aktif Tema
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
         {['OWNER', 'MANAGER', 'SERVICE_ADVISOR'].includes(user?.role) && (
           <div className="panel-card">
             <h3>WhatsApp Müşteri Giriş Onayı</h3>

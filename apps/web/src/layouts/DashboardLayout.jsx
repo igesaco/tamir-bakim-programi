@@ -11,6 +11,7 @@ import {
 } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
+import { getSavedTheme } from '../utils/theme';
 
 const menu = [
   {
@@ -510,34 +511,37 @@ export default function DashboardLayout() {
   const tabsStorageKey =
     `tb-desktop-tabs:${user?.id || 'default'}`;
 
-  const [uiMode, setUiMode] =
-    useState(() => {
-      const stored = localStorage.getItem(
-        `tb-ui-mode:${user?.id || 'default'}`,
-      );
-      if (stored === 'desktop') return 'classic';
-      if (stored && ALL_MODES.includes(stored)) return stored;
-      return 'classic';
-    });
+  const uiMode = 'classic';
+
+  const [theme, setTheme] = useState(() => getSavedTheme(user?.id));
 
   useEffect(() => {
-    localStorage.setItem(
-      `tb-ui-mode:${user?.id || 'default'}`,
-      uiMode,
-    );
-  }, [uiMode, user?.id]);
+    // Clear any previous experimental ui modes so the user always has the modern ERP layout
+    localStorage.removeItem(`tb-ui-mode:${user?.id || 'default'}`);
+    localStorage.setItem(`tb-ui-mode:${user?.id || 'default'}`, 'classic');
 
-  const [theme, setTheme] =
-    useState(() => {
-      const stored =
-        localStorage.getItem(
-          themeStorageKey,
-        );
+    const currentTheme = getSavedTheme(user?.id);
+    setTheme(currentTheme);
+    document.documentElement.dataset.theme = currentTheme;
 
-      return stored === 'light'
-        ? 'light'
-        : 'dark';
-    });
+    function handleThemeChange(e) {
+      if (e.detail) {
+        setTheme(e.detail);
+      }
+    }
+    function handleStorage(e) {
+      if (e.key && e.key.includes('tb-ui-theme')) {
+        setTheme(getSavedTheme(user?.id));
+      }
+    }
+
+    window.addEventListener('tb-theme-change', handleThemeChange);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('tb-theme-change', handleThemeChange);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [user?.id]);
 
   const desktopWallpaper =
     tenantDefaultWallpaper;
@@ -642,30 +646,8 @@ export default function DashboardLayout() {
     : visibleMenu;
 
   useEffect(() => {
-    const stored =
-      localStorage.getItem(
-        themeStorageKey,
-      );
-
-    setTheme(
-      stored === 'light'
-        ? 'light'
-        : 'dark',
-    );
-  }, [themeStorageKey]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      themeStorageKey,
-      theme,
-    );
-
-    document.documentElement.dataset.theme =
-      theme;
-  }, [
-    themeStorageKey,
-    theme,
-  ]);
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 
   const currentPage =
     getPageInfo(
@@ -1482,20 +1464,25 @@ export default function DashboardLayout() {
             </span>
           </div>
 
-          <div className="ui-mode-control">
-            {modeSwitcher}
-
-            <div className="ui-mode-copy">
-              <strong>
-                Tema
-              </strong>
-
-              <span>
-                Kişisel görünüm
-              </span>
-            </div>
-
-            {themeControl}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setPaletteOpen(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '7px 12px', borderRadius: '8px' }}
+              title="Hızlı Menü Arama (Ctrl+K)"
+            >
+              <span>🔍 Menü Ara</span>
+              <kbd style={{ fontSize: '10px', opacity: 0.7 }}>Ctrl+K</kbd>
+            </button>
+            <NavLink
+              to="/settings"
+              className="secondary-button"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '7px 12px', borderRadius: '8px' }}
+              title="Yönetim & Görünüm Ayarları"
+            >
+              ⚙️ Ayarlar
+            </NavLink>
           </div>
         </header>
 

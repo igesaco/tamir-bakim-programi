@@ -1,9 +1,10 @@
-﻿import {
+import {
   useState,
 } from 'react';
 
 import api from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { getSavedTheme, saveTheme } from '../utils/theme';
 
 const roleLabels = {
   OWNER: 'Kurucu',
@@ -19,6 +20,13 @@ export default function Account() {
     user,
     logout,
   } = useAuth();
+
+  const [currentTheme, setCurrentTheme] = useState(() => getSavedTheme(user?.id));
+
+  function handleThemeChange(newTheme) {
+    setCurrentTheme(newTheme);
+    saveTheme(newTheme, user?.id);
+  }
 
   const [
     passwordForm,
@@ -118,6 +126,80 @@ export default function Account() {
           {error}
         </div>
       )}
+
+      {/* Görünüm ve Tema */}
+      <div className="panel-card" style={{ marginBottom: '20px' }}>
+        <div className="card-title-row">
+          <div>
+            <h3>Görünüm ve Tema</h3>
+            <p className="muted-text">
+              Programın renk temasını seçin. Seçiminiz anında uygulanır ve bu cihazda hatırlanır.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginTop: '14px' }}>
+          <button
+            type="button"
+            onClick={() => handleThemeChange('dark')}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '20px',
+              borderRadius: '12px',
+              border: currentTheme === 'dark' ? '2px solid #3b82f6' : '1px solid #334155',
+              background: currentTheme === 'dark' ? 'rgba(59, 130, 246, 0.12)' : '#0f172a',
+              color: '#f8fafc',
+              cursor: 'pointer',
+              textAlign: 'center',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <span style={{ fontSize: '32px' }}>🌙</span>
+            <div>
+              <strong style={{ fontSize: '15px', display: 'block', marginBottom: '4px' }}>Koyu Tema</strong>
+              <span style={{ fontSize: '12px', color: '#94a3b8' }}>Göz yormayan koyu gri kurumsal arayüz</span>
+            </div>
+            {currentTheme === 'dark' && (
+              <span style={{ fontSize: '11px', background: '#3b82f6', color: '#fff', padding: '3px 10px', borderRadius: '6px', fontWeight: 600 }}>
+                ✓ Aktif Tema
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleThemeChange('light')}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '20px',
+              borderRadius: '12px',
+              border: currentTheme === 'light' ? '2px solid #3b82f6' : '1px solid #cbd5e1',
+              background: currentTheme === 'light' ? 'rgba(59, 130, 246, 0.08)' : '#ffffff',
+              color: '#0f172a',
+              cursor: 'pointer',
+              textAlign: 'center',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <span style={{ fontSize: '32px' }}>☀️</span>
+            <div>
+              <strong style={{ fontSize: '15px', display: 'block', marginBottom: '4px' }}>Aydınlık Tema</strong>
+              <span style={{ fontSize: '12px', color: '#64748b' }}>Ferah ve kurumsal beyaz arayüz</span>
+            </div>
+            {currentTheme === 'light' && (
+              <span style={{ fontSize: '11px', background: '#3b82f6', color: '#fff', padding: '3px 10px', borderRadius: '6px', fontWeight: 600 }}>
+                ✓ Aktif Tema
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
 
       <div className="content-grid">
         <div className="panel-card">
