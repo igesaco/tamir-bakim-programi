@@ -2,9 +2,11 @@ import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
-import express, { Express, Request, Response } from 'express';
+import express from 'express';
+import type { Express, Request, Response } from 'express';
 import helmet from 'helmet';
-import { AppModule } from '../src/app.module';
+
+import { AppModule } from '../dist/app.module.js';
 
 let cachedServer: Express;
 
