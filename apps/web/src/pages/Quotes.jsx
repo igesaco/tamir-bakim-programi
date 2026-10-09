@@ -426,62 +426,74 @@ export default function Quotes() {
 
       <ActionNotice error={error} />
 
-      <div className="panel-card quote-work-queue">
-        <div className="card-title-row">
-          <div>
-            <h3>Teklif Bekleyen İşler</h3>
-            <p className="muted-text">
-              Ayrı bir fiyatlandırma ekranı yok. İş emrini seçip aynı kalemleri burada fiyatlandırın.
-            </p>
+      {waitingOrders.length > 0 ? (
+        <div className="panel-card quote-work-queue" style={{ marginBottom: '16px' }}>
+          <div className="card-title-row">
+            <div>
+              <h3>Teklif Bekleyen İşler</h3>
+              <p className="muted-text">
+                İş emrini seçip aynı kalemleri burada fiyatlandırın.
+              </p>
+            </div>
+
+            <span className="status-badge">
+              {waitingOrders.length} kayıt
+            </span>
           </div>
 
-          <span className="status-badge">
-            {waitingOrders.length} kayıt
-          </span>
-        </div>
-
-        <div className="quote-work-queue-list">
-          {waitingOrders.map((order) => (
-            <div
-              className="quote-work-queue-row"
-              key={order.id}
-            >
-              <div>
-                <strong>{order.vehicle?.plate}</strong>
-                <span>{order.orderNumber}</span>
-              </div>
-
-              <div>
-                <strong>
-                  {order.customer?.firstName}{' '}
-                  {order.customer?.lastName}
-                </strong>
-                <span>
-                  {order.items?.length || 0} işlem kalemi
-                </span>
-              </div>
-
-              <button
-                type="button"
-                className="small-button"
-                onClick={() =>
-                  selectOrder(order, {
-                    syncUrl: true,
-                  })
-                }
+          <div className="quote-work-queue-list">
+            {waitingOrders.map((order) => (
+              <div
+                className="quote-work-queue-row"
+                key={order.id}
               >
-                Teklif Hazırla
-              </button>
-            </div>
-          ))}
+                <div>
+                  <strong>{order.vehicle?.plate}</strong>
+                  <span>{order.orderNumber}</span>
+                </div>
 
-          {!waitingOrders.length && (
-            <div className="empty-state">
-              Teklif bekleyen iş emri yok.
-            </div>
-          )}
+                <div>
+                  <strong>
+                    {order.customer?.firstName}{' '}
+                    {order.customer?.lastName}
+                  </strong>
+                  <span>
+                    {order.items?.length || 0} işlem kalemi
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  className="small-button"
+                  onClick={() =>
+                    selectOrder(order, {
+                      syncUrl: true,
+                    })
+                  }
+                >
+                  Teklif Hazırla
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div
+          className="panel-card"
+          style={{
+            padding: '12px 18px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '13px',
+            color: 'var(--text-secondary, #64748b)',
+          }}
+        >
+          <span>📋 Teklif bekleyen iş emri bulunmuyor. Doğrudan aşağıdan yeni teklif oluşturabilirsiniz.</span>
+          <span style={{ fontSize: '12px', color: '#94a3b8' }}>0 iş emri</span>
+        </div>
+      )}
 
       <div className="panel-card spaced-card">
         <h3>Yeni Teklif / Proforma</h3>

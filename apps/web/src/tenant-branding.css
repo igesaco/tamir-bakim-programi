@@ -14,16 +14,11 @@
       var(--tenant-sidebar) 68%,
       #0f1318
     );
-  --tenant-border:
-    color-mix(
-      in srgb,
-      var(--tenant-primary) 18%,
-      #2b3239
-    );
+  --tenant-border: #262e38;
   --tenant-accent-soft:
     color-mix(
       in srgb,
-      var(--tenant-primary) 17%,
+      var(--tenant-primary) 14%,
       transparent
     );
 }
@@ -255,46 +250,28 @@
    TENANT CHROME — LIGHT
    ========================================================= */
 .app-shell.theme-light {
-  color: #202830;
-  background: #edf1f4;
+  --tenant-border: #e2e8f0;
+  color: #1e293b;
+  background: #f8fafc;
 }
 
 .app-shell.theme-light .main-area,
 .app-shell.theme-light .page-area {
-  background:
-    radial-gradient(
-      circle at top right,
-      color-mix(
-        in srgb,
-        var(--tenant-primary) 10%,
-        transparent
-      ),
-      transparent 34%
-    ),
-    #f3f6f8;
+  background: #f8fafc;
 }
 
 .app-shell.theme-light .topbar {
-  border-bottom-color:
-    color-mix(
-      in srgb,
-      var(--tenant-primary) 16%,
-      #d8e0e6
-    );
-  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
 }
 
 .app-shell.theme-light .stat-card,
 .app-shell.theme-light .panel-card,
 .app-shell.theme-light .notification-item {
-  border-color:
-    color-mix(
-      in srgb,
-      var(--tenant-primary) 14%,
-      #d8e0e6
-    );
-  background: #fff;
-  color: #202830;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  background: #ffffff;
+  color: #1e293b;
 }
 
 .app-shell.theme-light
@@ -307,14 +284,9 @@
   .search-input,
 .app-shell.theme-light
   .filter-select {
-  border-color:
-    color-mix(
-      in srgb,
-      var(--tenant-primary) 15%,
-      #ccd6de
-    );
-  background: #fff;
-  color: #202830;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #1e293b;
 }
 
 /* =========================================================

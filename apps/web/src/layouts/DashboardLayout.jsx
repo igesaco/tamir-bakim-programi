@@ -452,9 +452,9 @@ export default function DashboardLayout() {
     '#111419';
 
   const tenantDefaultMode =
-    ALL_MODES.includes(
-      organization.defaultPanelMode,
-    )
+    organization.defaultPanelMode &&
+    ALL_MODES.includes(organization.defaultPanelMode) &&
+    organization.defaultPanelMode !== 'desktop'
       ? organization.defaultPanelMode
       : 'classic';
 
@@ -515,8 +515,9 @@ export default function DashboardLayout() {
       const stored = localStorage.getItem(
         `tb-ui-mode:${user?.id || 'default'}`,
       );
+      if (stored === 'desktop') return 'classic';
       if (stored && ALL_MODES.includes(stored)) return stored;
-      return tenantDefaultMode;
+      return 'classic';
     });
 
   useEffect(() => {

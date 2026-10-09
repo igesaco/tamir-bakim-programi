@@ -127,18 +127,18 @@ export default function Dashboard() {
         </div>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <Link to="/service-orders" className="primary-button" style={{ fontSize: '12px', padding: '8px 14px' }}>
+          <Link to="/service-orders" className="primary-button" style={{ fontSize: '13px', padding: '9px 18px', borderRadius: '10px' }}>
             + Yeni İş Emri
           </Link>
           {canUseCashier && (
-            <Link to="/cashier" className="small-button" style={{ fontSize: '12px', padding: '8px 14px' }}>
+            <Link to="/cashier" className="secondary-button" style={{ fontSize: '13px', padding: '9px 16px', borderRadius: '10px' }}>
               💵 Kasa & Tahsilat
             </Link>
           )}
-          <Link to="/appointments" className="small-button" style={{ fontSize: '12px', padding: '8px 14px' }}>
+          <Link to="/appointments" className="secondary-button" style={{ fontSize: '13px', padding: '9px 16px', borderRadius: '10px' }}>
             📅 Randevular
           </Link>
-          <button className="small-button" type="button" onClick={() => load()} title="Yenile">
+          <button className="secondary-button" type="button" onClick={() => load()} title="Yenile" style={{ padding: '9px 14px', borderRadius: '10px' }}>
             ↻
           </button>
         </div>
@@ -241,14 +241,14 @@ export default function Dashboard() {
             {stageDistribution.map((s) => (
               <span key={s.key} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.color }} />
-                <span style={{ color: '#a0a8b2' }}>{s.label}:</span>
-                <strong>{s.count}</strong>
+                <span style={{ color: 'var(--text-secondary, #64748b)' }}>{s.label}:</span>
+                <strong style={{ color: 'var(--text-primary, #0f172a)' }}>{s.count}</strong>
               </span>
             ))}
           </div>
         </div>
 
-        <div style={{ width: '100%', height: '10px', background: '#181c22', borderRadius: '5px', overflow: 'hidden', display: 'flex' }}>
+        <div style={{ width: '100%', height: '8px', background: 'var(--tenant-border, rgba(148, 163, 184, 0.2))', borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>
           {stageDistribution.map((s) => (
             <div
               key={s.key}

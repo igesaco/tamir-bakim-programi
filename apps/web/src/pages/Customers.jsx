@@ -1,4 +1,4 @@
-﻿import {
+import {
   useEffect,
   useMemo,
   useState,
@@ -76,6 +76,9 @@ export default function Customers() {
   const [importPreview, setImportPreview] = useState(null);
   const [importRows, setImportRows] = useState([]);
 
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+
   async function previewCsv(file) {
     setError(''); setMessage(''); setImportPreview(null); setImportRows([]);
     try {
@@ -112,7 +115,9 @@ export default function Customers() {
     try {
       const response = await api.post('/customers/import/commit', { rows: importRows });
       setMessage(`${response.data.imported} müşteri başarıyla içe aktarıldı.`);
-      setImportRows([]); setImportPreview(null); await load();
+      setImportRows([]); setImportPreview(null);
+      setShowImportModal(false);
+      await load();
     } catch (err) { setError(getApiMessage(err)); }
     finally { setBusy(false); }
   }
@@ -238,6 +243,8 @@ export default function Customers() {
       setMessage(
         'Müşteri başarıyla eklendi.',
       );
+
+      setShowNewModal(false);
 
       await load();
     } catch (err) {
@@ -372,187 +379,57 @@ export default function Customers() {
       <div className="page-heading">
         <div>
           <h1>Müşteriler</h1>
-          <p>
-            Müşteri ve araç sahiplerini yönetin.
-          </p>
+          <p>Kayıtlı müşteri ve araç portföyünü yönetin.</p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {canChooseBranch && (
+            <button
+              type="button"
+              className="small-button"
+              onClick={() => { setError(''); setMessage(''); setShowImportModal(true); }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 15px', borderRadius: '10px', fontSize: '13px' }}
+            >
+              📥 Toplu CSV İçe Aktar
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => { setError(''); setMessage(''); setShowNewModal(true); }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 18px', borderRadius: '10px', fontSize: '13px' }}
+          >
+            + Yeni Müşteri Ekle
+          </button>
         </div>
       </div>
 
       <ActionNotice message={message} error={error} />
 
-      {canChooseBranch && (
-        <div className="panel-card">
-          <h3>CSV ile Toplu İçe Aktarma</h3>
-          <p className="muted-text">
-            Excel dosyanızı CSV UTF-8 olarak kaydedin. Başlıklar: ad, soyad, telefon, eposta, subeId, plaka, marka, model, modelYili, kilometre.
-          </p>
-          <input type="file" accept=".csv,text/csv" onChange={(event) => event.target.files?.[0] && previewCsv(event.target.files[0])} />
-          {importPreview ? (
-            <div className="inline-actions">
-              <strong>{importPreview.valid} geçerli · {importPreview.invalid} hatalı</strong>
-              <button className="primary-button" disabled={busy || importPreview.invalid > 0} onClick={commitImport}>
-                {busy ? 'Aktarılıyor...' : 'Geçerli Dosyayı İçe Aktar'}
-              </button>
-            </div>
-          ) : null}
-          {importPreview?.rows?.filter(row => !row.valid).slice(0, 10).map(row => (
-            <p className="error-text" key={row.index}>{row.index + 2}. satır: {row.errors.join(', ')}</p>
-          ))}
+      {/* Metrics Row */}
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: '18px' }}>
+        <div className="stat-card" style={{ padding: '16px 20px' }}>
+          <span style={{ fontSize: '12px', color: '#64748b' }}>Kayıtlı Müşteri</span>
+          <strong style={{ fontSize: '24px' }}>{customers.length}</strong>
         </div>
-      )}
-
-      <div className="content-grid">
-        <div className="panel-card">
-          <h3>Yeni Müşteri</h3>
-
-          <form
-            className="form-grid"
-            onSubmit={submit}
-          >
-            {canChooseBranch && (
-              <select
-                className="full"
-                value={
-                  form.branchId
-                }
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    branchId:
-                      e.target.value,
-                  })
-                }
-                required
-              >
-                <option value="">
-                  Şube seç
-                </option>
-
-                {branches
-                  .filter(
-                    (branch) =>
-                      branch.active,
-                  )
-                  .map((branch) => (
-                    <option
-                      key={
-                        branch.id
-                      }
-                      value={
-                        branch.id
-                      }
-                    >
-                      {branch.name}
-                    </option>
-                  ))}
-              </select>
-            )}
-
-            <input
-              placeholder="Ad"
-              value={form.firstName}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  firstName:
-                    e.target.value,
-                })
-              }
-              required
-            />
-
-            <input
-              placeholder="Soyad"
-              value={form.lastName}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  lastName:
-                    e.target.value,
-                })
-              }
-            />
-
-            <input
-              placeholder="Telefon"
-              value={form.phone}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  phone:
-                    e.target.value,
-                })
-              }
-            />
-
-            <input
-              type="email"
-              placeholder="E-posta"
-              value={form.email}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  email:
-                    e.target.value,
-                })
-              }
-            />
-
-            <input
-              placeholder="Vergi numarası"
-              value={form.taxNumber}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  taxNumber:
-                    e.target.value,
-                })
-              }
-            />
-
-            <input
-              inputMode="numeric"
-              maxLength="11"
-              placeholder="T.C. Kimlik No (opsiyonel)"
-              value={form.nationalId}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  nationalId:
-                    e.target.value
-                      .replace(
-                        /\D/g,
-                        '',
-                      ),
-                })
-              }
-            />
-
-            <input
-              className="full"
-              placeholder="Adres"
-              value={form.address}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  address:
-                    e.target.value,
-                })
-              }
-            />
-
-            <button
-              className="primary-button full"
-              disabled={busy}
-            >
-              {busy
-                ? 'Kaydediliyor...'
-                : 'Müşteri Ekle'}
-            </button>
-          </form>
+        <div className="stat-card" style={{ padding: '16px 20px' }}>
+          <span style={{ fontSize: '12px', color: '#64748b' }}>Kayıtlı Araç</span>
+          <strong style={{ fontSize: '24px', color: '#3b82f6' }}>
+            {customers.reduce((acc, c) => acc + (c.vehicles?.length || 0), 0)}
+          </strong>
         </div>
-
-        <div className="panel-card">
+        {canChooseBranch && (
+          <div className="stat-card" style={{ padding: '16px 20px' }}>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>Aktif Şube</span>
+            <strong style={{ fontSize: '24px', color: '#10b981' }}>
+              {branches.filter(b => b.active).length || 1}
+            </strong>
+          </div>
+        )}
+      </div>
+      {/* Müşteri Listesi - Full Width Modern Card */}
+      <div className="panel-card" style={{ padding: '20px 24px' }}>
           <div className="card-title-row">
             <h3>
               Müşteri Listesi
@@ -670,7 +547,163 @@ export default function Customers() {
             </table>
           </div>
         </div>
-      </div>
+
+      {/* Yeni Müşteri Modalı */}
+      {showNewModal && (
+        <div className="modal-backdrop" onMouseDown={() => setShowNewModal(false)}>
+          <div className="modal-card" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2>Yeni Müşteri Ekle</h2>
+                <p>Müşteri ve iletişim bilgilerini tanımlayın.</p>
+              </div>
+              <button className="modal-close" onClick={() => setShowNewModal(false)}>×</button>
+            </div>
+
+            <form className="form-grid" onSubmit={submit}>
+              {canChooseBranch && (
+                <select
+                  className="full"
+                  value={form.branchId}
+                  onChange={(e) => setForm({ ...form, branchId: e.target.value })}
+                  required
+                >
+                  <option value="">Şube seç</option>
+                  {branches.filter(b => b.active).map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              )}
+
+              <input
+                placeholder="Ad *"
+                value={form.firstName}
+                onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                required
+              />
+              <input
+                placeholder="Soyad"
+                value={form.lastName}
+                onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+              />
+              <input
+                placeholder="Telefon"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              />
+              <input
+                type="email"
+                placeholder="E-posta"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
+              <input
+                placeholder="Vergi numarası"
+                value={form.taxNumber}
+                onChange={(e) => setForm({ ...form, taxNumber: e.target.value })}
+              />
+              <input
+                inputMode="numeric"
+                maxLength="11"
+                placeholder="T.C. Kimlik No (opsiyonel)"
+                value={form.nationalId}
+                onChange={(e) => setForm({ ...form, nationalId: e.target.value.replace(/\D/g, '') })}
+              />
+              <input
+                className="full"
+                placeholder="Adres"
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+              />
+
+              <div className="modal-actions full">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setShowNewModal(false)}
+                >
+                  Vazgeç
+                </button>
+                <button
+                  className="primary-button"
+                  disabled={busy}
+                >
+                  {busy ? 'Kaydediliyor...' : 'Müşteri Kaydet'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Toplu CSV İçe Aktarma Modalı */}
+      {showImportModal && (
+        <div className="modal-backdrop" onMouseDown={() => { setShowImportModal(false); setImportPreview(null); setImportRows([]); }}>
+          <div className="modal-card" style={{ maxWidth: '640px' }} onMouseDown={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2>CSV ile Toplu İçe Aktarma</h2>
+                <p>Müşteri ve araç listesini Excel/CSV formatında topluca yükleyin.</p>
+              </div>
+              <button className="modal-close" onClick={() => { setShowImportModal(false); setImportPreview(null); setImportRows([]); }}>×</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ padding: '12px 16px', background: 'rgba(59, 130, 246, 0.06)', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.15)', fontSize: '13px', color: '#334155', lineHeight: '1.5' }}>
+                <strong>Örnek Sütun Başlıkları:</strong><br />
+                <code>ad, soyad, telefon, eposta, subeId, plaka, marka, model, modelYili, kilometre</code>
+              </div>
+
+              <div>
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) previewCsv(file);
+                  }}
+                  style={{ fontSize: '13px' }}
+                />
+              </div>
+
+              {importPreview && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '13px', background: 'rgba(16, 185, 129, 0.1)', color: '#059669', padding: '4px 10px', borderRadius: '6px' }}>
+                      Eklenecek Müşteri: <strong>{importPreview.customersToCreate}</strong>
+                    </span>
+                    <span style={{ fontSize: '13px', background: 'rgba(59, 130, 246, 0.1)', color: '#2563eb', padding: '4px 10px', borderRadius: '6px' }}>
+                      Eklenecek Araç: <strong>{importPreview.vehiclesToCreate}</strong>
+                    </span>
+                    {importPreview.skippedDuplicates > 0 && (
+                      <span style={{ fontSize: '13px', background: 'rgba(245, 158, 11, 0.1)', color: '#d97706', padding: '4px 10px', borderRadius: '6px' }}>
+                        Atlanan (Mevcut): <strong>{importPreview.skippedDuplicates}</strong>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="modal-actions" style={{ marginTop: '8px' }}>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => { setImportPreview(null); setImportRows([]); }}
+                    >
+                      Temizle
+                    </button>
+                    <button
+                      className="primary-button"
+                      disabled={busy}
+                      onClick={commitImport}
+                    >
+                      {busy ? 'Yükleniyor...' : `${importRows.length} Kaydı İçe Aktar`}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {editing && (
         <div
