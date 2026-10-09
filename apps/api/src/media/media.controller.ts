@@ -30,10 +30,11 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UploadMediaDto } from './dto/upload-media.dto';
 import { MediaService } from './media.service';
 
+const defaultUploadDir = process.env.VERCEL ? '/tmp/uploads' : './uploads';
 const mediaStorageDir =
   resolve(
     process.env.MEDIA_STORAGE_DIR ??
-      './uploads',
+      defaultUploadDir,
   );
 
 @UseGuards(AuthGuard('jwt'), RolesGuard)

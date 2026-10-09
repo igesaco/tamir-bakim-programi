@@ -55,7 +55,8 @@ export class MediaService {
       if (!media.object?.data) throw new NotFoundException('Dosya depoda bulunamadı.');
       return { body: Buffer.from(media.object.data), mimeType: media.mimeType };
     }
-    const path = resolve(process.env.MEDIA_STORAGE_DIR || './uploads', basename(media.storageKey));
+    const defaultUploadDir = process.env.VERCEL ? '/tmp/uploads' : './uploads';
+    const path = resolve(process.env.MEDIA_STORAGE_DIR || defaultUploadDir, basename(media.storageKey));
     // Opening first surfaces a missing file as a normal 404 before headers are sent.
     const data = await readFile(path).catch(() => { throw new NotFoundException('Dosya depoda bulunamadı.'); });
     return { body: data, mimeType: media.mimeType };
